@@ -1,0 +1,11 @@
+Source: gpgmailer
+Section: parkbench
+Priority: required
+Maintainer: eviljoel, Andrew Klapp
+#Build-Depends:
+Standards-Version: 3.9.6.1
+
+Package: gpgmailer
+Architecture: any
+Depends: timber
+Description: Daemon to send multipart encrypted e-mails.
