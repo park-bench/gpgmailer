@@ -30,7 +30,6 @@ PID_FILE = '/var/opt/run/gpgmailer.pid'
 #	    instead of making multiple mails
 
 # After first commit
-# TODO: Handle all config_file validation here, remove it from gpgmailer.py
 # TODO: Make daemonize() a library
 # TODO: Clean up logging
 # TODO: Clean up method names
