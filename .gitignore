@@ -1,2 +1,5 @@
-/etc/opt/gpgmailer/gnupg
-/etc/opt/gpgmailer/gpgmailer.conf
+debian/tmp
+debian/debhelper.log
+debian/files
+src/etc/opt/gpgmailer/gnupg
+src/etc/opt/gpgmailer/gpgmailer.conf
