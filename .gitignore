@@ -3,3 +3,4 @@ debian/debhelper.log
 debian/files
 src/etc/opt/gpgmailer/gnupg
 src/etc/opt/gpgmailer/gpgmailer.conf
+src/var/opt/log/gpgmailer.log
