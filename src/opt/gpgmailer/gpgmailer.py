@@ -70,12 +70,6 @@ class mailer ():
         self.smtp.login(self.config['smtp_user'], self.config['smtp_pass'])
         self.logger.trace('Connected!')
 
-    # Enigmail doesn't like following the RFC. We will play their games. for now.
-    # Not currently in use. Bug was fixed.
-    def _sign_for_enigmail_bug(self, message, signing_key_fingerprint):
-        proc = subprocess.Popen(('gpg', '-u', signing_key_fingerprint, '-stab', '--charset', 'utf-8', '--display-charset', 'utf-8', '--batch', '--no-tty', '--digest-algo', 'sha512'), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        return str(proc.communicate(input=message)[0])
-
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.
