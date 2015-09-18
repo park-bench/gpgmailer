@@ -32,7 +32,7 @@ import base64
 # TODO: Write more effective logging.
 
 class mailer ():
-    #def __init__(self, gpg_home, smtp_server, smtp_port, smtp_user, smtp_pass):
+    
     def __init__(self, config):
         self.logger = timber.get_instance()
         self.config = config

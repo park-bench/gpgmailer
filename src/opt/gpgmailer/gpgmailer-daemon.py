@@ -15,19 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import ConfigHelper
+import ConfigParser
 import mailermonitor
 import os
 import signal
 import sys
 import timber
 import traceback
-import ConfigParser
 
 PID_FILE = '/var/opt/run/gpgmailer.pid'
-
-# Before first commit
-# TODO: Fix handling of multiple recipients: use PGP API multi-key encryption
-#	    instead of making multiple mails
 
 # After first commit
 # TODO: Make daemonize() a library
@@ -41,70 +38,32 @@ config_file.read('/etc/opt/gpgmailer/gpgmailer.conf')
 
 # Figure out the logging options so that can start before anything else.
 print('Verifying configuration.')
-if(config_file.has_option('General', 'log_file') and (config_file.get('General', 'log_file') != '')):
-    print(config_file.get('General', 'log_file'))
-    LOG_FILE = config_file.get('General', 'log_file').strip()
-else:
-    LOG_FILE = '/var/opt/log/gpgmailer.log'
+config_helper = confighelper.ConfigHelper()
+log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
+log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
 
-if(config_file.has_option('General', 'log_level') and (config_file.get('General', 'log_level') != '')):
-    LOG_LEVEL= config_file.get('General', 'log_level').strip()
-else:
-    print('Log level undefined.  Exiting.')
-    exit()
+logger = timber.get_instance_with_filename(log_file, log_level)
 
-logger = timber.get_instance_with_filename(LOG_FILE, LOG_LEVEL)
-
-def verify_string_parameter(param, config_file):
-    logger.trace('Veryifing parameter %s' % param)
-    if(config_file.has_option('General', param)):
-        value = config_file.get('General', param).strip()
-        if(value):
-            logger.info('%s set to %s' % (param, value))
-            return value
-        else:
-            logger.fatal('Parameter %s is empty.' % param)
-            exit()
-    else:
-        logger.fatal('Parameter %s not set.' % param)
-        exit()
-
-def verify_quiet_parameter(param, config_file):
-    logger.trace('Veryifing parameter %s' % param)
-    if(config_file.has_option('General', param)):
-        logger.trace('%s is defined.  Is it empty?' % param)
-        value = config_file.get('General', param).strip()
-        if(value):
-            logger.info('%s set' % param)
-            return value
-        else:
-            logger.fatal('Parameter %s is empty.' % param)
-            exit()
-    else:
-        logger.fatal('Parameter %s not set.' % param)
-        exit()
-
-logger.info('Verifying non-logging config')
+logger.trace('Verifying non-logging config')
 config = {}
 
-config['gpg_dir'] = verify_string_parameter('gpg_dir', config_file)
-config['watch_dir'] = verify_string_parameter('watch_dir', config_file)
-config['smtp_user'] = verify_string_parameter('smtp_user', config_file)
-
-config['smtp_pass'] = verify_quiet_parameter('smtp_pass', config_file)
-config['smtp_server'] = verify_string_parameter('smtp_server', config_file)
-config['smtp_port'] = verify_string_parameter('smtp_port', config_file)
-config['smtp_max_idle'] = verify_string_parameter('smtp_max_idle', config_file)
-config['smtp_sending_timeout'] = verify_string_parameter('smtp_sending_timeout', config_file)
+config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
+config['watch_dir'] = config_helper.verify_string_exists(config_file, 'watch_dir')
+config['smtp_user'] = config_helper.verify_string_exists(config_file, 'smtp_user')
+config['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
+config['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_server')
+config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
+config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
+config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
 # TODO: Verify that keys actually exist becuase the gpg module will fail silently
 # 	if they do not.
 # parse sender config.  <email>:<key fingerprint>
-sender_raw = verify_string_parameter('sender', config_file)
+sender_raw = config_helper.verify_string_exists(config_file, 'sender')
 sender_split = sender_raw.split(':')
 if( len(sender_split[1]) != 40 ):
     logger.fatal('Sender key fingerprint is invalid')
-    exit()
+    sys.exit(1)
 else:
     config['sender'] = { 'email' : sender_split[0], 'fingerprint' : sender_split[1] }
 
@@ -112,13 +71,13 @@ else:
 # <email>:<key fingerprint>,<email>:<key fingerprint>
 config['recipients'] = []
 
-recipients_raw = verify_string_parameter('recipients', config_file)
+recipients_raw = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_split = recipients_raw.split(',')
 for r in recipients_split:
     r_split = r.split(':')
     if( len(r_split[1].strip()) != 40 ):
         logger.fatal('Recipient key fingerprint for %s is invalid.' % r_split[0] )
-        exit()
+        sys.exit(1)
     else:
         r_dict = { 'email' : r_split[0].strip(), 'fingerprint' : r_split[1].strip() }
         config['recipients'].append(r_dict)
