@@ -50,9 +50,10 @@ class mailer_monitor():
                     file_handle.close()
                     file_dict['sender'] = self.config['sender']['email']
                     file_dict['signing_key_fingerprint'] = self.config['sender']['fingerprint']
-                    for attachments in file_dict['attachments']:
-                        attachments['data'] = base64.b64decode(attachments['data'])
-                
+                    if('attachments' in file_dict.keys()):
+                        for attachment in file_dict['attachments']:
+                            attachment['data'] = base64.b64decode(attachment['data'])
+                    
                     self.logger.trace('Sending %s' % file_name)
                     self.the_mailer.sendmail(file_dict)
                     os.remove('%s%s' % (self.config['watch_dir'],file_name))

@@ -28,8 +28,9 @@ def send(message):
     message_copy = copy.deepcopy(message)
 
     # Base64 encode the attachments.
-    for attachment in message_copy['attachments']:
-        attachment['data'] = base64.b64encode(attachment['data'])
+    if('attachments' in message_copy.keys()):
+        for attachment in message_copy['attachments']:
+            attachment['data'] = base64.b64encode(attachment['data'])
 
     message_json = json.dumps(message_copy)
     # Adversaries aren't going to be able to control our input, so MD5 is acceptable

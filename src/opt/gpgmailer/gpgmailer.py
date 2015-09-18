@@ -83,14 +83,16 @@ class mailer ():
         multipart_message.attach(MIMEText("%s\n" % message_dict['message']))
 
         # Loop over the attachments
-        for attachment in message_dict['attachments']:
-            mime_base = MIMEBase('application', 'octet-stream')
-            mime_base.set_payload(base64.b64encode(attachment['data']))
-            mime_base.add_header('Content-Transfer-Encoding', 'base64')
-            mime_base.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
-            multipart_message.attach(mime_base)
-            # Removes the first line and replaces LF with CR/LF
-            message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
+        if('attachments' in message_dict.keys()):
+            for attachment in message_dict['attachments']:
+                mime_base = MIMEBase('application', 'octet-stream')
+                mime_base.set_payload(base64.b64encode(attachment['data']))
+                mime_base.add_header('Content-Transfer-Encoding', 'base64')
+                mime_base.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
+                multipart_message.attach(mime_base)
+
+        # Removes the first line and replaces LF with CR/LF
+        message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
 
         # Make the signature component
         # Switch to using the python-gnupg signature if Enigmail ever gets its shit together
