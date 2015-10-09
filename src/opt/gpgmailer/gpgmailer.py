@@ -90,7 +90,7 @@ class mailer ():
 
         # Make the signature component
         # Switch to using the python-gnupg signature if Enigmail ever gets its shit together
-        signature_text = str(self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint']))
+        signature_text = str(self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint'], passphrase=self.config['sender']['key_password']))
         #signature_text = str(self._sign_for_enigmail_bug(message_string, signing_key_fingerprint))
 
         signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)

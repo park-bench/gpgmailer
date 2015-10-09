@@ -65,7 +65,9 @@ if( len(sender_split[1]) != 40 ):
     logger.fatal('Sender key fingerprint is invalid')
     sys.exit(1)
 else:
-    config['sender'] = { 'email' : sender_split[0], 'fingerprint' : sender_split[1] }
+    signing_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
+    config['sender'] = { 'email' : sender_split[0], 'fingerprint' : sender_split[1],
+    'key_password' : signing_key_password }
 
 # parse recipient config.  Comma-delimited list of objects like sender
 # <email>:<key fingerprint>,<email>:<key fingerprint>
