@@ -56,14 +56,9 @@ config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
-# TODO: Verify that keys actually exist becuase the gpg module will fail silently
-# 	if they do not.
-
 # init gnupg so we can verify keys
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])
 keylist = config['gpg'].list_keys()
-
-print(keylist)
 
 def gpg_fingerprint_exists(gpg_keyring, fingerprint_string):
     # gpg_keyring needs to be a list of dicts from the gnupg module's list_keys method
