@@ -37,6 +37,8 @@ smtp_sending_timeout=30
 # For example:
 # sender=test@example.com:5A4228C8D952459F240626EA4289EC280D58338B
 sender=
+# signing_key_password is the password for the key you just defined in sender
+signing_key_password=
 
 # recipients should be a comma-separated list of address and fingerprint pairs,
 # just like sender.  It can be multiline, but it must be indented, like so:
