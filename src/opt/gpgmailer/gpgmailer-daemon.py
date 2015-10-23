@@ -17,6 +17,7 @@
 
 import confighelper
 import ConfigParser
+import gnupg
 import mailermonitor
 import os
 import signal
@@ -30,7 +31,6 @@ PID_FILE = '/var/opt/run/gpgmailer.pid'
 # TODO: Make daemonize() a library
 # TODO: Clean up logging
 # TODO: Clean up method names
-# TODO: Add a password to secret key and a config option for it
 
 print('Loading configuration.')
 config_file = ConfigParser.SafeConfigParser()
@@ -56,8 +56,18 @@ config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
-# TODO: Verify that keys actually exist becuase the gpg module will fail silently
-# 	if they do not.
+# init gnupg so we can verify keys
+config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])
+keylist = config['gpg'].list_keys()
+
+def gpg_fingerprint_exists(gpg_keyring, fingerprint_string):
+    # gpg_keyring needs to be a list of dicts from the gnupg module's list_keys method
+    # fingerprint_string must be a full 40 char fingerprint
+    for key in gpg_keyring:
+        if(key['fingerprint'] == fingerprint_string):
+            return True
+    return False
+
 # parse sender config.  <email>:<key fingerprint>
 sender_raw = config_helper.verify_string_exists(config_file, 'sender')
 sender_split = sender_raw.split(':')
@@ -65,7 +75,13 @@ if( len(sender_split[1]) != 40 ):
     logger.fatal('Sender key fingerprint is invalid')
     sys.exit(1)
 else:
-    config['sender'] = { 'email' : sender_split[0], 'fingerprint' : sender_split[1] }
+    if(gpg_fingerprint_exists(keylist, sender_split[1].strip())):
+        signing_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
+        config['sender'] = { 'email' : sender_split[0], 'fingerprint' : sender_split[1],
+        'key_password' : signing_key_password }
+    else:
+        logger.fatal('Sender key not found in keyring.')
+        sys.exit(1)
 
 # parse recipient config.  Comma-delimited list of objects like sender
 # <email>:<key fingerprint>,<email>:<key fingerprint>
@@ -76,11 +92,16 @@ recipients_split = recipients_raw.split(',')
 for r in recipients_split:
     r_split = r.split(':')
     if( len(r_split[1].strip()) != 40 ):
-        logger.fatal('Recipient key fingerprint for %s is invalid.' % r_split[0] )
+        logger.fatal('Recipient key fingerprint for %s is invalid.' % r_split[0])
         sys.exit(1)
     else:
-        r_dict = { 'email' : r_split[0].strip(), 'fingerprint' : r_split[1].strip() }
-        config['recipients'].append(r_dict)
+        if(gpg_fingerprint_exists(keylist, r_split[1].strip())):
+            r_dict = { 'email' : r_split[0].strip(), 'fingerprint' : r_split[1].strip() }
+            config['recipients'].append(r_dict)
+        else:
+            logger.fatal('Recipient key fingerprint for %s not in keyring.' % r_split[0])
+            sys.exit(1)
+
 
 logger.info('Verification complete')
 

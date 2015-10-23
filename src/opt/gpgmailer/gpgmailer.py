@@ -36,7 +36,7 @@ class mailer ():
     def __init__(self, config):
         self.logger = timber.get_instance()
         self.config = config
-        self.gpg = gnupg.GPG(gnupghome=self.config['gpg_dir'])
+        self.gpg = config['gpg']
 
         self.smtp = None
 
@@ -89,9 +89,7 @@ class mailer ():
         message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
 
         # Make the signature component
-        # Switch to using the python-gnupg signature if Enigmail ever gets its shit together
-        signature_text = str(self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint']))
-        #signature_text = str(self._sign_for_enigmail_bug(message_string, signing_key_fingerprint))
+        signature_text = str(self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint'], passphrase=self.config['sender']['key_password']))
 
         signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)
         signature_part['Content-Description'] = 'OpenPGP Digital Signature'
