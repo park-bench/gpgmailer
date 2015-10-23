@@ -44,7 +44,7 @@ log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_leve
 
 logger = timber.get_instance_with_filename(log_file, log_level)
 
-logger.trace('Verifying non-logging config')
+logger.info('Verifying non-logging config')
 config = {}
 
 config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
@@ -91,7 +91,7 @@ def daemonize():
         if pid > 0:
             sys.exit(0)
     except OSError, e: 
-        logger.trace("Failed to make parent process init: %d (%s)" % (e.errno, e.strerror))
+        logger.fatal("Failed to make parent process init: %d (%s)" % (e.errno, e.strerror))
         sys.exit(1)
 
     os.chdir("/")  # Change the working directory
@@ -105,7 +105,7 @@ def daemonize():
         if pid > 0:
             sys.exit(0)
     except OSError, e:
-        logger.trace("Failed to give up session leadership: %d (%s)" % (e.errno, e.strerror))
+        logger.fatal("Failed to give up session leadership: %d (%s)" % (e.errno, e.strerror))
         sys.exit(1)
 
     # Redirect standard file descriptors
@@ -126,7 +126,7 @@ daemonize()
 
 # Quit when SIGTERM is received
 def sig_term_handler(signal, stack_frame):
-    logger.trace("Quitting.")
+    logger.info("Quitting.")
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, sig_term_handler)
@@ -136,6 +136,6 @@ try:
     the_watcher.start_monitoring()  
 
 except Exception as e:
-    logger.trace("Fatal %s: %s\n" % (type(e).__name__, e.message))
-    logger.trace(traceback.format_exc())
+    logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
+    logger.debug(traceback.format_exc())
     sys.exit(1)

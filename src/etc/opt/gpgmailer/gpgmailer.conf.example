@@ -6,7 +6,7 @@
 log_file=/var/opt/log/gpgmailer.log
 
 # log_level tells GpgMailer how much stuff to report
-log_level=trace
+log_level=info
 
 # gpg_dir should be the gnupg keyring directory containing all of the
 # keys you intend to use.  This is not included yet, you should set

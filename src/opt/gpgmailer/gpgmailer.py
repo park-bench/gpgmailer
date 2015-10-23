@@ -44,7 +44,7 @@ class mailer ():
         self.lastSentTime = time.time()
 
     def _connect(self):
-        self.logger.trace('Connecting.')
+        self.logger.info('Connecting.')
         if (self.smtp != None):
             #try:
             #    self.smtp.quit()
@@ -53,22 +53,22 @@ class mailer ():
             self.smtp = None
         
         # Create a random number as our host id
-        self.logger.trace('Generating random ehlo.')
+        self.logger.debug('Generating random ehlo.')
         self.ehlo_id = str(random.SystemRandom().random()).split( '.', 1)[1]
-        self.logger.trace('Random ehlo generated.')
+        self.logger.debug('Random ehlo generated.')
         connected = False
         while not(connected):
 	    try:
                 self.smtp = smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
                 connected = True
             except Exception, e:
-                self.logger.warn('Failed to connect, waiting to try again.  Exception %s' % str(e))
+                self.logger.error('Failed to connect, waiting to try again.  Exception %s' % str(e))
                 time.sleep(.1)
-        self.logger.trace('starttls.')
+        self.logger.debug('starttls.')
         self.smtp.starttls()
-        self.logger.trace('smtp.login.')
+        self.logger.debug('smtp.login.')
         self.smtp.login(self.config['smtp_user'], self.config['smtp_pass'])
-        self.logger.trace('Connected!')
+        self.logger.info('Connected!')
 
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
@@ -141,14 +141,14 @@ class mailer ():
             self.logger.trace(recipient['email'])
 
         if (time.time() - self.lastSentTime) > self.config['smtp_max_idle']:
-            self.logger.trace("Assuming the connection is dead.")
+            self.logger.info("Assuming the connection is dead.")
             self._connect()
 
         try:
             self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
         except Exception as e:
-            self.logger.trace("Fatal %s: %s\n" % (type(e).__name__, e.message))
-            self.logger.trace(traceback.format_exc())
+            self.logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
+            self.logger.debug(traceback.format_exc())
 
             # Try reconnecting and resending
             self._connect()

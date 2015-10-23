@@ -54,11 +54,11 @@ class mailer_monitor():
                         for attachment in file_dict['attachments']:
                             attachment['data'] = base64.b64decode(attachment['data'])
                     
-                    self.logger.trace('Sending %s' % file_name)
+                    self.logger.info('Sending %s' % file_name)
                     self.the_mailer.sendmail(file_dict)
                     os.remove('%s%s' % (self.config['watch_dir'],file_name))
                 except Exception as e:
-                    self.logger.trace("Exception: %s\n" % e.message);
+                    self.logger.error("Exception: %s\n" % e.message);
                     file_handle.close()
 
             time.sleep(.1)
