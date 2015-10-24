@@ -31,6 +31,7 @@ PID_FILE = '/var/opt/run/gpgmailer.pid'
 # TODO: Make daemonize() a library
 # TODO: Clean up logging
 # TODO: Clean up method names
+# TODO: Consider making this a class somehow.
 
 print('Loading configuration.')
 config_file = ConfigParser.SafeConfigParser()

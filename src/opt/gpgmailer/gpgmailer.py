@@ -30,6 +30,7 @@ from email.Encoders import encode_7or8bit
 import base64
 
 # TODO: Write more effective logging.
+# TODO: I kinda want to review method separation and naming for the entire file.
 
 class mailer ():
     
@@ -46,6 +47,7 @@ class mailer ():
     def _connect(self):
         self.logger.info('Connecting.')
         if (self.smtp != None):
+            # TODO: Probably should clean this up.
             #try:
             #    self.smtp.quit()
             #except:
@@ -63,6 +65,7 @@ class mailer ():
                 connected = True
             except Exception, e:
                 self.logger.error('Failed to connect, waiting to try again.  Exception %s' % str(e))
+                # TODO: Make this configurable?
                 time.sleep(.1)
         self.logger.debug('starttls.')
         self.smtp.starttls()
@@ -102,6 +105,7 @@ class mailer ():
 
         return signed_message
 
+    # TODO: We should probably name this appropriately.
     def _eldtritch_crypto_magic(self, message_dict):
 
         # PGP needs a version attachment
@@ -138,6 +142,8 @@ class mailer ():
             recipients.append(recipient['email'])
             self.logger.trace(recipient['email'])
 
+        # Mail servers will probably deauth you after a fixed period of inactivity.
+        # TODO: There is probably also a hard session limit too.
         if (time.time() - self.lastSentTime) > self.config['smtp_max_idle']:
             self.logger.info("Assuming the connection is dead.")
             self._connect()

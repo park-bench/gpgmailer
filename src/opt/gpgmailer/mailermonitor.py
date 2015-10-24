@@ -27,8 +27,7 @@ import time
 import base64
 import json
 
-
-# TODO: I'm not sure class names are suppose to be snake case.
+# TODO: Class names are suppose to be camel case. (Not the filenames though.)
 class mailer_monitor():
     def __init__(self, config):
         self.logger = timber.get_instance()
@@ -42,6 +41,8 @@ class mailer_monitor():
             # TODO: decide how to handle directories in the watch_dir
             # TODO: add a way to handle invalid json objects/non-json files
             file_list = next(os.walk(self.config['watch_dir']))[2]
+            # Sort the file name list (which should be timestamps) to ensure you process the
+            #   files in cronological order.
             file_list.sort()
             for file_name in file_list:
                 file_handle = open('%s%s' % (self.config['watch_dir'], file_name), 'r')
@@ -52,14 +53,18 @@ class mailer_monitor():
                     file_dict['signing_key_fingerprint'] = self.config['sender']['fingerprint']
                     if('attachments' in file_dict.keys()):
                         for attachment in file_dict['attachments']:
+                            # Attachment data is assumed to be encoded in base64.
                             attachment['data'] = base64.b64decode(attachment['data'])
                     
                     self.logger.info('Sending %s' % file_name)
                     self.the_mailer.sendmail(file_dict)
+
+                    # Remove the file after it has been sent.
                     os.remove('%s%s' % (self.config['watch_dir'],file_name))
                 except Exception as e:
                     self.logger.error("Exception: %s\n" % e.message);
                     file_handle.close()
 
+            # TODO: Make configurable?
             time.sleep(.1)
   
