@@ -7,5 +7,5 @@ Standards-Version: 3.9.6.1
 
 Package: gpgmailer
 Architecture: any
-Depends: confighelper,timber
+Depends: confighelper,timber,python-gnupg
 Description: Daemon to send multipart encrypted e-mails.
