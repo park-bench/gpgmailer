@@ -1,9 +1,15 @@
+gpgmailer (0.3) stable; urgency=low
+
+  * Corrected dependency issue.
+
+ -- Andrew Klapp <andklapp@null.net>  Thu, 29 Oct 2015 20:05:29 -0500
+
 gpgmailer (0.2) stable; urgency=low
 
   * Added postinst and prerm scripts. Actually just bumping version for
     git signed commit.
 
- -- eviljoel <eviljoel@rebel>  Thu, 10 Sep 2015 20:53:12 -0500
+ -- eviljoel <eviljoel@linux.com>  Thu, 10 Sep 2015 20:53:12 -0500
 
 gpgmailer (0.1) stable; urgency=low
 
