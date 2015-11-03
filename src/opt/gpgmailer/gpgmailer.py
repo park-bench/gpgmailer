@@ -45,6 +45,7 @@ class mailer ():
         self.lastSentTime = time.time()
 
     def _connect(self):
+        # TODO: Failed DNS lookups of the mail server might be eating messages. Investigate immediately.
         self.logger.info('Connecting.')
         if (self.smtp != None):
             # TODO: Probably should clean this up.
@@ -122,6 +123,8 @@ class mailer ():
             fingerprint_list.append(recipient['fingerprint'])
         # Encrypt the message
         encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
+        # TODO: encrypt() can return empty if a recipient's key is not signed. We should handle this
+        #   with a proper exception.
         encrypted_part.set_payload(str(self.gpg.encrypt(signed_message.as_string(), fingerprint_list)))
 
         # Pack it all into one big message
