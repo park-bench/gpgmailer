@@ -34,7 +34,7 @@ PID_FILE = '/var/opt/run/gpgmailer.pid'
 # TODO: Consider making this a class somehow.
 
 print('Loading configuration.')
-config_file = ConfigParser.SafeConfigParser()
+config_file = ConfigParser.RawConfigParser()
 config_file.read('/etc/opt/gpgmailer/gpgmailer.conf')
 
 # Figure out the logging options so that can start before anything else.
