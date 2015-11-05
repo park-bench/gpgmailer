@@ -159,5 +159,5 @@ try:
 
 except Exception as e:
     logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
-    logger.debug(traceback.format_exc())
+    logger.error(traceback.format_exc())
     sys.exit(1)
