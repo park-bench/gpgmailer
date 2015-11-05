@@ -1,3 +1,9 @@
+gpgmailer (0.4) stable; urgency=low
+
+  * Mostly corrected config parsing.
+
+ -- eviljoel <eviljoel@linux.com>  Wed, 04 Nov 2015 19:38:00 -0600
+
 gpgmailer (0.3) stable; urgency=low
 
   * Corrected dependency issue.
