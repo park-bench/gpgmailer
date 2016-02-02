@@ -53,7 +53,7 @@ do_start()
     # If $MAIL_DIR is empty and not mounted as a ramdisk, mount it as a ramdisk.
     # TODO: Replace 'ls' with 'find'
     # TODO: Put through shellcheck.
-    if [ ! "$(ls -A $MAIL_DIR/ 2> /dev/null)" ] && [ ! "$(mount | grep "^none on $MAIL_DIR type tmpfs ")" ]; then
+    if [ ! "$(find / -type d -path $MAIL_DIR 2> /dev/null)" ] && [ ! "$(mount | grep "^none on $MAIL_DIR type tmpfs ")" ]; then
         mount -t tmpfs -o size=25% none $MAIL_DIR 
     fi
     # If $MAIL_DIR is not mounted as a ramdisk, something is wrong. Bail!
