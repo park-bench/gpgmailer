@@ -63,16 +63,26 @@ class mailer ():
         while not(connected):
 	    try:
                 self.smtp = smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
+                self.logger.debug('starttls.')
+                self.smtp.starttls()
+                self.logger.debug('smtp.login.')
+                self.smtp.login(self.config['smtp_user'], self.config['smtp_pass'])
+                self.logger.info('Connected!')
                 connected = True
-            except Exception, e:
-                self.logger.error('Failed to connect, waiting to try again.  Exception %s' % str(e))
+            except smtplib.SMTPAuthenticationError, e:
+                # TODO: Decide how to handle authentication errors
+                self.logger.error('Failed to connect, authentication error.  Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Make this configurable?
                 time.sleep(.1)
-        self.logger.debug('starttls.')
-        self.smtp.starttls()
-        self.logger.debug('smtp.login.')
-        self.smtp.login(self.config['smtp_user'], self.config['smtp_pass'])
-        self.logger.info('Connected!')
+            except smtplib.SMTPDataError, e:
+                # TODO: Backoff strategy
+                self.logger.error('Failed to connect, Invalid response from server.  Exception %s:%s' % (type(e).__name__, e.message))
+                # TODO: Make this configurable?
+                time.sleep(.1)
+            except Exception, e:
+                self.logger.error('Failed to connect, waiting to try again.  Exception %s:%s' % (type(e).__name__, e.message))
+                # TODO: Make this configurable?
+                time.sleep(.1)
 
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
@@ -154,7 +164,7 @@ class mailer ():
         try:
             self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
         except Exception as e:
-            self.logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
+            self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
             self.logger.debug(traceback.format_exc())
 
             # Try reconnecting and resending

@@ -22,6 +22,8 @@ import json
 import os
 import shutil
 
+# TODO: Remove hard-coded mail directory.
+
 def send(message):
 
     # message is expected to be a dict that looks something like this one:
