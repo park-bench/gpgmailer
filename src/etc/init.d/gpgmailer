@@ -48,27 +48,27 @@ do_start()
 
     # Create /tmp if it doesn't exist (it should exist)    
     if [ ! -d "$MAIL_DIR" ]; then
-        mkdir -p $MAIL_DIR
+        mkdir -p "$MAIL_DIR"
     fi
     # If $MAIL_DIR is empty and not mounted as a ramdisk, mount it as a ramdisk.
-    if ! -z find / -type d -path $MAIL_DIR 2> /dev/null && ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
+    if ! -z find / -type d -path "$MAIL_DIR" 2> /dev/null && ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
         echo "Attempting to mount $MAIL_DIR as a ramdisk."
-        mount -t tmpfs -o size=25% none $MAIL_DIR 
+        mount -t tmpfs -o size=25% none "$MAIL_DIR" 
     fi
     # If $MAIL_DIR is not mounted as a ramdisk, something is wrong. Bail!
-    if ! mount | grep -q "^none on $MAIL_DIR type tmpfs "; then
+    if ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
         echo "Count not mount $MAIL_DIR as a ramdisk. Startup failed."
         return 2
     fi
-    if [ ! -d "$MAIL_DIR/outbox" ]; then
+    if ! -d "$MAIL_DIR/outbox"; then
         mkdir "$MAIL_DIR/outbox"
     fi
-    if [ ! -d "$MAIL_DIR/draft" ]; then
+    if ! -d "$MAIL_DIR/draft"; then
         mkdir "$MAIL_DIR/draft"
     fi
-    if [ ! -d "$MAIL_DIR/outbox" ] || \
-        [ ! -d "$MAIL_DIR/draft" ]; then
-        echo "Count not create required sub directories in $MAIL_DIR/."
+    if ! -d "$MAIL_DIR/outbox" || ! -d "$MAIL_DIR/draft"; then
+        echo "Count not create required sub directories in $MAIL_DIR/. Startup failed."
+        return 2
     fi
     
     # Return
@@ -78,8 +78,7 @@ do_start()
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" --name python2 --startas "$DAEMON" --test > /dev/null \
         || return 1
     start-stop-daemon --start --quiet --pidfile "$PIDFILE" --name python2 --startas "$DAEMON" -- \
-        "$DAEMON_ARGS" \
-        || return 2
+        "$DAEMON_ARGS" || return 2
 }
 
 #
@@ -92,11 +91,11 @@ do_stop()
     #   1 if daemon was already stopped
     #   2 if daemon could not be stopped
     #   other if a failure occurred
-    start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name python2
+    start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile "$PIDFILE" --name python2
     RETVAL="$?"
     [ "$RETVAL" = 2 ] && return 2
     # Many daemons don't delete their pidfiles when they exit.
-    rm -f $PIDFILE
+    rm -f "$PIDFILE"
     return "$RETVAL"
 }
 

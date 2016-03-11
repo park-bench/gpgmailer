@@ -71,16 +71,16 @@ class mailer ():
                 connected = True
             except smtplib.SMTPAuthenticationError, e:
                 # TODO: Decide how to handle authentication errors
-                self.logger.error('Failed to connect, authentication error.  Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error('Failed to connect. Authentication error. Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Make this configurable?
                 time.sleep(.1)
             except smtplib.SMTPDataError, e:
                 # TODO: Backoff strategy
-                self.logger.error('Failed to connect, Invalid response from server.  Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error('Failed to connect. Invalid response from server. Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Make this configurable?
                 time.sleep(.1)
             except Exception, e:
-                self.logger.error('Failed to connect, waiting to try again.  Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Make this configurable?
                 time.sleep(.1)
 

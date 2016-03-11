@@ -36,7 +36,7 @@ class mailer_monitor():
 
     def start_monitoring(self):
 
-        while 1:
+        while True:
             # check for new files and send them with _sendmail()
             # TODO: decide how to handle directories in the watch_dir
             # TODO: add a way to handle invalid json objects/non-json files
@@ -46,6 +46,7 @@ class mailer_monitor():
             file_list.sort()
             for file_name in file_list:
                 file_handle = open('%s%s' % (self.config['watch_dir'], file_name), 'r')
+                # TODO: Should the try catch be around more stuff?
                 try:
                     file_dict = json.loads(file_handle.read())
                     file_handle.close()
