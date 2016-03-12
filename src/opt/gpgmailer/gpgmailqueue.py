@@ -23,37 +23,67 @@ import os
 import shutil
 
 # TODO: Remove hard-coded mail directory.
+MAIL_DIR = '/tmp/gpgmailer'
 
-def send(message):
+# Each method should check if this object has already been saved and throw an
+#   exception if it has
+class GpgMailQueue:
+    def __init__(self):
+        self.saved = False
+        self.message = {}
 
-    # message is expected to be a dict that looks something like this one:
-    #   { 'subject': 'the subject you want', 'message': 'message body', 'attachments':,
-    #   [ { 'filename': 'attachment1', 'data': 'attachment1_data' },
-    #   { 'filename': 'attachment2', 'data': 'attachment2_data' } ]
+    def _check_if_saved(self):
+        # Check if this object has been saved and throw an exception if it has
+        if(self.saved):
+            raise Exception('Tried to save an already saved message.')
 
-    # Deep copy the object so we don't modify the original (when we return).
-    message_copy = copy.deepcopy(message)
+    def set_subject(self, subject):
+        self._check_if_saved()
+        self.message['subject'] = subject
 
-    # Base64 encode the attachments. Yeah, binary data doesn't serialize to JSON well.
-    if('attachments' in message_copy.keys()):
-        for attachment in message_copy['attachments']:
-            attachment['data'] = base64.b64encode(attachment['data'])
+    def set_body(self, body):
+        self._check_if_saved()
+        self.message['body'] = body
 
-    message_json = json.dumps(message_copy)
-    # Adversaries aren't going to be able to control our input, so MD5 is acceptable
-    #   and concise.
-    # TODO: Just change to SHA256 for the hell of it.
-    message_md5 = hashlib.md5(message_json).hexdigest()
-    time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
-    # Write to a draft directory to so the message doesn't get picked up before it is
-    #   fully created.
-    # TODO: These paths should be configurable.
-    draft_pathname = '/tmp/gpgmailer/draft/%s-%s' % (time_string, message_md5)
-    message_file = open(draft_pathname, 'w+')
-    message_file.write(message_json)
-    message_file.close()
+    def add_attachment(self, filename, data):
+        self._check_if_saved()
+        if not('attachments' in self.message.keys()):
+            self.message['attachments'] = []
 
-    # Move the file to the outbox which should be an atomic operation
-    # TODO: Make this path configurable.
-    outbox_pathname = '/tmp/gpgmailer/outbox/%s-%s' % (time_string, message_md5)
-    shutil.move(draft_pathname, outbox_pathname)
+        self.message['attachments'].append({ 'filename': filename, 'data': data })
+
+    def save(self):
+        self._check_if_saved()
+        # Check for subject and message, throw an exception if they aren't there
+        if(self.message['subject'] == None):
+            raise Exception('Tried to save message without a subject.')
+
+        if(self.message['body'] == None):
+            raise Exception('Tried to save message without a body.')
+
+        # Encode any attachments as base64
+        if('attachments' in self.message.keys()):
+            for attachment in self.message['attachments']:
+                attachment['data'] = base64.b64encode(attachment['data'])
+
+        # Serialize into JSON
+        message_json = json.dumps(self.message)
+        message_sha256 = hashlib.sha256(message_json).hexdigest()
+        time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
+
+        try:
+            # Write to a draft directory to so the message doesn't get picked up before it is
+            #   fully created.
+            # TODO: These paths should be configurable.
+            draft_pathname = '%s/draft/%s-%s' % (MAIL_DIR, time_string, message_sha256)
+            message_file = open(draft_pathname, 'w+')
+            message_file.write(message_json)
+            message_file.close()
+
+            # Move the file to the outbox which should be an atomic operation
+            # TODO: Make this path configurable.
+            outbox_pathname = '%s/outbox/%s-%s' % (MAIL_DIR, time_string, message_sha256)
+            shutil.move(draft_pathname, outbox_pathname)
+            self.saved = True
+        except Exception as e:
+            raise e

@@ -88,7 +88,7 @@ class mailer ():
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.
         multipart_message = MIMEMultipart(_subtype="mixed")
-        multipart_message.attach(MIMEText("%s\n" % message_dict['message']))
+        multipart_message.attach(MIMEText("%s\n" % message_dict['body']))
 
         # Loop over the attachments
         if('attachments' in message_dict.keys()):
