@@ -27,8 +27,9 @@ import shutil
 def send(message):
 
     # message is expected to be a dict that looks something like this one:
-    #   { 'subject': 'the subject you want', 'message': 'message body', 'attachments',
-    #   [ 'attachment1', 'attachment2', 'etc' ] }
+    #   { 'subject': 'the subject you want', 'message': 'message body', 'attachments':,
+    #   [ { 'filename': 'attachment1', 'data': 'attachment1_data' },
+    #   { 'filename': 'attachment2', 'data': 'attachment2_data' } ]
 
     # Deep copy the object so we don't modify the original (when we return).
     message_copy = copy.deepcopy(message)

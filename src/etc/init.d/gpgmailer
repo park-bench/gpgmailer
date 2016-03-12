@@ -60,13 +60,13 @@ do_start()
         echo "Count not mount $MAIL_DIR as a ramdisk. Startup failed."
         return 2
     fi
-    if ! -d "$MAIL_DIR/outbox"; then
+    if [ ! -d "$MAIL_DIR/outbox" ]; then
         mkdir "$MAIL_DIR/outbox"
     fi
-    if ! -d "$MAIL_DIR/draft"; then
+    if [ ! -d "$MAIL_DIR/draft" ]; then
         mkdir "$MAIL_DIR/draft"
     fi
-    if ! -d "$MAIL_DIR/outbox" || ! -d "$MAIL_DIR/draft"; then
+    if [ ! -d "$MAIL_DIR/outbox" ] || [ ! -d "$MAIL_DIR/draft" ]; then
         echo "Count not create required sub directories in $MAIL_DIR/. Startup failed."
         return 2
     fi
