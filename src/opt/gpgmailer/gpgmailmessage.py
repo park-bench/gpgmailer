@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-# Copyright 2015 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,37 +23,41 @@ import os
 import shutil
 
 # TODO: Remove hard-coded mail directory.
-MAIL_DIR = '/tmp/gpgmailer'
+mail_dir = '/tmp/gpgmailer'
 
-# Each method should check if this object has already been saved and throw an
-#   exception if it has
-class GpgMailQueue:
+# Constructs an e-mail message and serializes it to the mail queue directory.
+#   Messages are queued in json format.
+#
+# Note: Each method should check if this object has already been saved and
+#   throw an exception if it has.
+class GpgMailMessage:
+
+    # Initializes the class.
     def __init__(self):
         self.saved = False
         self.message = {}
+        self.message['attachments'] = []
 
-    def _check_if_saved(self):
-        # Check if this object has been saved and throw an exception if it has
-        if(self.saved):
-            raise Exception('Tried to save an already saved message.')
-
+    # Adds the subject of the message.
     def set_subject(self, subject):
         self._check_if_saved()
         self.message['subject'] = subject
 
+    # Adds the text body of the message.
     def set_body(self, body):
         self._check_if_saved()
         self.message['body'] = body
 
+    # Adds an attachment to the message.
     def add_attachment(self, filename, data):
         self._check_if_saved()
-        if not('attachments' in self.message.keys()):
-            self.message['attachments'] = []
-
         self.message['attachments'].append({ 'filename': filename, 'data': data })
 
+    # Saves the message to the outbox directory and marks this message class as saved
+    #   meaning no addtional method calls can be made on the current message object.
     def save(self):
         self._check_if_saved()
+
         # Check for subject and message, throw an exception if they aren't there
         if(self.message['subject'] == None):
             raise Exception('Tried to save message without a subject.')
@@ -62,28 +66,29 @@ class GpgMailQueue:
             raise Exception('Tried to save message without a body.')
 
         # Encode any attachments as base64
-        if('attachments' in self.message.keys()):
-            for attachment in self.message['attachments']:
-                attachment['data'] = base64.b64encode(attachment['data'])
+        for attachment in self.message['attachments']:
+            attachment['data'] = base64.b64encode(attachment['data'])
 
         # Serialize into JSON
         message_json = json.dumps(self.message)
         message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
 
-        try:
-            # Write to a draft directory to so the message doesn't get picked up before it is
-            #   fully created.
-            # TODO: These paths should be configurable.
-            draft_pathname = '%s/draft/%s-%s' % (MAIL_DIR, time_string, message_sha256)
-            message_file = open(draft_pathname, 'w+')
-            message_file.write(message_json)
-            message_file.close()
+        # Write to a draft directory to so the message doesn't get picked up before it is
+        #   fully created.
+        draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
+        message_file = open(draft_pathname, 'w+')
+        message_file.write(message_json)
+        message_file.close()
 
-            # Move the file to the outbox which should be an atomic operation
-            # TODO: Make this path configurable.
-            outbox_pathname = '%s/outbox/%s-%s' % (MAIL_DIR, time_string, message_sha256)
-            shutil.move(draft_pathname, outbox_pathname)
-            self.saved = True
-        except Exception as e:
-            raise e
+        # Move the file to the outbox which should be an atomic operation
+        outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
+        shutil.move(draft_pathname, outbox_pathname)
+
+        # Causes all future methods calls to fail.
+        self.saved = True
+
+    # Checks if this message has already been saved and throws an Exception if it has been.
+    def _check_if_saved(self):
+        if(self.saved):
+            raise Exception('Tried to save an already saved message.')
