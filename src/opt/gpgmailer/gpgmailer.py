@@ -48,11 +48,8 @@ class mailer ():
         # TODO: Failed DNS lookups of the mail server might be eating messages. Investigate immediately.
         self.logger.info('Connecting.')
         if (self.smtp != None):
-            # TODO: Probably should clean this up.
-            #try:
-            #    self.smtp.quit()
-            #except:
-            #    pass
+            # I originally tried to quit the existing SMTP session here, but that just slowed things down
+            #   too much and usually threw an exception.
             self.smtp = None
         
         # Create a random number as our host id
