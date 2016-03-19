@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import base64
-import copy
 import datetime
 import hashlib
 import json
