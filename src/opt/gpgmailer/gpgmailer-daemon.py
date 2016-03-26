@@ -61,49 +61,60 @@ config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file,
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])
 keylist = config['gpg'].list_keys()
 
-def gpg_fingerprint_exists(gpg_keyring, fingerprint_string):
-    # gpg_keyring needs to be a list of dicts from the gnupg module's list_keys method
-    # fingerprint_string must be a full 40 char fingerprint
-    for key in gpg_keyring:
-        if(key['fingerprint'] == fingerprint_string):
-            return True
-    return False
+def get_gpg_key_data(gpg_keyring, fingerprint_string):
+    # Check that fingerprint_string is exactly 40 characters
+    key_data = None
+    if len(fingerprint_string) == 40:
+        # Try to match fingerprint_string to keyring data
+        for key in gpg_keyring:
+            if key['fingerprint'] == fingerprint_string:
+                # if a match is found, save the fingerprint and get the expiration date
+                key_data = { 'fingerprint': key['fingerprint'],
+                    'expires': key['expires'] }
+        if key_data == None:
+            logger.debug('Fingerprint %s not found in keyring.' % fingerprint_string)
+    else:
+        logger.debug('Fingerprint %s is invalid.' % fingerprint_string)
+
+    return key_data
 
 # parse sender config.  <email>:<key fingerprint>
 sender_raw = config_helper.verify_string_exists(config_file, 'sender')
 sender_split = sender_raw.split(':')
-if( len(sender_split[1]) != 40 ):
-    logger.fatal('Sender key fingerprint is invalid')
-    sys.exit(1)
+sender_key_data = get_gpg_key_data(keylist, sender_split[1].strip())
+if sender_key_data != None:
+    sender_key_data['email'] = sender_split[0].strip()
+    logger.info('Using sender %s' % sender_key_data['email'])
+    sender_key_data['key_password'] = config_helper.verify_password_exists(config_file, 'signing_key_password')
+    config['sender'] = sender_key_data
 else:
-    if(gpg_fingerprint_exists(keylist, sender_split[1].strip())):
-        signing_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
-        config['sender'] = { 'email' : sender_split[0], 'fingerprint' : sender_split[1],
-        'key_password' : signing_key_password }
-    else:
-        logger.fatal('Sender key not found in keyring.')
-        sys.exit(1)
+    logger.fatal('Sender key not available. Exiting.')
+    sys.exit(1)
 
 # parse recipient config.  Comma-delimited list of objects like sender
 # <email>:<key fingerprint>,<email>:<key fingerprint>
+
 config['recipients'] = []
 
-recipients_raw = config_helper.verify_string_exists(config_file, 'recipients')
-recipients_split = recipients_raw.split(',')
-for r in recipients_split:
-    r_split = r.split(':')
-    if( len(r_split[1].strip()) != 40 ):
-        logger.fatal('Recipient key fingerprint for %s is invalid.' % r_split[0])
-        sys.exit(1)
+recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
+recipients_raw_list = recipients_raw_string.split(',')
+for recipient in recipients_raw_list:
+    recipient_split = recipient.split(':')
+    email_string = recipient_split[0].strip()
+    key_string = recipient_split[1].strip()
+
+    recipient_key_data = get_gpg_key_data(keylist, key_string)
+    if recipient_key_data != None:
+        logger.info('Adding recipient key for %s.' % email_string)
+        recipient_key_data['email'] = email_string
+        config['recipients'].append(recipient_key_data)
     else:
-        if(gpg_fingerprint_exists(keylist, r_split[1].strip())):
-            r_dict = { 'email' : r_split[0].strip(), 'fingerprint' : r_split[1].strip() }
-            config['recipients'].append(r_dict)
-        else:
-            logger.fatal('Recipient key fingerprint for %s not in keyring.' % r_split[0])
-            sys.exit(1)
+        logger.error('Recipient key for %s not available.' % email_string)
 
-
+if config['recipients'] == []:
+    logger.fatal('No valid recipients. Exiting.')
+    sys.exit(1)
+    
 logger.info('Verification complete')
 
 def daemonize():
