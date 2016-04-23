@@ -56,6 +56,7 @@ config['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_se
 config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
+config['key_expiration_threshhold'] = config_helper.verify_number_exists(config_file, 'key_expiration_threshhold')
 
 # init gnupg so we can verify keys
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])

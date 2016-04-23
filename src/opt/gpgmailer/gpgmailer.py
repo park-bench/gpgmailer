@@ -31,6 +31,12 @@ import base64
 
 # TODO: Write more effective logging.
 # TODO: I kinda want to review method separation and naming for the entire file.
+# TODO: Switch to using pygpgme instead of python-gnpug
+
+class KeyExpirationStates():
+    expired = "expired"
+    expiring_soon = "expiring_soon"
+    not_expiring_soon = "not_expiring_soon"
 
 class mailer ():
     
@@ -81,6 +87,30 @@ class mailer ():
                 # TODO: Make this configurable?
                 time.sleep(.1)
 
+    def _is_key_expired(self, key_expiration_date):
+        # This should just check to see if the key expiration date is going to
+        #   occur soon. Expiration dates are in epoch format.
+
+        # convert key_expiration_date to a datetime object
+
+        # make a timedelta object for the time between key_expiration_date
+        #   and now
+
+        # if timedelta is less than zero, return KeyExpirationStates.expired
+        # if timedelta is less than configured warning period, return KeyExpirationStates.expiring_soon
+        # otherwise, return KeyExpirationStates.not_expiring_soon
+        pass
+
+    def _build_key_expiration_message(self):
+        # This will put together a message that lists any keys expiring soon.
+
+        # check signing key
+
+        # check each recipient key
+
+        # return list
+        pass
+
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.
@@ -115,6 +145,8 @@ class mailer ():
 
     # TODO: We should probably name this appropriately.
     def _eldtritch_crypto_magic(self, message_dict):
+
+        # Check if any of the keys are expired.
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
