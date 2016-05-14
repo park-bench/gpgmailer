@@ -87,29 +87,47 @@ class mailer ():
                 # TODO: Make this configurable?
                 time.sleep(.1)
 
-    def _is_key_expired(self, key_expiration_date):
+    def _is_key_expired(self, key_expiration_time):
         # This should just check to see if the key expiration date is going to
         #   occur soon. Expiration dates are in epoch format.
+        key_expiry_state = None
 
-        # convert key_expiration_date to a datetime object
+        # convert current time to epoch format
+        current_time = time.mktime()
 
-        # make a timedelta object for the time between key_expiration_date
-        #   and now
+        # subtract current time from key_expiration_time
+        time_delta = key_expiration_time - current_time
 
-        # if timedelta is less than zero, return KeyExpirationStates.expired
-        # if timedelta is less than configured warning period, return KeyExpirationStates.expiring_soon
-        # otherwise, return KeyExpirationStates.not_expiring_soon
-        pass
+        if(time_delta <= 0):
+            key_expiry_state = KeyExpirationStates.expired
+
+        elif(time_delta <= self.config['key_expiration_threshhold']):
+            key_expiry_state = KeyExpirationStates.expiring_soon
+
+        else:
+            key_expiry_state = KeyExpirationStates.not_expiring_soon
+
+        return key_expiry_state
+
 
     def _build_key_expiration_message(self):
         # This will put together a message that lists any keys expiring soon.
+        message = ''
 
-        # check signing key
+        # build a list of key data
+        keys_to_check = self.config['recipients']
+        keys_to_check.append(self.config['sender'])
 
-        # check each recipient key
+        # check each key
+        for key in keys_to_check:
+            key_status = self._is_key_expired(key['expires'])
+            if(key_status == KeyExpirationStates.expired):
+                message = '%s\nKey %s for %s is expired!' % (message, key['fingerprint'], key['email'])
 
-        # return list
-        pass
+            elif(key_status == KeyExpirationStates.expiring_soon):
+                message = '%s\nKey %s for %s will be expiring soon!' % (message, key['fingerprint'], key['email'])
+
+        return message
 
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
