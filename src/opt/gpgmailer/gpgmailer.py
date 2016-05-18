@@ -92,20 +92,26 @@ class mailer ():
         #   occur soon. Expiration dates are in epoch format.
         key_expiry_state = None
 
-        # convert current time to epoch format
-        current_time = time.mktime()
-
-        # subtract current time from key_expiration_time
-        time_delta = key_expiration_time - current_time
-
-        if(time_delta <= 0):
-            key_expiry_state = KeyExpirationStates.expired
-
-        elif(time_delta <= self.config['key_expiration_threshhold']):
-            key_expiry_state = KeyExpirationStates.expiring_soon
+        # Keys with no expiration date just return an empty string.
+        if(key_expiration_time == ''):
+            key_expiry_state = KeyExpirationStates.not_expiring_soon
 
         else:
-            key_expiry_state = KeyExpirationStates.not_expiring_soon
+
+            # convert current time to epoch format
+            current_time = time.mktime(time.gmtime())
+
+            # subtract current time from key_expiration_time
+            time_delta = key_expiration_time - current_time
+
+            if(time_delta <= 0):
+                key_expiry_state = KeyExpirationStates.expired
+
+            elif(time_delta <= self.config['key_expiration_threshhold']):
+                key_expiry_state = KeyExpirationStates.expiring_soon
+
+            else:
+                key_expiry_state = KeyExpirationStates.not_expiring_soon
 
         return key_expiry_state
 
@@ -132,8 +138,12 @@ class mailer ():
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.
+
+        # Build the key expiration message
+        key_expiration_message = self._build_key_expiration_message()
         multipart_message = MIMEMultipart(_subtype="mixed")
-        multipart_message.attach(MIMEText("%s\n" % message_dict['message']))
+
+        multipart_message.attach(MIMEText("%s\n%s\n" % (message_dict['message'], key_expiration_message)))
 
         # Loop over the attachments
         if('attachments' in message_dict.keys()):
