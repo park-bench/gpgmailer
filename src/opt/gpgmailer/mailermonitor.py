@@ -20,12 +20,12 @@
 #   iterates through JSON object files
 #   sends emails using gpgmailer based on the object files
 
+import base64
+import json
 import gpgmailer
 import os
 import timber
 import time
-import base64
-import json
 
 # TODO: Class names are suppose to be camel case. (Not the filenames though.)
 class mailer_monitor():
