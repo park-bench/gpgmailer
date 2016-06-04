@@ -187,6 +187,7 @@ class mailer ():
 
         # Check if any of the keys are expired.
         # Build the key expiration message
+        # TODO: We should probably run this on a timer of some sort instead of every time it sends something.
         key_expiration_message,valid_keys = self._build_key_expiration_message_and_list()
 
         # TODO: This will generate an extra \n if no keys are expired/expiring
@@ -202,9 +203,8 @@ class mailer ():
         signed_message = self._build_signed_message(message_dict)
 
         # We need all encryption keys in a list
-        # TODO: Change this to use the valid_keys list instead.
         fingerprint_list = []
-        for recipient in self.config['recipients']:
+        for recipient in valid_keys:
             fingerprint_list.append(recipient['fingerprint'])
         # Encrypt the message
         encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
