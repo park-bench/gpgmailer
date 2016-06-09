@@ -53,7 +53,7 @@ do_start()
     # If $MAIL_DIR is empty and not mounted as a ramdisk, mount it as a ramdisk.
     if ! -z find / -type d -path "$MAIL_DIR" 2> /dev/null && ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
         echo "Attempting to mount $MAIL_DIR as a ramdisk."
-        mount -t tmpfs -o size=25% none "$MAIL_DIR" 
+        mount -t tmpfs -o size=25% none "$MAIL_DIR"
     fi
     # If $MAIL_DIR is not mounted as a ramdisk, something is wrong. Bail!
     if ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
