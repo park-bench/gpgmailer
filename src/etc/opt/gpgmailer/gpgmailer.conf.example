@@ -15,7 +15,7 @@ gpg_dir=/etc/opt/gpgmailer/gnupg/
 
 # watch_dir sets the directory that gpgmailer checks for new mail objects to
 # send.
-watch_dir=/tmp/gpgmailer/
+watch_dir=/tmp/gpgmailer/outbox/
 
 # Standard email server details
 smtp_user=
