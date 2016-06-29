@@ -56,8 +56,7 @@ class GpgMailMessage:
 
     # Saves the message to the outbox directory and marks this message class as saved
     #   meaning no addtional method calls can be made on the current message object.
-    # TODO: I think this should be called 'send' or maybe 'queue_for_sending'.
-    def save(self):
+    def queue_for_sending(self):
         self._check_if_saved()
 
         # Check for subject and message, throw an exception if they aren't there
