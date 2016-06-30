@@ -115,7 +115,8 @@ def sig_term_handler(signal, stack_frame):
 # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
 daemon_context = daemon.DaemonContext(
     working_directory = '/',
-    pidfile = lockfile.FileLock(PID_FILE)
+    pidfile = lockfile.FileLock(PID_FILE),
+    umask = 0
     )
 
 # TODO: Make a real cleanup method for this.
