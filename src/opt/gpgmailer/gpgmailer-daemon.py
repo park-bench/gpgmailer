@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -56,20 +56,28 @@ config['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_se
 config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
+# TODO: Explain the conversion that is happening on this line.
 config['key_expiration_threshhold'] = config_helper.verify_number_exists(config_file, 'key_expiration_threshhold') * 86400
 
 # init gnupg so we can verify keys
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])
 keylist = config['gpg'].list_keys()
 
+# TODO: Document.
 def get_gpg_key_data(gpg_keyring, fingerprint_string):
     # Check that fingerprint_string is exactly 40 characters
     key_data = None
+    # TODO: There are better ways to check for validity. Setup a regex to check for 0-f forty times.
     if len(fingerprint_string) == 40:
+        # TODO: What you are doing here is, what I call a many-to-many search. You can increase
+        #   performance by building a dictionary from one of your search sets. Of course, the
+        #   amount of data we are working with is rather small, so it probably won't make any difference.
+        # TODO: This will keep looping until even if a key is already found. Fortunately, the solution
+        #   above will likely solve this issue.
         # Try to match fingerprint_string to keyring data
         for key in gpg_keyring:
             if key['fingerprint'] == fingerprint_string:
-                # if a match is found, save the fingerprint and get the expiration date
+                # If a match is found, save the fingerprint and get the expiration date
                 key_data = { 'fingerprint': key['fingerprint'],
                     'expires': key['expires'] }
         if key_data == None:
@@ -80,6 +88,7 @@ def get_gpg_key_data(gpg_keyring, fingerprint_string):
     return key_data
 
 # parse sender config.  <email>:<key fingerprint>
+# TODO: Might be possible to combine with the recipient code below.
 sender_raw = config_helper.verify_string_exists(config_file, 'sender')
 sender_split = sender_raw.split(':')
 sender_key_data = get_gpg_key_data(keylist, sender_split[1].strip())
@@ -99,9 +108,11 @@ config['recipients'] = []
 
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_raw_list = recipients_raw_string.split(',')
+# TODO: Consider putting this in a helper method.
 for recipient in recipients_raw_list:
     recipient_split = recipient.split(':')
     email_string = recipient_split[0].strip()
+    # TODO: Why is this called 'key'? Would 'desired_fingerprint' be more appropriate?
     key_string = recipient_split[1].strip()
 
     recipient_key_data = get_gpg_key_data(keylist, key_string)
@@ -110,6 +121,7 @@ for recipient in recipients_raw_list:
         recipient_key_data['email'] = email_string
         config['recipients'].append(recipient_key_data)
     else:
+        # TODO: The remaining users should be notified of this via e-mail if this occurs.
         logger.error('Recipient key for %s not available.' % email_string)
 
 if config['recipients'] == []:

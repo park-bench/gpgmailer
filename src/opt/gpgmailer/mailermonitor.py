@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
 #   sends emails using gpgmailer based on the object files
 
 import base64
-import json
 import gpgmailer
+import json
 import os
 import timber
 import time

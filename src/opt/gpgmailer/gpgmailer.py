@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,8 +31,8 @@ import base64
 
 # TODO: Write more effective logging.
 # TODO: I kinda want to review method separation and naming for the entire file.
-# TODO: Switch to using pygpgme instead of python-gnpug
 
+# TODO: Not sure if this justifies its own class.
 class KeyExpirationStates():
     expired = "expired"
     expiring_soon = "expiring_soon"
@@ -87,6 +87,8 @@ class mailer ():
                 # TODO: Make this configurable?
                 time.sleep(.1)
 
+    # Kinda don't get what value you get with this helper method. You still
+    #   need to have a 3 body 'if' block in your originating method.
     def _is_key_expired(self, key_expiration_time):
         # This should just check to see if the key expiration date is going to
         #   occur soon. Expiration dates are in epoch format.
@@ -123,20 +125,24 @@ class mailer ():
         message = ''
         valid_key_list = []
 
-        # build a list of key data
-        keys_to_check = [ self.config['sender'] ] + self.config['recipients']
+        # Build a list of key data.
+        # The sender is last here so s/he will end up first in the printed message.
+        keys_to_check = self.config['recipients'] + [ self.config['sender'] ]
 
         # check each key
         for key in keys_to_check:
             self.logger.info('Checking key %s for %s.' % (key['fingerprint'], key['email']))
             self.logger.trace('Key expiry date: %s.' % key['expires'])
             key_status = self._is_key_expired(key['expires'])
-            if(key_status == KeyExpirationStates.expired):
-                message = '%s\nKey %s for %s is expired!' % (message, key['fingerprint'], key['email'])
+            # TODO: Ideally the already expired messages should go before the expiring soon messages.
+            if (key_status == KeyExpirationStates.expired):
+                # TODO: Combine the message and log strings because they are esstentially the same anyway.
+                message = 'Key %s for %s is expired!\n%s' % (key['fingerprint'], key['email'], message)
                 self.logger.warn('Key %s for %s is expired!' % (key['fingerprint'], key['email']))
 
-            elif(key_status == KeyExpirationStates.expiring_soon):
-                message = '%s\nKey %s for %s will be expiring soon!' % (message, key['fingerprint'], key['email'])
+            elif (key_status == KeyExpirationStates.expiring_soon):
+                # TODO: Combine the message and log string because they are esstentially the same anyway.
+                message = 'Key %s for %s will be expiring soon!\n%s' % (key['fingerprint'], key['email'], message)
                 self.logger.warn('Key %s for %s is expiring soon!' % (key['fingerprint'], key['email']))
                 valid_key_list.append(key)
 
@@ -150,7 +156,7 @@ class mailer ():
         # Make a multipart message to contain the attachments and main message text.
 
         multipart_message = MIMEMultipart(_subtype="mixed")
-        multipart_message.attach(MIMEText("%s" % message_dict['message']))
+        multipart_message.attach(MIMEText(message_dict['message']))
 
         # Loop over the attachments
         if('attachments' in message_dict.keys()):
@@ -168,6 +174,7 @@ class mailer ():
         signature_result = self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint'], passphrase=self.config['sender']['key_password'])
         signature_text = str(signature_result)
 
+        # Can't you check the status instead? I mean, isn't that what it is there for?
         if(signature_text == ''):
             self.logger.error('Error while signing message: %s.' % signature_result.status)
 
@@ -188,11 +195,9 @@ class mailer ():
         # Check if any of the keys are expired.
         # Build the key expiration message
         # TODO: We should probably run this on a timer of some sort instead of every time it sends something.
-        key_expiration_message,valid_keys = self._build_key_expiration_message_and_list()
+        key_expiration_messages,valid_keys = self._build_key_expiration_message_and_list()
 
-        # TODO: This will generate an extra \n if no keys are expired/expiring
-        #   soon. It's unimportant, but it's a little ugly.
-        message_dict['message'] = '%s\n%s\n' % (key_expiration_message, message_dict['message'])
+        message_dict['message'] = '%s%s\n' % (key_expiration_messages, message_dict['message'])
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
@@ -204,6 +209,7 @@ class mailer ():
 
         # We need all encryption keys in a list
         fingerprint_list = []
+        # TODO: Bug: valid_keys contains the sender.
         for recipient in valid_keys:
             fingerprint_list.append(recipient['fingerprint'])
         # Encrypt the message
