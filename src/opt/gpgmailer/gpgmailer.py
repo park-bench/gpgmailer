@@ -136,14 +136,12 @@ class mailer ():
             key_status = self._is_key_expired(key['expires'])
             # TODO: Ideally the already expired messages should go before the expiring soon messages.
             if (key_status == KeyExpirationStates.expired):
-                # TODO: Combine the message and log strings because they are esstentially the same anyway.
                 message = 'Key %s for %s is expired!\n%s' % (key['fingerprint'], key['email'], message)
-                self.logger.warn('Key %s for %s is expired!' % (key['fingerprint'], key['email']))
+                self.logger.warn(message)
 
             elif (key_status == KeyExpirationStates.expiring_soon):
-                # TODO: Combine the message and log string because they are esstentially the same anyway.
                 message = 'Key %s for %s will be expiring soon!\n%s' % (key['fingerprint'], key['email'], message)
-                self.logger.warn('Key %s for %s is expiring soon!' % (key['fingerprint'], key['email']))
+                self.logger.warn(message)
                 valid_key_list.append(key)
 
             else:

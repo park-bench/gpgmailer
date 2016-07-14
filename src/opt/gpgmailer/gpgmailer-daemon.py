@@ -61,29 +61,25 @@ config['key_expiration_threshhold'] = config_helper.verify_number_exists(config_
 
 # init gnupg so we can verify keys
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])
-keylist = config['gpg'].list_keys()
+keylist = {}
 
-# TODO: Document.
+for key in config['gpg'].list_keys():
+    keylist[key['fingerprint']] = key['expires']
+
+# Returns a dict containing the fingerprint and expiration date of a single key
+#   by searching for its' fingerprint in the keyring.
 def get_gpg_key_data(gpg_keyring, fingerprint_string):
     # Check that fingerprint_string is exactly 40 characters
     key_data = None
     # TODO: There are better ways to check for validity. Setup a regex to check for 0-f forty times.
     if len(fingerprint_string) == 40:
-        # TODO: What you are doing here is, what I call a many-to-many search. You can increase
-        #   performance by building a dictionary from one of your search sets. Of course, the
-        #   amount of data we are working with is rather small, so it probably won't make any difference.
-        # TODO: This will keep looping until even if a key is already found. Fortunately, the solution
-        #   above will likely solve this issue.
-        # Try to match fingerprint_string to keyring data
-        for key in gpg_keyring:
-            if key['fingerprint'] == fingerprint_string:
-                # If a match is found, save the fingerprint and get the expiration date
-                key_data = { 'fingerprint': key['fingerprint'],
-                    'expires': key['expires'] }
-        if key_data == None:
-            logger.debug('Fingerprint %s not found in keyring.' % fingerprint_string)
+        if fingerprint_string in keylist:
+            key_data = { 'fingerprint': key['fingerprint'],
+                'expires': key['expires'] }
+        else:
+            logger.warn('Fingerprint %s not found in keyring.' % fingerprint_string)
     else:
-        logger.debug('Fingerprint %s is invalid.' % fingerprint_string)
+        logger.warn('Fingerprint %s is invalid.' % fingerprint_string)
 
     return key_data
 
