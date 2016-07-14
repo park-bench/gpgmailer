@@ -56,7 +56,8 @@ config['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_se
 config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
-# TODO: Explain the conversion that is happening on this line.
+# Convert the key expiration threshhold into seconds because expiry dates are
+#   stored in epoch time.
 config['key_expiration_threshhold'] = config_helper.verify_number_exists(config_file, 'key_expiration_threshhold') * 86400
 
 # init gnupg so we can verify keys
@@ -83,13 +84,20 @@ def get_gpg_key_data(gpg_keyring, fingerprint_string):
 
     return key_data
 
+# Parses the key strings from the config file. They should be formatted this way:
+#   <email><:key fingerprint>
+#   Also checks key validity.
+def parse_key_config_data(key_config_string):
+    key_data = None
+    key_config_string_split = key_config_string.split(':')
+    key_data = get_gpg_key_data(keylist, key_config_string_split[1].strip())
+    key_data['email'] = key_config_string_split[0].strip()
+
+    return key_data
+
 # parse sender config.  <email>:<key fingerprint>
-# TODO: Might be possible to combine with the recipient code below.
-sender_raw = config_helper.verify_string_exists(config_file, 'sender')
-sender_split = sender_raw.split(':')
-sender_key_data = get_gpg_key_data(keylist, sender_split[1].strip())
+sender_key_data = parse_key_config_data(config_helper.verify_string_exists(config_file, 'sender'))
 if sender_key_data != None:
-    sender_key_data['email'] = sender_split[0].strip()
     logger.info('Using sender %s' % sender_key_data['email'])
     sender_key_data['key_password'] = config_helper.verify_password_exists(config_file, 'signing_key_password')
     config['sender'] = sender_key_data
@@ -99,22 +107,13 @@ else:
 
 # parse recipient config.  Comma-delimited list of objects like sender
 # <email>:<key fingerprint>,<email>:<key fingerprint>
-
 config['recipients'] = []
-
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_raw_list = recipients_raw_string.split(',')
-# TODO: Consider putting this in a helper method.
 for recipient in recipients_raw_list:
-    recipient_split = recipient.split(':')
-    email_string = recipient_split[0].strip()
-    # TODO: Why is this called 'key'? Would 'desired_fingerprint' be more appropriate?
-    key_string = recipient_split[1].strip()
-
-    recipient_key_data = get_gpg_key_data(keylist, key_string)
+    recipient_key_data = parse_key_config_data(config_helper.verify_string_exists(config_file, 'sender'))
     if recipient_key_data != None:
-        logger.info('Adding recipient key for %s.' % email_string)
-        recipient_key_data['email'] = email_string
+        logger.info('Adding recipient key for %s.' % recipient_key_data['email'])
         config['recipients'].append(recipient_key_data)
     else:
         # TODO: The remaining users should be notified of this via e-mail if this occurs.
