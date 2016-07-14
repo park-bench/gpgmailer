@@ -20,12 +20,15 @@ import ConfigParser
 import gnupg
 import mailermonitor
 import os
+import re
 import signal
 import sys
 import timber
 import traceback
 
 PID_FILE = '/var/opt/run/gpgmailer.pid'
+
+key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
 
 # After first commit
 # TODO: Make daemonize() a library
@@ -72,15 +75,14 @@ for key in config['gpg'].list_keys():
 def get_gpg_key_data(gpg_keyring, fingerprint_string):
     # Check that fingerprint_string is exactly 40 characters
     key_data = None
-    # TODO: There are better ways to check for validity. Setup a regex to check for 0-f forty times.
-    if len(fingerprint_string) == 40:
+    if key_fingerprint_regex.match(fingerprint_string):
         if fingerprint_string in keylist:
             key_data = { 'fingerprint': key['fingerprint'],
                 'expires': key['expires'] }
         else:
-            logger.warn('Fingerprint %s not found in keyring.' % fingerprint_string)
+            logger.error('Fingerprint %s not found in keyring.' % fingerprint_string)
     else:
-        logger.warn('Fingerprint %s is invalid.' % fingerprint_string)
+        logger.error('Fingerprint %s is invalid.' % fingerprint_string)
 
     return key_data
 
@@ -91,7 +93,8 @@ def parse_key_config_data(key_config_string):
     key_data = None
     key_config_string_split = key_config_string.split(':')
     key_data = get_gpg_key_data(keylist, key_config_string_split[1].strip())
-    key_data['email'] = key_config_string_split[0].strip()
+    if key_data:
+        key_data['email'] = key_config_string_split[0].strip()
 
     return key_data
 
