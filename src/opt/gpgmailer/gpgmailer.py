@@ -131,6 +131,7 @@ class mailer ():
 
         # check each key
         for key in keys_to_check:
+            add_key = False
             self.logger.info('Checking key %s for %s.' % (key['fingerprint'], key['email']))
             self.logger.trace('Key expiry date: %s.' % key['expires'])
             key_status = self._is_key_expired(key['expires'])
@@ -139,12 +140,15 @@ class mailer ():
                 message = 'Key %s for %s is expired!\n%s' % (key['fingerprint'], key['email'], message)
                 self.logger.warn(message)
 
-            elif (key_status == KeyExpirationStates.expiring_soon):
+            elif ((key_status == KeyExpirationStates.expiring_soon) & (key == self.config['sender'])):
                 message = 'Key %s for %s will be expiring soon!\n%s' % (key['fingerprint'], key['email'], message)
                 self.logger.warn(message)
-                valid_key_list.append(key)
+                add_key = True
 
-            else:
+            elif (key == self.config['sender']):
+                add_key = True
+
+            if add_key:
                 valid_key_list.append(key)
 
         return message,valid_key_list
@@ -172,7 +176,7 @@ class mailer ():
         signature_result = self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint'], passphrase=self.config['sender']['key_password'])
         signature_text = str(signature_result)
 
-        # Can't you check the status instead? I mean, isn't that what it is there for?
+        # TODO: Can't you check the status instead? I mean, isn't that what it is there for?
         if(signature_text == ''):
             self.logger.error('Error while signing message: %s.' % signature_result.status)
 
