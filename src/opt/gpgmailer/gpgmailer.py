@@ -178,7 +178,8 @@ class mailer ():
 
         # TODO: Can't you check the status instead? I mean, isn't that what it is there for?
         if(signature_text == ''):
-            self.logger.error('Error while signing message: %s.' % signature_result.status)
+            # TODO: Handle this error properly. Do not send or delete the message.
+            self.logger.error('Error while signing message.')
 
         signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)
         signature_part['Content-Description'] = 'OpenPGP Digital Signature'
@@ -220,7 +221,9 @@ class mailer ():
         encrypted_payload = str(encrypted_payload_result)
 
         if(encrypted_payload == ''):
+            # TODO: Handle this error properly. Do not send or delete the message.
             self.logger.error('Error while encrypting message: %s.' % encrypted_payload_result.status)
+            encryption_error = True
 
         encrypted_part.set_payload(encrypted_payload)
 
@@ -230,17 +233,21 @@ class mailer ():
         encrypted_message.attach(pgp_version)
         encrypted_message.attach(encrypted_part)
 
-        return encrypted_message
+        if encryption_error:
+            return None
+        else:
+            return encrypted_message
 
     def sendmail(self, message_dict):
+        sent_successfully = False
         # Use our magic
-        encrypted_message_string = str(self._eldtritch_crypto_magic(message_dict))
+        encrypted_message = self._eldtritch_crypto_magic(message_dict)
+        encrypted_message_string = str(encrypted_message)
 
         # Get a list of recipients from config
         recipients = []
         for recipient in self.config['recipients']:
             recipients.append(recipient['email'])
-            self.logger.trace(recipient['email'])
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: There is probably also a hard session limit too.
@@ -248,13 +255,19 @@ class mailer ():
             self.logger.info("Assuming the connection is dead.")
             self._connect()
 
-        try:
-            self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
-        except Exception as e:
-            self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
-            self.logger.debug(traceback.format_exc())
 
-            # Try reconnecting and resending
-            self._connect()
-            self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
-        self.lastSentTime = time.time()
+        if not(encrypted_message == None):
+            try:
+                self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
+                sent_successfully = True
+            except Exception as e:
+                self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
+                self.logger.debug(traceback.format_exc())
+
+                # Try reconnecting and resending
+                self._connect()
+                self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
+                sent_successfully = True
+            self.lastSentTime = time.time()
+        else:
+            self.logger.error('Message is empty, encryption or signing failed, not sending.')

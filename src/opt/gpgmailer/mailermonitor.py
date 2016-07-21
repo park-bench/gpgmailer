@@ -58,10 +58,11 @@ class mailer_monitor():
                             attachment['data'] = base64.b64decode(attachment['data'])
                     
                     self.logger.info('Sending %s' % file_name)
-                    self.the_mailer.sendmail(file_dict)
+                    sending_successful = self.the_mailer.sendmail(file_dict)
 
-                    # Remove the file after it has been sent.
-                    os.remove('%s%s' % (self.config['watch_dir'],file_name))
+                    # Remove the file after it has been sent, but not if it failed.
+                    if sending_successful:
+                        os.remove('%s%s' % (self.config['watch_dir'],file_name))
                 except Exception as e:
                     self.logger.error("Exception: %s\n" % e.message);
                     file_handle.close()
