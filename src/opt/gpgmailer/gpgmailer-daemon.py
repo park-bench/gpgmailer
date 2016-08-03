@@ -121,7 +121,7 @@ daemon_context = daemon.DaemonContext(
 
 # TODO: Make a real cleanup method for this.
 daemon_context.signal_map = {
-    signal.SIGTERM = sig_term_handler
+    signal.SIGTERM : sig_term_handler
     }
 
 with daemon_context:
