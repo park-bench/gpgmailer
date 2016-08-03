@@ -1,8 +1,10 @@
 gpgmailer (0.7) UNRELEASED; urgency=low
 
   * Improved daemonization with python-daemon.
+  * Made the interface considerably less ugly.
 
  -- eviljoel <eviljoel@linux.com>  Wed, 08 Jun 2016 20:11:00 -0500
+ -- Andrew Klapp <andklapp@null.net>  Tue, 02 Aug 2016 19:01:15 -0500
 
 gpgmailer (0.4) stable; urgency=low
 
