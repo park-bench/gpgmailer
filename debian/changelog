@@ -1,6 +1,6 @@
-gpgmailer (0.6) stable; urgency=low
+gpgmailer (0.7) UNRELEASED; urgency=low
 
-  * Updated error in configuration file. Forgot changelog entry for v0.5.
+  * Improved daemonization with python-daemon.
 
  -- eviljoel <eviljoel@linux.com>  Wed, 08 Jun 2016 20:11:00 -0500
 
