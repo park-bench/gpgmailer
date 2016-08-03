@@ -1,3 +1,9 @@
+gpgmailer (0.7) UNRELEASED; urgency=medium
+
+  * Made the interface considerably less ugly.
+
+ -- Andrew Klapp <andklapp@null.net>  Tue, 02 Aug 2016 19:01:15 -0500
+
 gpgmailer (0.4) stable; urgency=low
 
   * Mostly corrected config parsing.
