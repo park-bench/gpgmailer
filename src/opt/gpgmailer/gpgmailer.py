@@ -176,9 +176,11 @@ class mailer ():
         signature_result = self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint'], passphrase=self.config['sender']['key_password'])
         signature_text = str(signature_result)
 
-        # TODO: Can't you check the status instead? I mean, isn't that what it is there for?
         if(signature_text == ''):
-            # TODO: Handle this error properly. Do not send or delete the message.
+            # The library we are using contains a bug and does not actually set the
+            #   status variable in the documentation. It could be caused by a few
+            #   things, but usually either the key password is wrong or the key is
+            #   not trusted.
             self.logger.error('Error while signing message.')
 
         signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)
@@ -220,7 +222,8 @@ class mailer ():
         encrypted_payload_result = self.gpg.encrypt(signed_message.as_string(), fingerprint_list)
         encrypted_payload = str(encrypted_payload_result)
 
-        if(encrypted_payload == ''):
+        # This ok variable is not the status result we need. It only indicates failure.
+        if(encrypted_payload_result.ok == False):
             # TODO: Handle this error properly. Do not send or delete the message.
             self.logger.error('Error while encrypting message: %s.' % encrypted_payload_result.status)
             encryption_error = True
