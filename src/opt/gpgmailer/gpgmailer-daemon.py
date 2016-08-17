@@ -114,7 +114,7 @@ config['recipients'] = []
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_raw_list = recipients_raw_string.split(',')
 for recipient in recipients_raw_list:
-    recipient_key_data = parse_key_config_data(config_helper.verify_string_exists(config_file, 'sender'))
+    recipient_key_data = parse_key_config_data(recipient)
     if recipient_key_data != None:
         logger.info('Adding recipient key for %s.' % recipient_key_data['email'])
         config['recipients'].append(recipient_key_data)

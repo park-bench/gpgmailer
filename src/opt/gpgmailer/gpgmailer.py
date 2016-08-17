@@ -107,6 +107,7 @@ class mailer ():
             # subtract current time from key_expiration_time
             time_delta = float(key_expiration_time) - current_time
             self.logger.trace('Key expiration delta is %s seconds.' % time_delta)
+            self.logger.trace('Key expiry threshhold:  %s seconds.' % self.config['key_expiration_threshhold'])
 
             if(time_delta <= 0):
                 key_expiry_state = KeyExpirationStates.expired
@@ -124,9 +125,11 @@ class mailer ():
         # This will put together a message that lists any keys expiring soon.
         message = ''
         valid_key_list = []
+        expired_messages = []
+        expiring_soon_messages = []
 
         # Build a list of key data.
-        # The sender is last here so s/he will end up first in the printed message.
+        # The sender is last here so they will end up first in the printed message.
         keys_to_check = self.config['recipients'] + [ self.config['sender'] ]
 
         # check each key
@@ -135,23 +138,32 @@ class mailer ():
             self.logger.info('Checking key %s for %s.' % (key['fingerprint'], key['email']))
             self.logger.trace('Key expiry date: %s.' % key['expires'])
             key_status = self._is_key_expired(key['expires'])
-            # TODO: Ideally the already expired messages should go before the expiring soon messages.
             if (key_status == KeyExpirationStates.expired):
-                message = 'Key %s for %s is expired!\n%s' % (key['fingerprint'], key['email'], message)
+                message = 'Key %s for %s is expired!' % (key['fingerprint'], key['email'])
+                expired_messages.append(message)
                 self.logger.warn(message)
 
-            elif ((key_status == KeyExpirationStates.expiring_soon) & (key == self.config['sender'])):
+            elif (key_status == KeyExpirationStates.expiring_soon):
                 message = 'Key %s for %s will be expiring soon!\n%s' % (key['fingerprint'], key['email'], message)
+                expired_messages.append(message)
                 self.logger.warn(message)
                 add_key = True
+            
+            elif (key_status == KeyExpirationStates.not_expiring_soon):
+                add_key = True
 
-            elif (key == self.config['sender']):
+            if key == self.config['sender']:
                 add_key = True
 
             if add_key:
                 valid_key_list.append(key)
 
-        return message,valid_key_list
+        # TODO: These messages are still in the wrong order.
+        expired_message = '\n'.join(expired_messages)
+        expiring_soon_message = '\n'.join(expiring_soon_messages)
+        full_message = '\n'.join([expired_message, expiring_soon_message])
+
+        return full_message,valid_key_list
 
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
