@@ -173,7 +173,8 @@ class mailer ():
         message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
 
         # Make the signature component
-        signature_result = self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint'], passphrase=self.config['sender']['key_password'])
+        sender = self.config['sender']
+        signature_result = self.gpg.sign(message_string, detach=True, keyid=sender['fingerprint'], passphrase=sender['key_password'])
         signature_text = str(signature_result)
 
         if(signature_text == ''):
@@ -214,6 +215,7 @@ class mailer ():
 
         # We need all encryption keys in a list
         fingerprint_list = []
+        encryption_error = False
         # TODO: Bug: valid_keys contains the sender.
         for recipient in valid_keys:
             fingerprint_list.append(recipient['fingerprint'])
@@ -274,3 +276,5 @@ class mailer ():
             self.lastSentTime = time.time()
         else:
             self.logger.error('Message is empty, encryption or signing failed, not sending.')
+
+        return sent_successfully

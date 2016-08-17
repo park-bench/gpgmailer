@@ -77,8 +77,8 @@ def get_gpg_key_data(gpg_keyring, fingerprint_string):
     key_data = None
     if key_fingerprint_regex.match(fingerprint_string):
         if fingerprint_string in keylist:
-            key_data = { 'fingerprint': key['fingerprint'],
-                'expires': key['expires'] }
+            key_data = { 'fingerprint': fingerprint_string,
+                'expires': keylist[fingerprint_string] }
         else:
             logger.error('Fingerprint %s not found in keyring.' % fingerprint_string)
     else:
