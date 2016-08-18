@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gnupg
+import gpgkey
 import random
 import smtplib
 import subprocess
@@ -31,12 +32,6 @@ import base64
 
 # TODO: Write more effective logging.
 # TODO: I kinda want to review method separation and naming for the entire file.
-
-# TODO: Not sure if this justifies its own class.
-class KeyExpirationStates():
-    expired = "expired"
-    expiring_soon = "expiring_soon"
-    not_expiring_soon = "not_expiring_soon"
 
 class mailer ():
     
@@ -60,7 +55,7 @@ class mailer ():
         
         # Create a random number as our host id
         self.logger.debug('Generating random ehlo.')
-        self.ehlo_id = str(random.SystemRandom().random()).split( '.', 1)[1]
+        self.ehlo_id = str(random.SystemRandom().random()).split('.', 1)[1]
         self.logger.debug('Random ehlo generated.')
         connected = False
         while not(connected):
@@ -87,83 +82,39 @@ class mailer ():
                 # TODO: Make this configurable?
                 time.sleep(.1)
 
-    # Kinda don't get what value you get with this helper method. You still
-    #   need to have a 3 body 'if' block in your originating method.
-    def _is_key_expired(self, key_expiration_time):
-        # This should just check to see if the key expiration date is going to
-        #   occur soon. Expiration dates are in epoch format.
-        key_expiry_state = None
-
-        # Keys with no expiration date just return an empty string.
-        if(key_expiration_time == ''):
-            key_expiry_state = KeyExpirationStates.not_expiring_soon
-            self.logger.trace('Key does not expire.')
-
-        else:
-
-            # convert current time to epoch format
-            current_time = time.mktime(time.gmtime())
-
-            # subtract current time from key_expiration_time
-            time_delta = float(key_expiration_time) - current_time
-            self.logger.trace('Key expiration delta is %s seconds.' % time_delta)
-            self.logger.trace('Key expiry threshhold:  %s seconds.' % self.config['key_expiration_threshhold'])
-
-            if(time_delta <= 0):
-                key_expiry_state = KeyExpirationStates.expired
-
-            elif(time_delta <= self.config['key_expiration_threshhold']):
-                key_expiry_state = KeyExpirationStates.expiring_soon
-
-            else:
-                key_expiry_state = KeyExpirationStates.not_expiring_soon
-
-        return key_expiry_state
-
-
-    def _build_key_expiration_message_and_list(self):
-        # This will put together a message that lists any keys expiring soon.
+    def _build_key_expiration_message(self):
+        # This will put together a message that lists any keys that are either
+        #   expired or expiring soon.
         message = ''
-        valid_key_list = []
         expired_messages = []
         expiring_soon_messages = []
 
-        # Build a list of key data.
+        # Build a list of keys.
         # The sender is last here so they will end up first in the printed message.
-        keys_to_check = self.config['recipients'] + [ self.config['sender'] ]
+        keys_to_check = self.config['recipients']
+        if self.config['sender'] not in keys_to_check:
+            keys_to_check.append(self.config['sender'])
 
         # check each key
         for key in keys_to_check:
-            add_key = False
-            self.logger.info('Checking key %s for %s.' % (key['fingerprint'], key['email']))
-            self.logger.trace('Key expiry date: %s.' % key['expires'])
-            key_status = self._is_key_expired(key['expires'])
-            if (key_status == KeyExpirationStates.expired):
-                message = 'Key %s for %s is expired!' % (key['fingerprint'], key['email'])
+            self.logger.info('Checking key %s for %s.' % (key.fingerprint, key.email))
+            self.logger.trace('Key expiry date: %s.' % key.expires)
+            key_status = key.is_expired(expiration_threshhold = self.config['key_expiration_threshhold'])
+            if (key_status == 'expired'):
+                message = 'Key %s for %s is expired!' % (key.fingerprint, key.email)
                 expired_messages.append(message)
                 self.logger.warn(message)
 
-            elif (key_status == KeyExpirationStates.expiring_soon):
-                message = 'Key %s for %s will be expiring soon!\n%s' % (key['fingerprint'], key['email'], message)
-                expired_messages.append(message)
+            elif (key_status == 'expiring_soon'):
+                message = 'Key %s for %s will be expiring soon!' % (key.fingerprint, key.email)
+                expiring_soon_messages.append(message)
                 self.logger.warn(message)
-                add_key = True
-            
-            elif (key_status == KeyExpirationStates.not_expiring_soon):
-                add_key = True
 
-            if key == self.config['sender']:
-                add_key = True
-
-            if add_key:
-                valid_key_list.append(key)
-
-        # TODO: These messages are still in the wrong order.
         expired_message = '\n'.join(expired_messages)
         expiring_soon_message = '\n'.join(expiring_soon_messages)
-        full_message = '\n'.join([expired_message, expiring_soon_message])
+        full_message = '%s\n%s\n' % (expired_message, expiring_soon_message)
 
-        return full_message,valid_key_list
+        return full_message
 
     def _build_signed_message(self, message_dict):
         # this will sign the message text and attachments and puts them all together
@@ -186,7 +137,7 @@ class mailer ():
 
         # Make the signature component
         sender = self.config['sender']
-        signature_result = self.gpg.sign(message_string, detach=True, keyid=sender['fingerprint'], passphrase=sender['key_password'])
+        signature_result = self.gpg.sign(message_string, detach=True, keyid=sender.fingerprint, passphrase=sender.password)
         signature_text = str(signature_result)
 
         if(signature_text == ''):
@@ -213,7 +164,7 @@ class mailer ():
         # Check if any of the keys are expired.
         # Build the key expiration message
         # TODO: We should probably run this on a timer of some sort instead of every time it sends something.
-        key_expiration_messages,valid_keys = self._build_key_expiration_message_and_list()
+        key_expiration_messages = self._build_key_expiration_message()
 
         message_dict['message'] = '%s%s\n' % (key_expiration_messages, message_dict['message'])
 
@@ -228,9 +179,11 @@ class mailer ():
         # We need all encryption keys in a list
         fingerprint_list = []
         encryption_error = False
-        # TODO: Bug: valid_keys contains the sender.
-        for recipient in valid_keys:
-            fingerprint_list.append(recipient['fingerprint'])
+
+        for recipient in self.config['recipients']:
+            if recipient.valid == True:
+                fingerprint_list.append(recipient.fingerprint)
+
         # Encrypt the message
         encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
         encrypted_payload_result = self.gpg.encrypt(signed_message.as_string(), fingerprint_list)
@@ -264,7 +217,7 @@ class mailer ():
         # Get a list of recipients from config
         recipients = []
         for recipient in self.config['recipients']:
-            recipients.append(recipient['email'])
+            recipients.append(recipient.email)
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: There is probably also a hard session limit too.
@@ -275,7 +228,7 @@ class mailer ():
 
         if not(encrypted_message == None):
             try:
-                self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
+                self.smtp.sendmail(self.config['sender'].email, recipients, encrypted_message_string)
                 sent_successfully = True
             except Exception as e:
                 self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
@@ -283,7 +236,7 @@ class mailer ():
 
                 # Try reconnecting and resending
                 self._connect()
-                self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
+                self.smtp.sendmail(self.config['sender'].email, recipients, encrypted_message_string)
                 sent_successfully = True
             self.lastSentTime = time.time()
         else:

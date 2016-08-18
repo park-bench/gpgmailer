@@ -50,8 +50,8 @@ class mailer_monitor():
                 try:
                     file_dict = json.loads(file_handle.read())
                     file_handle.close()
-                    file_dict['sender'] = self.config['sender']['email']
-                    file_dict['signing_key_fingerprint'] = self.config['sender']['fingerprint']
+                    file_dict['sender'] = self.config['sender'].email
+                    file_dict['signing_key_fingerprint'] = self.config['sender'].fingerprint
                     if('attachments' in file_dict.keys()):
                         for attachment in file_dict['attachments']:
                             # Attachment data is assumed to be encoded in base64.

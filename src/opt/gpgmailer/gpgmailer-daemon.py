@@ -18,6 +18,7 @@
 import confighelper
 import ConfigParser
 import gnupg
+import gpgkey
 import mailermonitor
 import os
 import re
@@ -70,42 +71,15 @@ keylist = {}
 for key in config['gpg'].list_keys():
     keylist[key['fingerprint']] = key['expires']
 
-# Returns a dict containing the fingerprint and expiration date of a single key
-#   by searching for its' fingerprint in the keyring.
-def get_gpg_key_data(gpg_keyring, fingerprint_string):
-    # Check that fingerprint_string is exactly 40 characters
-    key_data = None
-    if key_fingerprint_regex.match(fingerprint_string):
-        if fingerprint_string in keylist:
-            key_data = { 'fingerprint': fingerprint_string,
-                'expires': keylist[fingerprint_string] }
-        else:
-            logger.error('Fingerprint %s not found in keyring.' % fingerprint_string)
-    else:
-        logger.error('Fingerprint %s is invalid.' % fingerprint_string)
-
-    return key_data
-
-# Parses the key strings from the config file. They should be formatted this way:
-#   <email><:key fingerprint>
-#   Also checks key validity.
-def parse_key_config_data(key_config_string):
-    key_data = None
-    key_config_string_split = key_config_string.split(':')
-    key_data = get_gpg_key_data(keylist, key_config_string_split[1].strip())
-    if key_data:
-        key_data['email'] = key_config_string_split[0].strip()
-
-    return key_data
-
 # parse sender config.  <email>:<key fingerprint>
-sender_key_data = parse_key_config_data(config_helper.verify_string_exists(config_file, 'sender'))
-if sender_key_data != None:
-    logger.info('Using sender %s' % sender_key_data['email'])
-    sender_key_data['key_password'] = config_helper.verify_password_exists(config_file, 'signing_key_password')
-    config['sender'] = sender_key_data
+sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
+sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
+sender_key = gpgkey.GpgKey(keylist, sender_key_string, password=sender_key_password)
+if sender_key.valid:
+    logger.info('Using sender %s' % sender_key.email)
+    config['sender'] = sender_key
 else:
-    logger.fatal('Sender key not available. Exiting.')
+    logger.fatal('Sender key not available or invalid. Exiting.')
     sys.exit(1)
 
 # parse recipient config.  Comma-delimited list of objects like sender
@@ -114,13 +88,13 @@ config['recipients'] = []
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_raw_list = recipients_raw_string.split(',')
 for recipient in recipients_raw_list:
-    recipient_key_data = parse_key_config_data(recipient)
-    if recipient_key_data != None:
-        logger.info('Adding recipient key for %s.' % recipient_key_data['email'])
-        config['recipients'].append(recipient_key_data)
+    recipient_key = gpgkey.GpgKey(keylist, recipient)
+    if recipient_key.fingerprint:
+        logger.info('Adding recipient key for %s.' % recipient_key.email)
+        config['recipients'].append(recipient_key)
     else:
         # TODO: The remaining users should be notified of this via e-mail if this occurs.
-        logger.error('Recipient key for %s not available.' % email_string)
+        logger.error('Recipient key for %s not available.' % recipient)
 
 if config['recipients'] == []:
     logger.fatal('No valid recipients. Exiting.')
