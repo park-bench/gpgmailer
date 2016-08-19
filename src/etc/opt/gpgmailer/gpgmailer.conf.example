@@ -33,12 +33,22 @@ smtp_max_idle=300
 # to send.
 smtp_sending_timeout=30
 
+# Email and gpg settings
+# key_expiration_threshhold is the number of days before a key's expiration
+#   that gpgmailer should start attaching warnings.
+key_expiration_threshhold=14
+
+# key_checking_interval is the time in days between checking each key's
+#   expiration date.
+key_checking_interval=1
+
 # Sender should be one email address paired with a full PGP key fingerprint.
 # For example:
 # sender=test@example.com:5A4228C8D952459F240626EA4289EC280D58338B
 sender=
 
 # signing_key_password is the password for the key you just defined in sender.
+#   A password is required.
 signing_key_password=
 
 # recipients should be a comma-separated list of address and fingerprint pairs,

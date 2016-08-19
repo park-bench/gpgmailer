@@ -60,6 +60,8 @@ config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file,
 #   stored in epoch time.
 config['key_expiration_threshhold'] = config_helper.verify_number_exists(config_file, 'key_expiration_threshhold') * 86400
 
+config['key_checking_interval'] = config_helper.verify_number_exists(config_file, 'key_checking_interval'])
+
 # init gnupg so we can verify keys
 gpg_dir = config_helper.verify_string_exists(config_file, 'gpg_dir')
 config['gpg'] = gnupg.GPG(gnupghome=gpg_dir)
