@@ -21,15 +21,12 @@ import gnupg
 import gpgkey
 import mailermonitor
 import os
-import re
 import signal
 import sys
 import timber
 import traceback
 
 PID_FILE = '/var/opt/run/gpgmailer.pid'
-
-key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
 
 # After first commit
 # TODO: Make daemonize() a library
@@ -52,7 +49,6 @@ logger = timber.get_instance_with_filename(log_file, log_level)
 logger.info('Verifying non-logging config')
 config = {}
 
-config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 config['watch_dir'] = config_helper.verify_string_exists(config_file, 'watch_dir')
 config['smtp_user'] = config_helper.verify_string_exists(config_file, 'smtp_user')
 config['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
@@ -65,11 +61,9 @@ config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file,
 config['key_expiration_threshhold'] = config_helper.verify_number_exists(config_file, 'key_expiration_threshhold') * 86400
 
 # init gnupg so we can verify keys
-config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])
-keylist = {}
-
-for key in config['gpg'].list_keys():
-    keylist[key['fingerprint']] = key['expires']
+gpg_dir = config_helper.verify_string_exists(config_file, 'gpg_dir')
+config['gpg'] = gnupg.GPG(gnupghome=gpg_dir)
+keylist = gpgkey.build_key_hash_dict(config['gpg'].list_keys())
 
 # parse sender config.  <email>:<key fingerprint>
 sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
