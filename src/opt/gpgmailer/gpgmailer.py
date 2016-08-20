@@ -39,11 +39,13 @@ class mailer ():
         self.logger = timber.get_instance()
         self.config = config
         self.gpg = config['gpg']
+        self.key_expiration_message = ''
 
         self.smtp = None
 
         self._connect()
         self.lastSentTime = time.time()
+        self.last_key_check = time.time()
 
     def _connect(self):
         # TODO: Failed DNS lookups of the mail server might be eating messages. Investigate immediately.
@@ -160,13 +162,17 @@ class mailer ():
 
     # TODO: We should probably name this appropriately.
     def _eldtritch_crypto_magic(self, message_dict):
-
-        # Check if any of the keys are expired.
         # Build the key expiration message
-        # TODO: We should probably run this on a timer of some sort instead of every time it sends something.
-        key_expiration_messages = self._build_key_expiration_message()
+        if((time.time() - self.last_key_check) >= self.config['key_checking_interval']) \
+            or (self.key_expiration_message == ''):
+            self.logger.trace('last_key_check: %s, delta: %s' % (self.last_key_check, (time.time() - self.last_key_check)))
+            self.logger.info('Checking all keys.')
+            self.key_expiration_message = self._build_key_expiration_message()
+            self.last_key_check = time.time()
+        else:
+            self.logger.trace('Not checking keys.')
 
-        message_dict['message'] = '%s%s\n' % (key_expiration_messages, message_dict['message'])
+        message_dict['message'] = '%s%s\n' % (self.key_expiration_message, message_dict['message'])
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)

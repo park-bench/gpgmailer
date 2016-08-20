@@ -38,9 +38,9 @@ smtp_sending_timeout=30
 #   that gpgmailer should start attaching warnings.
 key_expiration_threshhold=14
 
-# key_checking_interval is the time in days between checking each key's
+# key_checking_interval is the number of seconds between checking each key's
 #   expiration date.
-key_checking_interval=1
+key_checking_interval=3600
 
 # Sender should be one email address paired with a full PGP key fingerprint.
 # For example:
