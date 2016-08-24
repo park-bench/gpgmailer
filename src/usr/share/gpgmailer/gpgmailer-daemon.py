@@ -27,7 +27,7 @@ import sys
 import timber
 import traceback
 
-PID_FILE = '/var/opt/run/gpgmailer.pid'
+PID_FILE = '/run/gpgmailer.pid'
 
 # After first commit
 # TODO: Clean up logging
@@ -36,7 +36,7 @@ PID_FILE = '/var/opt/run/gpgmailer.pid'
 
 print('Loading configuration.')
 config_file = ConfigParser.RawConfigParser()
-config_file.read('/etc/opt/gpgmailer/gpgmailer.conf')
+config_file.read('/etc/gpgmailer/gpgmailer.conf')
 
 # Figure out the logging options so that can start before anything else.
 print('Verifying configuration.')
