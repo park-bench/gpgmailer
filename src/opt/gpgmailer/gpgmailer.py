@@ -93,7 +93,7 @@ class mailer ():
 
         # Build a list of keys.
         # The sender is last here so they will end up first in the printed message.
-        keys_to_check = self.config['recipients']
+        keys_to_check = list(self.config['recipients'])
         if self.config['sender'] not in keys_to_check:
             keys_to_check.append(self.config['sender'])
 
