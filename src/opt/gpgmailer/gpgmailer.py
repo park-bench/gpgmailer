@@ -84,10 +84,12 @@ class mailer ():
                 # TODO: Make this configurable?
                 time.sleep(.1)
 
+    # TODO: Put key business in a separate file.
+    # Checks each key in use for expiration, then compiles a helpful message to
+    #   be inserted into every email sent.
     def _build_key_expiration_message(self):
         # This will put together a message that lists any keys that are either
         #   expired or expiring soon.
-        message = ''
         expired_messages = []
         expiring_soon_messages = []
 
@@ -99,22 +101,22 @@ class mailer ():
 
         # check each key
         for key in keys_to_check:
-            self.logger.info('Checking key %s for %s.' % (key.fingerprint, key.email))
-            self.logger.trace('Key expiry date: %s.' % key.expires)
-            key_status = key.is_expired(expiration_threshhold = self.config['key_expiration_threshhold'])
+            self.logger.debug('Checking key <%s> (%s) with expiration date <%s> has expired.' % (key.fingerprint, key.email, key.expires))
+            key_status = key.get_key_expiration_status(expiration_threshhold = self.config['key_expiration_threshhold'])
             if (key_status == 'expired'):
-                message = 'Key %s for %s is expired!' % (key.fingerprint, key.email)
+                message = 'Key <%s> (%s) is expired!' % (key.fingerprint, key.email)
                 expired_messages.append(message)
                 self.logger.warn(message)
 
             elif (key_status == 'expiring_soon'):
-                message = 'Key %s for %s will be expiring soon!' % (key.fingerprint, key.email)
+                pretty_expiration_date = time.strftime('%Y-%m-%d %H:%M:%S', key.expires)
+                message = 'Key <%s> (%s) will be expiring on date <%s>!' % (key.fingerprint, key.email, pretty_expiration_date)
                 expiring_soon_messages.append(message)
                 self.logger.warn(message)
 
-        expired_message = '\n'.join(expired_messages)
-        expiring_soon_message = '\n'.join(expiring_soon_messages)
-        full_message = '%s\n%s\n' % (expired_message, expiring_soon_message)
+        joined_expired_messages = '\n'.join(expired_messages)
+        joined_expiring_soon_messages = '\n'.join(expiring_soon_messages)
+        full_message = '%s\n%s\n' % (joined_expired_messages, joined_expiring_soon_messages)
 
         return full_message
 
@@ -123,6 +125,7 @@ class mailer ():
         # Make a multipart message to contain the attachments and main message text.
 
         multipart_message = MIMEMultipart(_subtype="mixed")
+        # TODO: This may need an extra newline. Test with attachments.
         multipart_message.attach(MIMEText(message_dict['message']))
 
         # Loop over the attachments
@@ -147,6 +150,7 @@ class mailer ():
             #   status variable in the documentation. It could be caused by a few
             #   things, but usually either the key password is wrong or the key is
             #   not trusted.
+            # TODO: In this case, build an unsigned message with a warning prepended to the body.
             self.logger.error('Error while signing message.')
 
         signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)

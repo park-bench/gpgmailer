@@ -68,5 +68,6 @@ class mailer_monitor():
                     file_handle.close()
 
             # TODO: Make configurable?
+            # TODO: Move key expiration checks into this area.
             time.sleep(.1)
   

@@ -41,7 +41,7 @@ class GpgKey:
                 self.fingerprint = key_fingerprint
                 self.expires = key_list[key_fingerprint]['expires']
                 self.ownertrust = key_list[key_fingerprint]['ownertrust']
-                if (self.ownertrust in valid_owner_trust_levels) and not(self.is_expired() == 'expired'):
+                if (self.ownertrust in valid_owner_trust_levels) and not(self.get_key_expiration_status() == 'expired'):
                     self.valid = True
                 else:
                     self.logger.error('Key %s is either expired or not trusted.' % key_fingerprint)
@@ -53,7 +53,7 @@ class GpgKey:
 
     # Checks the expiration against the current date and returns a status
     #   of either 'good', 'expired', or 'expiring_soon'.
-    def is_expired(self, expiration_threshhold=0):
+    def get_key_expiration_status(self, expiration_threshhold=0):
         self.logger.info('Checking key expiration for key %s.' % self.fingerprint)
         key_expiration_state = 'expired'
 
