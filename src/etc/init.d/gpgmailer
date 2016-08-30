@@ -1,4 +1,20 @@
-#! /bin/sh
+#! /bin/sh 
+
+# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ### BEGIN INIT INFO
 # Provides:          gpgmailer
 # Required-Start:    $remote_fs $syslog
@@ -53,7 +69,7 @@ do_start()
     # If $MAIL_DIR is empty and not mounted as a ramdisk, mount it as a ramdisk.
     if ! -z find / -type d -path "$MAIL_DIR" 2> /dev/null && ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
         echo "Attempting to mount $MAIL_DIR as a ramdisk."
-        mount -t tmpfs -o size=25% none "$MAIL_DIR" 
+        mount -t tmpfs -o size=25% none "$MAIL_DIR"
     fi
     # If $MAIL_DIR is not mounted as a ramdisk, something is wrong. Bail!
     if ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then

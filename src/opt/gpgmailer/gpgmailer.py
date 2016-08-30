@@ -125,6 +125,7 @@ class mailer ():
         # Make a multipart message to contain the attachments and main message text.
 
         multipart_message = MIMEMultipart(_subtype="mixed")
+
         # TODO: This may need an extra newline. Test with attachments.
         multipart_message.attach(MIMEText(message_dict['message']))
 

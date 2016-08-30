@@ -17,8 +17,10 @@
 
 import confighelper
 import ConfigParser
+import daemon
 import gnupg
 import gpgkey
+import lockfile
 import mailermonitor
 import os
 import signal
@@ -29,7 +31,6 @@ import traceback
 PID_FILE = '/var/opt/run/gpgmailer.pid'
 
 # After first commit
-# TODO: Make daemonize() a library
 # TODO: Clean up logging
 # TODO: Clean up method names
 # TODO: Consider making this a class somehow.
@@ -98,58 +99,29 @@ if config['recipients'] == []:
     
 logger.info('Verification complete')
 
-def daemonize():
-    # Fork the first time to make init our parent.
-    try:
-        pid = os.fork()
-        if pid > 0:
-            sys.exit(0)
-    except OSError, e: 
-        logger.fatal("Failed to make parent process init: %d (%s)" % (e.errno, e.strerror))
-        sys.exit(1)
-
-    os.chdir("/")  # Change the working directory
-    os.setsid()  # Create a new process session.
-    os.umask(0)
-
-    # Fork the second time to make sure the process is not a session leader. 
-    #   This apparently prevents us from taking control of a TTY.
-    try:
-        pid = os.fork()
-        if pid > 0:
-            sys.exit(0)
-    except OSError, e:
-        logger.fatal("Failed to give up session leadership: %d (%s)" % (e.errno, e.strerror))
-        sys.exit(1)
-
-    # Redirect standard file descriptors
-    sys.stdout.flush()
-    sys.stderr.flush()
-    devnull = os.open(os.devnull, os.O_RDWR)
-    os.dup2(devnull, sys.stdin.fileno())
-    os.dup2(devnull, sys.stdout.fileno())
-    os.dup2(devnull, sys.stderr.fileno())
-    os.close(devnull)
-
-    pid = str(os.getpid())
-    pidFile = file(PID_FILE,'w')
-    pidFile.write("%s\n" % pid)
-    pidFile.close()
-
-daemonize()
-
 # Quit when SIGTERM is received
 def sig_term_handler(signal, stack_frame):
     logger.info("Quitting.")
     sys.exit(0)
 
-signal.signal(signal.SIGTERM, sig_term_handler)
+# TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
+daemon_context = daemon.DaemonContext(
+    working_directory = '/',
+    pidfile = lockfile.FileLock(PID_FILE),
+    umask = 0
+    )
 
-try:
-    the_watcher = mailermonitor.mailer_monitor(config)
-    the_watcher.start_monitoring()  
+# TODO: Make a real cleanup method for this.
+daemon_context.signal_map = {
+    signal.SIGTERM : sig_term_handler
+    }
 
-except Exception as e:
-    logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
-    logger.error(traceback.format_exc())
-    sys.exit(1)
+with daemon_context:
+    try:
+        the_watcher = mailermonitor.mailer_monitor(config)
+        the_watcher.start_monitoring()
+
+    except Exception as e:
+        logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
+        logger.error(traceback.format_exc())
+        sys.exit(1)

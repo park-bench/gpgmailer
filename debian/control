@@ -2,10 +2,10 @@ Source: gpgmailer
 Section: parkbench
 Priority: required
 Maintainer: eviljoel, Andrew Klapp
-#Build-Depends:
+Build-Depends: debhelper
 Standards-Version: 3.9.6.1
 
 Package: gpgmailer
 Architecture: any
-Depends: confighelper,timber,python-gnupg
+Depends: confighelper,python-timber,python-gnupg,python-daemon
 Description: Daemon to send multipart encrypted e-mails.
