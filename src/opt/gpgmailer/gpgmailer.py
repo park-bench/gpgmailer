@@ -101,8 +101,8 @@ class mailer ():
 
         # check each key
         for key in keys_to_check:
-            self.logger.debug('Checking key <%s> (%s) with expiration date <%s> has expired.' % (key.fingerprint, key.email, key.expires))
-            key_status = key.get_key_expiration_status(expiration_threshhold = self.config['key_expiration_threshhold'])
+            self.logger.debug('Checking if key <%s> (%s) with expiration date <%s> has expired.' % (key.fingerprint, key.email, key.expires))
+            key_status = key.get_key_expiration_status()
             if (key_status == 'expired'):
                 message = 'Key <%s> (%s) is expired!' % (key.fingerprint, key.email)
                 expired_messages.append(message)
@@ -170,8 +170,7 @@ class mailer ():
         # Build the key expiration message
         if((time.time() - self.last_key_check) >= self.config['key_checking_interval']) \
             or (self.key_expiration_message == ''):
-            self.logger.trace('last_key_check: %s, delta: %s' % (self.last_key_check, (time.time() - self.last_key_check)))
-            self.logger.info('Checking all keys.')
+            self.logger.info('last_key_check: %s, delta: %s\nChecking all keys.' % (self.last_key_check, (time.time() - self.last_key_check)))
             self.key_expiration_message = self._build_key_expiration_message()
             self.last_key_check = time.time()
         else:
@@ -243,7 +242,7 @@ class mailer ():
                 sent_successfully = True
             except Exception as e:
                 self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
-                self.logger.debug(traceback.format_exc())
+                self.logger.error(traceback.format_exc())
 
                 # Try reconnecting and resending
                 self._connect()

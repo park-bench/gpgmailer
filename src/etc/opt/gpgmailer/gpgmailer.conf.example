@@ -34,9 +34,9 @@ smtp_max_idle=300
 smtp_sending_timeout=30
 
 # Email and gpg settings
-# key_expiration_threshhold is the number of days before a key's expiration
+# expiration_warning_threshold is the number of days before a key's expiration
 #   that gpgmailer should start attaching warnings.
-key_expiration_threshhold=14
+expiration_warning_threshold=14
 
 # key_checking_interval is the number of seconds between checking each key's
 #   expiration date.

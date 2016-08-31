@@ -58,8 +58,8 @@ config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 # Convert the key expiration threshhold into seconds because expiry dates are
-#   stored in epoch time.
-config['key_expiration_threshhold'] = config_helper.verify_number_exists(config_file, 'key_expiration_threshhold') * 86400
+#   stored in unix time.
+config['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
 
 config['key_checking_interval'] = config_helper.verify_number_exists(config_file, 'key_checking_interval')
 
@@ -71,7 +71,7 @@ keylist = gpgkey.build_key_hash_dict(config['gpg'].list_keys())
 # parse sender config.  <email>:<key fingerprint>
 sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
 sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
-sender_key = gpgkey.GpgKey(keylist, sender_key_string, password=sender_key_password)
+sender_key = gpgkey.GpgKey(keylist, sender_key_string, config['expiration_warning_threshold'], password=sender_key_password)
 if sender_key.valid:
     logger.info('Using sender %s' % sender_key.email)
     config['sender'] = sender_key
@@ -85,7 +85,7 @@ config['recipients'] = []
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_raw_list = recipients_raw_string.split(',')
 for recipient in recipients_raw_list:
-    recipient_key = gpgkey.GpgKey(keylist, recipient)
+    recipient_key = gpgkey.GpgKey(keylist, recipient, config['expiration_warning_threshold'])
     if recipient_key.fingerprint:
         logger.info('Adding recipient key for %s.' % recipient_key.email)
         config['recipients'].append(recipient_key)
@@ -122,6 +122,5 @@ with daemon_context:
         the_watcher.start_monitoring()
 
     except Exception as e:
-        logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
-        logger.error(traceback.format_exc())
+        logger.fatal("Fatal %s: %s\n%s" % (type(e).__name__, e.message, traceback.format_exc()))
         sys.exit(1)
