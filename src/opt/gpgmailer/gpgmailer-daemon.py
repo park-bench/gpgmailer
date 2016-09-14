@@ -65,13 +65,15 @@ config['key_checking_interval'] = config_helper.verify_number_exists(config_file
 
 # init gnupg so we can verify keys
 gpg_dir = config_helper.verify_string_exists(config_file, 'gpg_dir')
+
+# TODO: Remove the redundancy here.
 config['gpg'] = gnupg.GPG(gnupghome=gpg_dir)
-keylist = gpgkey.build_key_hash_dict(config['gpg'].list_keys())
+gpgkey.gpg_object = config['gpg']
 
 # parse sender config.  <email>:<key fingerprint>
 sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
 sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
-sender_key = gpgkey.GpgKey(keylist, sender_key_string, config['expiration_warning_threshold'], password=sender_key_password)
+sender_key = gpgkey.GpgKey(sender_key_string, config['expiration_warning_threshold'], password=sender_key_password)
 if sender_key.valid:
     logger.info('Using sender %s' % sender_key.email)
     config['sender'] = sender_key
@@ -85,7 +87,7 @@ config['recipients'] = []
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_raw_list = recipients_raw_string.split(',')
 for recipient in recipients_raw_list:
-    recipient_key = gpgkey.GpgKey(keylist, recipient, config['expiration_warning_threshold'])
+    recipient_key = gpgkey.GpgKey(recipient, config['expiration_warning_threshold'])
     if recipient_key.fingerprint:
         logger.info('Adding recipient key for %s.' % recipient_key.email)
         config['recipients'].append(recipient_key)
