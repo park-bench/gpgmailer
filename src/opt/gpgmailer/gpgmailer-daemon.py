@@ -19,9 +19,9 @@ import confighelper
 import ConfigParser
 import daemon
 import gnupg
-import lockfile
 import mailermonitor
 import os
+from daemon import pidlockfile
 import signal
 import sys
 import timber
@@ -115,7 +115,7 @@ def sig_term_handler(signal, stack_frame):
 # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
 daemon_context = daemon.DaemonContext(
     working_directory = '/',
-    pidfile = lockfile.FileLock(PID_FILE),
+    pidfile = pidlockfile.PIDLockFile(PID_FILE),
     umask = 0
     )
 
