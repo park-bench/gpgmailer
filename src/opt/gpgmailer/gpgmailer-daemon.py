@@ -19,8 +19,8 @@ import confighelper
 import ConfigParser
 import daemon
 import gnupg
-import gpgkey
-import mailermonitor
+import gpgkeyring
+import gpgmailer
 import os
 from daemon import pidlockfile
 import signal
@@ -34,6 +34,20 @@ PID_FILE = '/var/opt/run/gpgmailer.pid'
 # TODO: Clean up logging
 # TODO: Clean up method names
 # TODO: Consider making this a class somehow.
+
+def build_key_dict(key_config_string, gpgkeyring):
+    final_key_dict = None
+    key_config_list = key_config_string.split(':')
+
+    key_dict = {}
+    key_dict['fingerprint'] = key_config_list[1].strip()
+    key_dict['email'] = key_config_list[0].strip()
+
+    if not(gpgkeyring.is_expired(key_dict['fingerprint'])) and \
+        (gpgkeyring.is_trusted(key_dict['fingerprint'])):
+        final_key_dict = key_dict
+
+    return final_key_dict
 
 print('Loading configuration.')
 config_file = ConfigParser.RawConfigParser()
@@ -64,18 +78,19 @@ config['expiration_warning_threshold'] = config_helper.verify_number_exists(conf
 config['key_database_reload_interval'] = config_helper.verify_number_exists(config_file, 'key_database_reload_interval')
 
 # init gnupg so we can verify keys
-gpg_dir = config_helper.verify_string_exists(config_file, 'gpg_dir')
+config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 
-# TODO: Remove the redundancy here.
-config['gpg'] = gnupg.GPG(gnupghome=gpg_dir)
-gpgkey.gpg_object = config['gpg']
+# Parse and check keys.
+
+gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 
 # parse sender config.  <email>:<key fingerprint>
 sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
 sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
-sender_key = gpgkey.GpgKey(sender_key_string, config['expiration_warning_threshold'], password=sender_key_password)
-if sender_key.valid:
-    logger.info('Using sender %s' % sender_key.email)
+
+sender_key = build_key_dict(sender_key_string, gpgkeyring)
+if sender_key:
+    logger.info('Using sender %s' % sender_key['email'])
     config['sender'] = sender_key
 else:
     logger.fatal('Sender key not available or invalid. Exiting.')
@@ -87,9 +102,9 @@ config['recipients'] = []
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
 recipients_raw_list = recipients_raw_string.split(',')
 for recipient in recipients_raw_list:
-    recipient_key = gpgkey.GpgKey(recipient, config['expiration_warning_threshold'])
-    if recipient_key.fingerprint:
-        logger.info('Adding recipient key for %s.' % recipient_key.email)
+    recipient_key = build_key_dict(recipient, gpgkeyring)
+    if recipient_key:
+        logger.info('Adding recipient key for %s.' % recipient_key['email'])
         config['recipients'].append(recipient_key)
     else:
         # TODO: The remaining users should be notified of this via e-mail if this occurs.
@@ -118,9 +133,11 @@ daemon_context.signal_map = {
     signal.SIGTERM : sig_term_handler
     }
 
+logger.debug('Daemonizing')
 with daemon_context:
     try:
-        the_watcher = mailermonitor.mailer_monitor(config)
+        logger.info('Starting GpgMailer.')
+        the_watcher = gpgmailer.GpgMailer(config, gpgkeyring)
         the_watcher.start_monitoring()
 
     except Exception as e:

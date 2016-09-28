@@ -21,14 +21,15 @@ import os
 import timber
 import time
 
-class GPGMailer:
-    def __init__(self, config):
+class GpgMailer:
+    def __init__(self, config, gpgkeyring):
         self.logger = timber.get_instance()
         self.config = config
-        self.gpgkeyring = gpgkeyring.GpgKeyRing(self.config['gpg_home'])
+        self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_home'])
         # self.gpgkeychecker = gpgkeychecker.GpgKeyChecker(self.gpgkeyring, config['expiration_warning_threshold'])
 
+        self.logger.info('GpgMailer initialized.')
         # TODO: Check keys here.
 
     def start_monitoring(self, directory):
