@@ -10,11 +10,12 @@ import time
 import timber
 
 class gpgMailBuilder:
-    def __init__(self, keyring):
+    def __init__(self, gpg_home):
         self.logger = timber.get_instance()
+        self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
 
     # Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
-    def build_message(self, message_dict, recipient_fingerprints, subject):
+    def build_message(self, message_dict, recipient_fingerprints):
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
@@ -25,16 +26,16 @@ class gpgMailBuilder:
         signed_message = self._build_signed_message(message_dict)
 
         # We need all encryption keys in a list
-        fingerprint_list = []
+        good_fingerprints = []
         encryption_error = False
 
-        for recipient in self.config['recipients']:
-            if recipient.valid == True:
-                fingerprint_list.append(recipient.fingerprint)
+        for fingerprint in recipient_fingerprints:
+            if self.gpgkeyring.is_trusted(fingerprint) and self.gpgkeyring.is_valid(fingerprint):
+                good_fingerprints.append(fingerprint)
 
         # Encrypt the message
         encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
-        encrypted_payload_result = self.gpg.encrypt(signed_message.as_string(), fingerprint_list)
+        encrypted_payload_result = self.gpg.encrypt(signed_message.as_string(), good_fingerprints)
         encrypted_payload = str(encrypted_payload_result)
 
         # This ok variable is not the status result we need. It only indicates failure.
