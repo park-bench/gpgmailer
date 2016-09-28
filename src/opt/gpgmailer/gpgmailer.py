@@ -27,7 +27,7 @@ class GPGMailer:
         self.config = config
         self.gpgkeyring = gpgkeyring.GpgKeyRing(self.config['gpg_home'])
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_home'])
-        self.gpgkeychecker = gpgkeychecker.GpgKeyChecker(self.gpgkeyring)
+        # self.gpgkeychecker = gpgkeychecker.GpgKeyChecker(self.gpgkeyring, config['expiration_warning_threshold'])
 
         # TODO: Check keys here.
 
@@ -48,6 +48,10 @@ class GPGMailer:
                     if encrypted_message == None:
                         # TODO: Some mechanism to ignore broken files
                         self.logger.error('Encrypting or signing message %s failed.' % file_name)
+
+                    else:
+                        # TODO Actually send mail. For testing, just logging is fine.
+                        self.logger.info('Successfully read message %s.' % file_name)
 
             # TODO: Move key expiration checks into this area.
             # TODO: Make configurable.
