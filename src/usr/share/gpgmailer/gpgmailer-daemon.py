@@ -19,12 +19,12 @@ import confighelper
 import ConfigParser
 import daemon
 import gnupg
+import logging
 import mailermonitor
 import os
 from daemon import pidlockfile
 import signal
 import sys
-import timber
 import traceback
 
 PID_FILE = '/run/gpgmailer.pid'
@@ -44,7 +44,9 @@ config_helper = confighelper.ConfigHelper()
 log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
 log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
 
-logger = timber.get_instance_with_filename(log_file, log_level)
+config_helper.configure_logger(log_file, log_level)
+
+logger = logging.getLogger()
 
 logger.info('Verifying non-logging config')
 config = {}
@@ -74,7 +76,7 @@ def gpg_fingerprint_exists(gpg_keyring, fingerprint_string):
 sender_raw = config_helper.verify_string_exists(config_file, 'sender')
 sender_split = sender_raw.split(':')
 if( len(sender_split[1]) != 40 ):
-    logger.fatal('Sender key fingerprint is invalid')
+    logger.critical('Sender key fingerprint is invalid')
     sys.exit(1)
 else:
     if(gpg_fingerprint_exists(keylist, sender_split[1].strip())):
@@ -82,7 +84,7 @@ else:
         config['sender'] = { 'email' : sender_split[0], 'fingerprint' : sender_split[1],
         'key_password' : signing_key_password }
     else:
-        logger.fatal('Sender key not found in keyring.')
+        logger.critical('Sender key not found in keyring.')
         sys.exit(1)
 
 # parse recipient config.  Comma-delimited list of objects like sender
@@ -94,14 +96,14 @@ recipients_split = recipients_raw.split(',')
 for r in recipients_split:
     r_split = r.split(':')
     if( len(r_split[1].strip()) != 40 ):
-        logger.fatal('Recipient key fingerprint for %s is invalid.' % r_split[0])
+        logger.critical('Recipient key fingerprint for %s is invalid.' % r_split[0])
         sys.exit(1)
     else:
         if(gpg_fingerprint_exists(keylist, r_split[1].strip())):
             r_dict = { 'email' : r_split[0].strip(), 'fingerprint' : r_split[1].strip() }
             config['recipients'].append(r_dict)
         else:
-            logger.fatal('Recipient key fingerprint for %s not in keyring.' % r_split[0])
+            logger.critical('Recipient key fingerprint for %s not in keyring.' % r_split[0])
             sys.exit(1)
 
 
@@ -130,6 +132,6 @@ with daemon_context:
         the_watcher.start_monitoring()
 
     except Exception as e:
-        logger.fatal("Fatal %s: %s\n" % (type(e).__name__, e.message))
+        logger.critical("Fatal %s: %s\n" % (type(e).__name__, e.message))
         logger.error(traceback.format_exc())
         sys.exit(1)
