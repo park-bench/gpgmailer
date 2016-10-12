@@ -33,9 +33,9 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="GPG Mailer"
 NAME=gpgmailer
-DAEMON=/opt/gpgmailer/gpgmailer-daemon.py
+DAEMON=/usr/share/gpgmailer/gpgmailer-daemon.py
 DAEMON_ARGS=
-PIDFILE=/var/opt/run/$NAME.pid
+PIDFILE=/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 MAIL_DIR=/tmp/gpgmailer
 
@@ -43,7 +43,7 @@ MAIL_DIR=/tmp/gpgmailer
 [ -x "$DAEMON" ] || exit 0
 
 # Read configuration variable file if it is present
-[ -r /etc/opt/default/$NAME ] && . /etc/opt/default/$NAME
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
