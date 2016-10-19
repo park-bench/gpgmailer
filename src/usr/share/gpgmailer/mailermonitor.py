@@ -21,8 +21,8 @@
 #   sends emails using gpgmailer based on the object files
 
 import gpgmailer
+import logging
 import os
-import timber
 import time
 import base64
 import json
@@ -30,7 +30,7 @@ import json
 # TODO: Class names are suppose to be camel case. (Not the filenames though.)
 class mailer_monitor():
     def __init__(self, config):
-        self.logger = timber.get_instance()
+        self.logger = logging.getLogger()
         self.config = config
         self.the_mailer = gpgmailer.mailer(self.config)
 

@@ -16,11 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gnupg
+import logging
 import random
 import smtplib
 import subprocess
 import time
-import timber
 import traceback
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -35,7 +35,7 @@ import base64
 class mailer ():
     
     def __init__(self, config):
-        self.logger = timber.get_instance()
+        self.logger = logging.getLogger()
         self.config = config
         self.gpg = config['gpg']
 
