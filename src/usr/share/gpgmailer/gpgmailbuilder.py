@@ -6,12 +6,12 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import gnupg
+import logging
 import time
-import timber
 
 class gpgMailBuilder:
     def __init__(self, gpg_home):
-        self.logger = timber.get_instance()
+        self.logger = logging.getLogger()
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
 
     # Formerly known as eldtdritch_crypto_magic. #NoFunAllowed

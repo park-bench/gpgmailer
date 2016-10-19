@@ -1,8 +1,8 @@
-import timber
+import logging
 
 class GpgKeyVerifier:
     def __init__(self, gpgkeyring, expiration_margin):
-        self.logger = timber.get_instance()
+        self.logger = logging.getLogger()
         self.expiration_margin = expiration_margin
         self.gpgkeyring = gpgkeyring
 

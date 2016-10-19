@@ -19,13 +19,11 @@ import gpgmailbuilder
 import json
 import logging
 import os
-import timber
 import time
 
 class GpgMailer:
     def __init__(self, config, gpgkeyring):
         self.logger = timber.get_instance()
-=======
 # TODO: Write more effective logging.
 # TODO: I kinda want to review method separation and naming for the entire file.
 
@@ -33,7 +31,6 @@ class mailer ():
     
     def __init__(self, config):
         self.logger = logging.getLogger()
->>>>>>> master:src/usr/share/gpgmailer/gpgmailer.py
         self.config = config
         self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_home'])

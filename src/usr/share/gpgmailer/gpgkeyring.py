@@ -1,6 +1,6 @@
 import gnupg
+import logging
 import re
-import timber
 import time
 
 key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
@@ -8,7 +8,7 @@ valid_owner_trust_levels = ('u', 'f', 'm')
 
 class GpgKeyRing:
     def __init__(self, gnupg_home):
-        self.logger = timber.get_instance()
+        self.logger = logging.getLogger()
         self.gpg = gnupg.GPG(gnupghome=gnupg_home)
         self.keys = {}
 
