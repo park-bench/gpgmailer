@@ -3,7 +3,7 @@
 [General]
 
 # log_file is pretty self-explanatory
-log_file=/var/opt/log/gpgmailer.log
+log_file=/var/log/gpgmailer.log
 
 # log_level tells GpgMailer how much stuff to report
 log_level=info
@@ -11,7 +11,7 @@ log_level=info
 # gpg_dir should be the gnupg keyring directory containing all of the
 # keys you intend to use.  This is not included yet, you should set
 # this up yourself first.
-gpg_dir=/etc/opt/gpgmailer/gnupg/
+gpg_dir=/etc/gpgmailer/gnupg/
 
 # watch_dir sets the directory that gpgmailer checks for new mail objects to
 # send.

@@ -21,14 +21,14 @@ import daemon
 import gnupg
 import gpgkeyring
 import gpgmailer
+import logging
 import os
 from daemon import pidlockfile
 import signal
 import sys
-import timber
 import traceback
 
-PID_FILE = '/var/opt/run/gpgmailer.pid'
+PID_FILE = '/run/gpgmailer.pid'
 
 # After first commit
 # TODO: Clean up logging
@@ -51,7 +51,7 @@ def build_key_dict(key_config_string, gpgkeyring):
 
 print('Loading configuration.')
 config_file = ConfigParser.RawConfigParser()
-config_file.read('/etc/opt/gpgmailer/gpgmailer.conf')
+config_file.read('/etc/gpgmailer/gpgmailer.conf')
 
 # Figure out the logging options so that can start before anything else.
 print('Verifying configuration.')
@@ -59,7 +59,9 @@ config_helper = confighelper.ConfigHelper()
 log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
 log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
 
-logger = timber.get_instance_with_filename(log_file, log_level)
+config_helper.configure_logger(log_file, log_level)
+
+logger = logging.getLogger()
 
 logger.info('Verifying non-logging config')
 config = {}

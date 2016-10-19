@@ -1,0 +1,5 @@
+# Automatically added by dh_installinit
+if [ -x "/etc/init.d/gpgmailer" ] || [ -e "/etc/init/gpgmailer.conf" ]; then
+	invoke-rc.d gpgmailer stop || exit $?
+fi
+# End automatically added section
