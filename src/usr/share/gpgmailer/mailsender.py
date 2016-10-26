@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import random
 import smtplib
 import time
 
@@ -25,7 +26,7 @@ class MailSender:
         self.config = config
         self.smtp = None
 
-        self.connect()
+        self._connect()
         self.lastSentTime = time.time()
 
     def _connect(self):

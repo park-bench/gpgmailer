@@ -1,4 +1,5 @@
 import logging
+import time
 
 class GpgKeyVerifier:
     def __init__(self, gpgkeyring, expiration_margin):
@@ -9,7 +10,7 @@ class GpgKeyVerifier:
     def filter_valid_keys(self, fingerprint_list):
         valid_keys = []
 
-        check_date = time.time() + self.expiration_margin)
+        check_date = time.time() + self.expiration_margin
 
         for fingerprint in fingerprint_list:
             if not(self.gpgkeyring.is_expired(fingerprint, check_date=check_date)):

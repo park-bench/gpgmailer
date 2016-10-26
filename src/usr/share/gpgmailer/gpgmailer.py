@@ -14,27 +14,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import base64
+import gpgkeyverifier
 import gpgkeyring
 import gpgmailbuilder
 import json
 import logging
+import mailsender
 import os
 import time
 
+# TODO: Make this configurable.
+loop_wait_time = 0.1
+
+# TODO: Write more effective logging.
 class GpgMailer:
     def __init__(self, config, gpgkeyring):
-        self.logger = timber.get_instance()
-# TODO: Write more effective logging.
-# TODO: I kinda want to review method separation and naming for the entire file.
-
-class mailer ():
-    
-    def __init__(self, config):
         self.logger = logging.getLogger()
         self.config = config
         self.gpgkeyring = gpgkeyring
-        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_home'])
-        # self.gpgkeychecker = gpgkeychecker.GpgKeyChecker(self.gpgkeyring, config['expiration_warning_threshold'])
+        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'])
+        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, loop_wait_time)
+
+        self.mailsender = mailsender.MailSender(self.config)
 
         self.logger.info('GpgMailer initialized.')
         # TODO: Check keys here.
@@ -42,16 +43,26 @@ class mailer ():
     def start_monitoring(self, directory):
         
         while True:
+            self.logger.debug("Checking watch directory.")
             file_list = next(os.walk(self.config['watch_dir']))[2]
             for file_name in file_list:
+                self.logger.info("Found file %s." % file_name)
                 message_dict = self._read_message_file(file_name)
                 if message_dict == {}:
                     # TODO: Some mechanism to ignore broken files
                     self.logger.error('Message file %s could not be read.' % file_name)
 
                 else:
+                    # TODO: Add key expiration message.
+
+                    recipient_fingerprints = []
+                    for recipient in self.config['recipients']:
+                        recipient_fingerprints.append(recipient['fingerprint'])
+                    valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
+
                     # Try to encrypt the message.
-                    encrypted_message = self.gpgmailbuilder.build_message(message_dict, recipient_fingerprints)
+                    encrypted_message = self.gpgmailbuilder.build_message(message_dict, valid_recipient_fingerprints, self.config['sender']['fingerprint'], \
+                        self.config['sender']['password'])
 
                     if encrypted_message == None:
                         # TODO: Some mechanism to ignore broken files
@@ -60,10 +71,11 @@ class mailer ():
                     else:
                         # TODO Actually send mail. For testing, just logging is fine.
                         self.logger.info('Successfully read message %s.' % file_name)
+                        #self.mailsender.sendmail(encrypted_message);
 
             # TODO: Move key expiration checks into this area.
             # TODO: Make configurable.
-            time.sleep(.1)
+            time.sleep(loop_wait_time)
 
     # Read a message file and build a dictionary appropriate for gpgmailbuilder.
     def _read_message_file(self, file_name):

@@ -93,6 +93,7 @@ sender_key_password = config_helper.verify_password_exists(config_file, 'signing
 sender_key = build_key_dict(sender_key_string, gpgkeyring)
 if sender_key:
     logger.info('Using sender %s' % sender_key['email'])
+    sender_key['password'] = sender_key_password
     config['sender'] = sender_key
 else:
     logger.fatal('Sender key not available or invalid. Exiting.')
@@ -135,12 +136,14 @@ daemon_context.signal_map = {
     signal.SIGTERM : sig_term_handler
     }
 
+daemon_context.files_preserve = [config_helper.get_log_file_handle()]
+
 logger.debug('Daemonizing')
 with daemon_context:
     try:
         logger.info('Starting GpgMailer.')
         the_watcher = gpgmailer.GpgMailer(config, gpgkeyring)
-        the_watcher.start_monitoring()
+        the_watcher.start_monitoring(config['watch_dir'])
 
     except Exception as e:
         logger.fatal("Fatal %s: %s\n%s" % (type(e).__name__, e.message, traceback.format_exc()))

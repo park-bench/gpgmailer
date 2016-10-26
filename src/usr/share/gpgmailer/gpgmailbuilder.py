@@ -6,16 +6,18 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import gnupg
+import gpgkeyring
 import logging
 import time
 
-class gpgMailBuilder:
+class GpgMailBuilder:
     def __init__(self, gpg_home):
         self.logger = logging.getLogger()
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
+        self.gpg = gnupg.GPG(gpg_home)
 
     # Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
-    def build_message(self, message_dict, recipient_fingerprints):
+    def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_password):
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
@@ -23,7 +25,7 @@ class gpgMailBuilder:
         pgp_version.set_payload("Version: 1\n")
 
         # Sign the message
-        signed_message = self._build_signed_message(message_dict)
+        signed_message = self._build_signed_message(message_dict, signing_key_fingerprint, signing_key_password)
 
         # We need all encryption keys in a list
         good_fingerprints = []
@@ -57,14 +59,14 @@ class gpgMailBuilder:
         else:
             return str(encrypted_message)
 
-    def _build_signed_message(self, message_dict):
+    def _build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_password):
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.
 
         multipart_message = MIMEMultipart(_subtype="mixed")
 
         # TODO: This may need an extra newline. Test with attachments.
-        multipart_message.attach(MIMEText(message_dict['message']))
+        multipart_message.attach(MIMEText(message_dict['body']))
 
         # Loop over the attachments
         if('attachments' in message_dict.keys()):
@@ -79,8 +81,7 @@ class gpgMailBuilder:
         message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
 
         # Make the signature component
-        sender = self.config['sender']
-        signature_result = self.gpg.sign(message_string, detach=True, keyid=sender.fingerprint, passphrase=sender.password)
+        signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint, passphrase=signing_key_password)
         signature_text = str(signature_result)
 
         if(signature_text == ''):
