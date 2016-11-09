@@ -72,7 +72,7 @@ class MailSender:
         # Get a list of recipients from config
         recipients = []
         for recipient in self.config['recipients']:
-            recipients.append(recipient.email)
+            recipients.append(recipient['email'])
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: There is probably also a hard session limit too.
@@ -81,9 +81,9 @@ class MailSender:
             self._connect()
 
 
-        if not(encrypted_message == None):
+        if not(message_string == None):
             try:
-                self.smtp.sendmail(self.config['sender'].email, recipients, encrypted_message_string)
+                self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
                 sent_successfully = True
             except Exception as e:
                 self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
@@ -91,7 +91,7 @@ class MailSender:
 
                 # Try reconnecting and resending
                 self._connect()
-                self.smtp.sendmail(self.config['sender'].email, recipients, encrypted_message_string)
+                self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
                 sent_successfully = True
             self.lastSentTime = time.time()
         else:

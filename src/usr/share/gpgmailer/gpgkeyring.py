@@ -27,7 +27,7 @@ class GpgKeyRing:
 
         if self._valid_fingerprint(fingerprint):
             self.logger.debug('Expiration: %s, check date: %s' % (self.keys[fingerprint]['expires'], check_date))
-            if (self.keys[fingerprint]['expires'] == None) or (self.keys[fingerprint]['expires'] > check_date):
+            if (self.keys[fingerprint]['expires'] == None) or (self.keys[fingerprint]['expires'] < check_date):
                 expired = False
 
         return expired

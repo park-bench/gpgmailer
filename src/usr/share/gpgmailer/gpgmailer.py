@@ -72,7 +72,14 @@ class GpgMailer:
                     else:
                         # TODO Actually send mail. For testing, just logging is fine.
                         self.logger.info('Successfully read message %s.' % file_name)
-                        #self.mailsender.sendmail(encrypted_message);
+                        if not(self.mailsender.sendmail(encrypted_message)):
+                            # TODO: Some mechanism to handle mail errors.
+                            self.logger.error('Failed to send message %s.' % file_name)
+
+                        else:
+                            self.logger.info('Message %s sent successfully.' % file_name)
+                            os.remove('%s%s' % (self.config['watch_dir'],file_name))
+                            
 
             # TODO: Move key expiration checks into this area.
             # TODO: Make configurable.
@@ -98,16 +105,6 @@ class GpgMailer:
                     # Attachment data is assumed to be encoded in base64.
                     attachment['data'] = base64.b64decode(attachment['data'])
             
-            # TODO: This functionality goes in another bit of the code.
-            '''
-            self.logger.info('Sending %s' % file_name)
-            sending_successful = self.the_mailer.sendmail(file_dict)
-
-            # Remove the file after it has been sent, but not if it failed.
-            if sending_successful:
-                os.remove('%s%s' % (self.config['watch_dir'],file_name))
-            '''
-
         except Exception as e:
             self.logger.error('Exception: %s\n' % e.message);
 
