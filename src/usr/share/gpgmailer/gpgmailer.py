@@ -29,7 +29,7 @@ loop_wait_time = 0.1
 # TODO: Write more effective logging.
 class GpgMailer:
     def __init__(self, config, gpgkeyring):
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger('GpgMailer')
         self.config = config
         self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'])

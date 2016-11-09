@@ -3,7 +3,7 @@ import time
 
 class GpgKeyVerifier:
     def __init__(self, gpgkeyring, expiration_margin):
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger('GpgKeyVerifier')
         self.expiration_margin = expiration_margin
         self.gpgkeyring = gpgkeyring
 

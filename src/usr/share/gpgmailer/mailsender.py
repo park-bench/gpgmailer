@@ -21,7 +21,7 @@ import time
 
 class MailSender:
     def __init__(self, config):
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger('MailSender')
 
         self.config = config
         self.smtp = None

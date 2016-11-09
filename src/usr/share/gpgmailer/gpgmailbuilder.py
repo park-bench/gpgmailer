@@ -12,7 +12,7 @@ import time
 
 class GpgMailBuilder:
     def __init__(self, gpg_home):
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger('GpgMailBuilder')
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
         self.gpg = gnupg.GPG(gnupghome=gpg_home)
 
