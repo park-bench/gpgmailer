@@ -14,7 +14,7 @@ class GpgMailBuilder:
     def __init__(self, gpg_home):
         self.logger = logging.getLogger()
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
-        self.gpg = gnupg.GPG(gpg_home)
+        self.gpg = gnupg.GPG(gnupghome=gpg_home)
 
     # Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
     def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_password):
@@ -32,27 +32,32 @@ class GpgMailBuilder:
         encryption_error = False
 
         for fingerprint in recipient_fingerprints:
-            if self.gpgkeyring.is_trusted(fingerprint) and self.gpgkeyring.is_valid(fingerprint):
+            if self.gpgkeyring.is_trusted(fingerprint) and not(self.gpgkeyring.is_expired(fingerprint)):
                 good_fingerprints.append(fingerprint)
 
-        # Encrypt the message
-        encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
-        encrypted_payload_result = self.gpg.encrypt(signed_message.as_string(), good_fingerprints)
-        encrypted_payload = str(encrypted_payload_result)
-
-        # This ok variable is not the status result we need. It only indicates failure.
-        if(encrypted_payload_result.ok == False):
-            # TODO: Handle this error properly. Do not send or delete the message.
-            self.logger.error('Error while encrypting message: %s.' % encrypted_payload_result.status)
+        if(good_fingerprints == []):
+            self.logger.critical('No keys usable for encryption.')
             encryption_error = True
 
-        encrypted_part.set_payload(encrypted_payload)
+        else:
+            # Encrypt the message
+            encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
+            encrypted_payload_result = self.gpg.encrypt(signed_message.as_string(), good_fingerprints)
+            encrypted_payload = str(encrypted_payload_result)
 
-        # Pack it all into one big message
-        encrypted_message = MIMEMultipart(_subtype="encrypted", protocol="application/pgp-encrypted")
-        encrypted_message['Subject'] = message_dict['subject']
-        encrypted_message.attach(pgp_version)
-        encrypted_message.attach(encrypted_part)
+            # This ok variable is not the status result we need. It only indicates failure.
+            if(encrypted_payload_result.ok == False):
+                # TODO: Handle this error properly. Do not send or delete the message.
+                self.logger.error('Error while encrypting message: %s.' % encrypted_payload_result.status)
+                encryption_error = True
+
+            encrypted_part.set_payload(encrypted_payload)
+
+            # Pack it all into one big message
+            encrypted_message = MIMEMultipart(_subtype="encrypted", protocol="application/pgp-encrypted")
+            encrypted_message['Subject'] = message_dict['subject']
+            encrypted_message.attach(pgp_version)
+            encrypted_message.attach(encrypted_part)
 
         if encryption_error:
             return None
@@ -80,6 +85,7 @@ class GpgMailBuilder:
         # Removes the first line and replaces LF with CR/LF
         message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
 
+        # TODO: Validate signing key and maybe password.
         # Make the signature component
         signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint, passphrase=signing_key_password)
         signature_text = str(signature_result)

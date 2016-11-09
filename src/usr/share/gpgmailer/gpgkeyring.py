@@ -13,6 +13,9 @@ class GpgKeyRing:
         self.keys = {}
 
         for key in self.gpg.list_keys():
+            if key['expires'] == '':
+                key['expires'] = None
+
             self.keys[key['fingerprint']] = { 'expires': key['expires'],
                 'ownertrust': key['ownertrust']
             }
@@ -23,7 +26,8 @@ class GpgKeyRing:
         expired = True
 
         if self._valid_fingerprint(fingerprint):
-            if self.keys[fingerprint]['expires'] > check_date:
+            self.logger.debug('Expiration: %s, check date: %s' % (self.keys[fingerprint]['expires'], check_date))
+            if (self.keys[fingerprint]['expires'] == None) or (self.keys[fingerprint]['expires'] > check_date):
                 expired = False
 
         return expired
@@ -48,7 +52,7 @@ class GpgKeyRing:
             self.logger.error('Key fingerprint %s not found in GPG key store.' % fingerprint)
 
         else:
-            self.logger.debug('Key fingerprint is good')
+            self.logger.debug('Key fingerprint %s is good.' % fingerprint)
             valid = True
 
         return valid

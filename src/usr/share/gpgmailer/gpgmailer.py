@@ -54,6 +54,7 @@ class GpgMailer:
 
                 else:
                     # TODO: Add key expiration message.
+                    self.logger.error('Message file read.')
 
                     recipient_fingerprints = []
                     for recipient in self.config['recipients']:

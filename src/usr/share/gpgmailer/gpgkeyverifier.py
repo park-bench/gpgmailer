@@ -13,15 +13,18 @@ class GpgKeyVerifier:
         check_date = time.time() + self.expiration_margin
 
         for fingerprint in fingerprint_list:
-            if not(self.gpgkeyring.is_expired(fingerprint, check_date=check_date)):
-                self.logger.error('Key with fingerprint %s is expired.' % fingerprint)
+            if self.gpgkeyring.is_expired(fingerprint, check_date=check_date):
+                self.logger.error('Key with fingerprint %s is expired and will not be used.' % fingerprint)
 
             else:
                 if not(self.gpgkeyring.is_trusted(fingerprint)):
-                    self.logger.error('Key with fingerprint %s is not trusted.' % fingerprint)
+                    self.logger.error('Key with fingerprint %s is not trusted and will not be used.' % fingerprint)
 
                 else:
+                    self.logger.trace('Key with fingerprint %s is valid and will be used.' % fingerprint)
                     valid_keys.append(fingerprint)
+
+        return valid_keys
             
 
     def build_key_expiration_message(self, expiration_warning_threshold, key_dict_list):
