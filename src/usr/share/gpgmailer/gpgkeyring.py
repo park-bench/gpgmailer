@@ -17,7 +17,9 @@ class GpgKeyRing:
                 key['expires'] = None
 
             self.keys[key['fingerprint']] = { 'expires': key['expires'],
-                'ownertrust': key['ownertrust']
+                'ownertrust': key['ownertrust'],
+                'email': None,
+                'fingerprint': key['fingerprint']
             }
 
 
@@ -41,6 +43,20 @@ class GpgKeyRing:
                 trusted = True
 
         return trusted
+
+    # Returns the key's expiration date in Unix time.
+    def get_key_data(self, fingerprint):
+        result = None
+
+        if self._valid_fingerprint(fingerprint):
+            if fingerprint in self.keys.keys():
+                result = self.keys[fingerprint]
+
+        return result
+
+    def set_key_email(self, fingerprint, email):
+        if self._valid_fingerprint(fingerprint):
+            self.keys[fingerprint]['email'] = email
 
     def _valid_fingerprint(self, fingerprint):
         valid = False

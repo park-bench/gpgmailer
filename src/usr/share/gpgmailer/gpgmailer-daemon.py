@@ -43,11 +43,8 @@ def build_key_dict(key_config_string, gpgkeyring):
     key_dict['fingerprint'] = key_config_list[1].strip()
     key_dict['email'] = key_config_list[0].strip()
 
-    if not(gpgkeyring.is_expired(key_dict['fingerprint'])) and \
-        (gpgkeyring.is_trusted(key_dict['fingerprint'])):
-        final_key_dict = key_dict
-
-    return final_key_dict
+    gpgkeyring.set_key_email(key_dict['fingerprint'], key_dict['email'])
+    return key_dict
 
 print('Loading configuration.')
 config_file = ConfigParser.RawConfigParser()

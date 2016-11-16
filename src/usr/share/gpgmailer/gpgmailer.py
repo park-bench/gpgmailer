@@ -53,13 +53,17 @@ class GpgMailer:
                     self.logger.error('Message file %s could not be read.' % file_name)
 
                 else:
-                    # TODO: Add key expiration message.
-                    self.logger.error('Message file read.')
+                    self.logger.info('Message file read.')
 
                     recipient_fingerprints = []
                     for recipient in self.config['recipients']:
                         recipient_fingerprints.append(recipient['fingerprint'])
                     valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
+
+                    # TODO: Add key expiration message.
+                    # TODO: Include sender key if it isn't already in the recipients list.
+                    key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], recipient_fingerprints)
+                    message_dict['body'] = '%s\n%s' % (message_dict['body'], key_expiration_message)
 
                     # Try to encrypt the message.
                     encrypted_message = self.gpgmailbuilder.build_message(message_dict, valid_recipient_fingerprints, self.config['sender']['fingerprint'], \
@@ -70,7 +74,6 @@ class GpgMailer:
                         self.logger.error('Encrypting or signing message %s failed.' % file_name)
 
                     else:
-                        # TODO Actually send mail. For testing, just logging is fine.
                         self.logger.info('Successfully read message %s.' % file_name)
                         if not(self.mailsender.sendmail(encrypted_message)):
                             # TODO: Some mechanism to handle mail errors.
@@ -93,12 +96,6 @@ class GpgMailer:
         try:
             with open('%s%s' % (self.config['watch_dir'], file_name), 'r') as file_handle:
                 message_dict = json.loads(file_handle.read())
-
-            # TODO: This stuff goes in gpgmailbuilder.
-            '''
-            message_dict['sender'] = self.config['sender'].email
-            message_dict['signing_key_fingerprint'] = self.config['sender'].fingerprint
-            '''
 
             if('attachments' in message_dict.keys()):
                 for attachment in message_dict['attachments']:
