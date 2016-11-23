@@ -40,9 +40,10 @@ class GpgMailBuilder:
             encryption_error = True
 
         else:
+            self.logger.debug('good fingerprints: %s' % good_fingerprints)
             # Encrypt the message
             encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
-            encrypted_payload_result = self.gpg.encrypt(signed_message.as_string(), good_fingerprints)
+            encrypted_payload_result = self.gpg.encrypt(data=signed_message.as_string(), recipients=good_fingerprints)
             encrypted_payload = str(encrypted_payload_result)
 
             # This ok variable is not the status result we need. It only indicates failure.

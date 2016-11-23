@@ -8,6 +8,7 @@ class GpgKeyVerifier:
         self.gpgkeyring = gpgkeyring
 
     def filter_valid_keys(self, fingerprint_list):
+        self.logger.info('Filtering keys in list')
         valid_keys = []
 
         check_date = time.time() + self.expiration_margin
@@ -28,6 +29,7 @@ class GpgKeyVerifier:
             
 
     def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list):
+        self.logger.info('Building key expiration message.')
         expired_messages = []
         expiring_soon_messages = []
 

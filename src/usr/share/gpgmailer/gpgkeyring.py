@@ -16,6 +16,9 @@ class GpgKeyRing:
             if key['expires'] == '':
                 key['expires'] = None
 
+            else:
+                key['expires'] = int(key['expires'])
+
             self.keys[key['fingerprint']] = { 'expires': key['expires'],
                 'ownertrust': key['ownertrust'],
                 'email': None,
@@ -25,13 +28,15 @@ class GpgKeyRing:
 
     # Check if key fingerprint is expired at date and return a boolean.
     def is_expired(self, fingerprint, check_date=time.time()):
+        # TODO: Also check the encryption subkey.
         expired = True
 
         if self._valid_fingerprint(fingerprint):
             self.logger.debug('Expiration: %s, check date: %s' % (self.keys[fingerprint]['expires'], check_date))
-            if (self.keys[fingerprint]['expires'] == None) or (self.keys[fingerprint]['expires'] < check_date):
+            if (self.keys[fingerprint]['expires'] == None) or (self.keys[fingerprint]['expires'] > check_date):
                 expired = False
 
+        self.logger.debug('Expired: %s' % expired)
         return expired
 
     # Check if key fingerprint is trusted and return a boolean.

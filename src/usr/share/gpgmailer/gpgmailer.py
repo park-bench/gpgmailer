@@ -43,7 +43,6 @@ class GpgMailer:
     def start_monitoring(self, directory):
         
         while True:
-            self.logger.debug("Checking watch directory.")
             file_list = next(os.walk(self.config['watch_dir']))[2]
             for file_name in file_list:
                 self.logger.info("Found file %s." % file_name)
