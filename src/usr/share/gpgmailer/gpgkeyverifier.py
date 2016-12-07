@@ -56,6 +56,6 @@ class GpgKeyVerifier:
 
         joined_expired_messages = '\n'.join(expired_messages)
         joined_expiring_soon_messages = '\n'.join(expiring_soon_messages)
-        full_message = '%s\n%s' % (joined_expired_messages, joined_expiring_soon_messages)
+        full_message = '%s\n%s\n' % (joined_expired_messages, joined_expiring_soon_messages)
 
         return full_message
