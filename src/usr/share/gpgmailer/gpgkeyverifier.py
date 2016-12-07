@@ -1,3 +1,4 @@
+import datetime
 import logging
 import time
 
@@ -29,7 +30,6 @@ class GpgKeyVerifier:
             
 
     def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list):
-        # TODO: Expiring soon checks do not seem to work.
         self.logger.info('Building key expiration message.')
         expired_messages = []
         expiring_soon_messages = []
@@ -47,8 +47,8 @@ class GpgKeyVerifier:
                 expired_messages.append(message)
                 self.logger.warn(message)
 
-            elif self.gpgkeyring.is_expired(key_dict['fingerprint'], check_date = time.time() - expiration_warning_threshold):
-                pretty_expiration_date = time.strftime('%Y-%m-%d %H:%M:%S', key_dict['expires'])
+            elif self.gpgkeyring.is_expired(key_dict['fingerprint'], check_date = time.time() + expiration_warning_threshold):
+                pretty_expiration_date = datetime.datetime.fromtimestamp(key_dict['expires']).strftime('%Y-%m-%d %H:%M:%S')
                 message = 'Key <%s> (%s) will be expiring on date <%s>!' % \
                     (key_dict['fingerprint'], key_dict['email'], pretty_expiration_date)
                 expiring_soon_messages.append(message)
