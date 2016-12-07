@@ -59,17 +59,16 @@ class GpgMailer:
                         recipient_fingerprints.append(recipient['fingerprint'])
                     valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
 
-                    # TODO: Add key expiration message.
                     # TODO: Include sender key if it isn't already in the recipients list.
                     key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], recipient_fingerprints)
-                    message_dict['body'] = '%s\n%s' % (message_dict['body'], key_expiration_message)
+                    message_dict['body'] = '%s\n%s' % (key_expiration_message, message_dict['body'])
 
                     # Try to encrypt the message.
                     encrypted_message = self.gpgmailbuilder.build_message(message_dict, valid_recipient_fingerprints, self.config['sender']['fingerprint'], \
                         self.config['sender']['password'])
 
                     if encrypted_message == None:
-                        # TODO: Some mechanism to ignore broken files
+                        # TODO: Move corrupted files to a new directory
                         self.logger.error('Encrypting or signing message %s failed.' % file_name)
 
                     else:
