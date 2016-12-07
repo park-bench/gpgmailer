@@ -110,6 +110,7 @@ for recipient in recipients_raw_list:
         # TODO: The remaining users should be notified of this via e-mail if this occurs.
         logger.error('Recipient key for %s not available or invalid.' % recipient)
 
+
 if config['recipients'] == []:
     logger.fatal('No valid recipients. Exiting.')
     sys.exit(1)

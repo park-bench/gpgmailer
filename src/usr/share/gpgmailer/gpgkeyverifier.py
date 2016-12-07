@@ -29,6 +29,7 @@ class GpgKeyVerifier:
             
 
     def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list):
+        # TODO: Expiring soon checks do not seem to work.
         self.logger.info('Building key expiration message.')
         expired_messages = []
         expiring_soon_messages = []
@@ -55,6 +56,6 @@ class GpgKeyVerifier:
 
         joined_expired_messages = '\n'.join(expired_messages)
         joined_expiring_soon_messages = '\n'.join(expiring_soon_messages)
-        full_message = '%s\n%s\n' % (joined_expired_messages, joined_expiring_soon_messages)
+        full_message = '%s\n%s' % (joined_expired_messages, joined_expiring_soon_messages)
 
         return full_message
