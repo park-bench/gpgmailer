@@ -32,7 +32,7 @@ class GpgMailer:
         self.logger = logging.getLogger('GpgMailer')
         self.config = config
         self.gpgkeyring = gpgkeyring
-        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'])
+        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['send_unsigned_messages'])
         self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, loop_wait_time)
 
         self.mailsender = mailsender.MailSender(self.config)
@@ -60,7 +60,7 @@ class GpgMailer:
                     valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
 
                     sender_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], \
-                        self.config['sender']['fingerprint'])
+                        [self.config['sender']['fingerprint']])
                     key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], recipient_fingerprints)
                     message_dict['body'] = '%s%s%s' % (sender_expiration_message, key_expiration_message, message_dict['body'])
 
@@ -83,7 +83,6 @@ class GpgMailer:
                             os.remove('%s%s' % (self.config['watch_dir'],file_name))
                             
 
-            # TODO: Move key expiration checks into this area.
             # TODO: Make configurable.
             time.sleep(loop_wait_time)
 

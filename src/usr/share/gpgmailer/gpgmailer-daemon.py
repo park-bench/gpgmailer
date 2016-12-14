@@ -32,8 +32,6 @@ PID_FILE = '/run/gpgmailer.pid'
 
 # After first commit
 # TODO: Clean up logging
-# TODO: Clean up method names
-# TODO: Consider making this a class somehow.
 
 def build_key_dict(key_config_string, gpgkeyring):
     final_key_dict = None
@@ -43,7 +41,9 @@ def build_key_dict(key_config_string, gpgkeyring):
     key_dict['fingerprint'] = key_config_list[1].strip()
     key_dict['email'] = key_config_list[0].strip()
 
-    gpgkeyring.set_key_email(key_dict['fingerprint'], key_dict['email'])
+    if not gpgkeyring.set_key_email(key_dict['fingerprint'], key_dict['email']):
+        key_dict = {}
+
     return key_dict
 
 print('Loading configuration.')
@@ -70,11 +70,17 @@ config['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_se
 config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
+
 # Convert the key expiration threshhold into seconds because expiry dates are
 #   stored in unix time.
 config['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
 
 config['key_database_reload_interval'] = config_helper.verify_number_exists(config_file, 'key_database_reload_interval')
+
+if(config_helper.verify_string_exists(config_file, 'send_unsigned_messages').lower() == 'true'):
+    config['send_unsigned_messages'] = True
+else:
+    config['send_unsigned_messages'] = False
 
 # init gnupg so we can verify keys
 config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
@@ -88,13 +94,34 @@ sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
 sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
 
 sender_key = build_key_dict(sender_key_string, gpgkeyring)
-if sender_key:
+
+if not(sender_key == {}):
     logger.info('Using sender %s' % sender_key['email'])
     sender_key['password'] = sender_key_password
     config['sender'] = sender_key
 else:
-    logger.fatal('Sender key not available or invalid. Exiting.')
+    logger.fatal('Sender key not defined or not in keyring. Exiting.')
     sys.exit(1)
+
+# TODO: Test that this fails when sender key is not trusted or expired
+if(gpgkeyring.is_expired(sender_key['fingerprint']) and \
+    gpgkeyring.is_trusted(sender_key['fingerprint'])):
+    signing_key_valid = True
+
+if not config['send_unsigned_messages']:
+    # Check signing key
+    logger.info('send_unsigned_messages is not enabled, checking signing key.')
+
+    if not sender_key:
+        # Log critical error and quit
+        logger.critical('Sender key not defined.')
+        sys.exit(1)
+
+    elif not signing_key_valid:
+        # Log critical error and quit
+        logger.critical('Sender key not available or invalid. Exiting.')
+        sys.exit(1)
+
 
 # parse recipient config.  Comma-delimited list of objects like sender
 # <email>:<key fingerprint>,<email>:<key fingerprint>

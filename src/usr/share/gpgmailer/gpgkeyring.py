@@ -60,8 +60,12 @@ class GpgKeyRing:
         return result
 
     def set_key_email(self, fingerprint, email):
+        success = False
         if self._valid_fingerprint(fingerprint):
             self.keys[fingerprint]['email'] = email
+            success = True
+
+        return success
 
     def _valid_fingerprint(self, fingerprint):
         valid = False
