@@ -94,13 +94,15 @@ class GpgMailBuilder:
         signature_test = self.gpg.sign('I\'ve got a lovely bunch of coconuts', detach=True,
             keyid=signing_key_fingerprint, passphrase=signing_key_password)
 
-        if(signature_test == ''):
+        if(str(signature_test).strip() == ''):
             # The library we are using contains a bug and does not actually set the
             #   status variable in the documentation. It could be caused by a few
             #   things, but usually either the key password is wrong or the key is
             #   not trusted.
             signature_error = True
             self.logger.error('Error during signature test.')
+        else:
+            self.logger.debug(signature_test)
 
         if(signature_error and self.send_unsigned_messages):
             # Prepend warning text to message body and build plaintext message
