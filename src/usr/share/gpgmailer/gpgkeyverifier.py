@@ -27,7 +27,6 @@ class GpgKeyVerifier:
                     valid_keys.append(fingerprint)
 
         return valid_keys
-            
 
     def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list):
         self.logger.info('Building key expiration message.')

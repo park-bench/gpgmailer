@@ -56,12 +56,26 @@ class GpgMailer:
                 else:
                     self.logger.info('Message file read.')
 
+                    key_check_date = time.time() + loop_wait_time
+
                     recipient_fingerprints = []
+                    valid_recipient_fingerprints = []
                     for recipient in self.config['recipients']:
                         recipient_fingerprints.append(recipient['fingerprint'])
-                    valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
+                        # TODO: Send an email for each individual expired key.
 
-                    # TODO: Quit if no recipient keys are valid.
+                        if(self.gpgkeyring.is_expired(recipient['fingerprint'], check_date=key_check_date)):
+                            self.logger.error('Key with fingerprint %s is expired and will not be used.' % recipient['fingerprint'])
+                            # TODO: Send message
+
+                        elif not(self.gpgkeyring.is_trusted(recipient['fingerprint'], check_date=key_check_date)):
+                            self.logger.error('Key with fingerprint %s is not trusted and will not be used.' % recipient['fingerprint'])
+                            # TODO: Send message
+
+                        else:
+                            self.logger.debug('Key with fingerprint %s is valid and will be used.' % recipient['fingerprint'])
+                            valid_recipient_fingerprints.append(recipient['fingerprint'])
+
                     if(valid_recipient_fingerprints == []):
                         self.logger.critical('No recipient keys available. Exiting.')
                         sys.exit(1)
