@@ -62,6 +62,9 @@ class GpgMailer:
                     valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
 
                     # TODO: Quit if no recipient keys are valid.
+                    if(valid_recipient_fingerprints == []):
+                        self.logger.critical('No recipient keys available. Exiting.')
+                        sys.exit(1)
 
                     sender_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], \
                         [self.config['sender']['fingerprint']])
