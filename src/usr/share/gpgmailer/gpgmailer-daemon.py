@@ -104,7 +104,7 @@ else:
     sys.exit(1)
 
 # The signing key should always be present and trusted.
-if not(gpgkeyring.is_trusted(sender_key['fingerprint']):
+if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
     logger.critical('Signing key is not trusted. Exiting.');
     sys.exit(1)
 
