@@ -82,6 +82,8 @@ if(config_helper.verify_string_exists(config_file, 'send_unsigned_messages').low
 else:
     config['send_unsigned_messages'] = False
 
+config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
+
 # init gnupg so we can verify keys
 config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 

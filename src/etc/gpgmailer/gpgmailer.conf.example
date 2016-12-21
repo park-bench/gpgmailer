@@ -47,6 +47,10 @@ key_database_reload_interval=5
 #   value, messages will not be sent unless signed.
 send_unsigned_messages=true
 
+# default_subject is the subject that will be assigned to all mail that does not
+#   otherwise have one defined.
+default_subject=
+
 # Sender should be one email address paired with a full PGP key fingerprint.
 # For example:
 # sender=test@example.com:5A4228C8D952459F240626EA4289EC280D58338B
