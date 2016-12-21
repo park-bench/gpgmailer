@@ -71,7 +71,7 @@ config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
-# Convert the key expiration threshhold into seconds because expiry dates are
+# Convert the key expiration threshold into seconds because expiry dates are
 #   stored in unix time.
 config['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
 
@@ -103,23 +103,21 @@ else:
     logger.critical('Sender key not defined or not in keyring. Exiting.')
     sys.exit(1)
 
-# TODO: Test that this fails when sender key is not trusted or expired
-if(gpgkeyring.is_expired(sender_key['fingerprint']) and \
-    gpgkeyring.is_trusted(sender_key['fingerprint'])):
-    signing_key_valid = True
+# The signing key should always be present and trusted.
+if not(gpgkeyring.is_trusted(sender_key['fingerprint']):
+    logger.critical('Signing key is not trusted. Exiting.');
+    sys.exit(1)
+
+if not(gpgkeyring.is_expired(sender_key['fingerprint'])):
+    signing_key_expired = False
 
 if not config['send_unsigned_messages']:
     # Check signing key
     logger.info('send_unsigned_messages is not enabled, checking signing key.')
 
-    if not sender_key:
+    if signing_key_expired:
         # Log critical error and quit
-        logger.critical('Sender key not defined.')
-        sys.exit(1)
-
-    elif not signing_key_valid:
-        # Log critical error and quit
-        logger.critical('Sender key not available or invalid. Exiting.')
+        logger.critical('Sender key expired. Exiting.')
         sys.exit(1)
 
 
