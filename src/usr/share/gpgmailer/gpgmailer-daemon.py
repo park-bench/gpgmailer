@@ -21,6 +21,7 @@ import daemon
 import gnupg
 import gpgkeyring
 import gpgmailer
+import gpgmailmessage
 import logging
 import os
 from daemon import pidlockfile
@@ -137,6 +138,9 @@ for recipient in recipients_raw_list:
         # TODO: The remaining users should be notified of this via e-mail if this occurs.
         #   Explicit, separate emails.
         logger.error('Recipient key for %s not available or invalid.' % recipient)
+        expiration_message = gpgmailmessage.GpgMailMessage()
+        expiration_message.set_body('The encryption key for %s has expired.' % recipient_key['email'])
+        expiration_message.queue_for_sending()
 
 
 if config['recipients'] == []:
