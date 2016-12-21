@@ -100,7 +100,7 @@ if not(sender_key == {}):
     sender_key['password'] = sender_key_password
     config['sender'] = sender_key
 else:
-    logger.fatal('Sender key not defined or not in keyring. Exiting.')
+    logger.critical('Sender key not defined or not in keyring. Exiting.')
     sys.exit(1)
 
 # TODO: Test that this fails when sender key is not trusted or expired
@@ -139,7 +139,7 @@ for recipient in recipients_raw_list:
 
 
 if config['recipients'] == []:
-    logger.fatal('No valid recipients. Exiting.')
+    logger.critical('No valid recipients. Exiting.')
     sys.exit(1)
     
 logger.info('Verification complete')
@@ -171,5 +171,5 @@ with daemon_context:
         the_watcher.start_monitoring(config['watch_dir'])
 
     except Exception as e:
-        logger.fatal("Fatal %s: %s\n%s" % (type(e).__name__, e.message, traceback.format_exc()))
+        logger.critical("Fatal %s: %s\n%s" % (type(e).__name__, e.message, traceback.format_exc()))
         sys.exit(1)
