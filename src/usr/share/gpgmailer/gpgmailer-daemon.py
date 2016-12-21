@@ -135,6 +135,7 @@ for recipient in recipients_raw_list:
         config['recipients'].append(recipient_key)
     else:
         # TODO: The remaining users should be notified of this via e-mail if this occurs.
+        #   Explicit, separate emails.
         logger.error('Recipient key for %s not available or invalid.' % recipient)
 
 

@@ -49,7 +49,6 @@ class GpgMailBuilder:
 
             # This ok variable is not the status result we need. It only indicates failure.
             if(encrypted_payload_result.ok == False):
-                # TODO: Handle this error properly. Do not send or delete the message.
                 self.logger.error('Error while encrypting message: %s.' % encrypted_payload_result.status)
                 encryption_error = True
 
@@ -124,7 +123,6 @@ class GpgMailBuilder:
             # Removes the first line and replaces LF with CR/LF
             message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
 
-            # TODO: Validate signing key and maybe password.
             # Make the signature component
             signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint, passphrase=signing_key_password)
             signature_text = str(signature_result)
