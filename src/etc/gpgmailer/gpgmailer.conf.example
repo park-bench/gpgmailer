@@ -38,10 +38,6 @@ smtp_sending_timeout=30
 #   that gpgmailer should start attaching warnings.
 expiration_warning_threshold=14
 
-# key_database_reload_interval is the number of seconds to wait before reloading
-#   the gnupg database.
-key_database_reload_interval=5
-
 # main_loop_delay is the number of seconds between each check for queued emails.
 main_loop_delay=0.1
 
