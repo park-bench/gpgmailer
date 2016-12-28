@@ -77,6 +77,7 @@ config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file,
 config['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
 
 config['key_database_reload_interval'] = config_helper.verify_number_exists(config_file, 'key_database_reload_interval')
+config['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay')
 
 if(config_helper.verify_string_exists(config_file, 'send_unsigned_messages').lower() == 'true'):
     config['send_unsigned_messages'] = True

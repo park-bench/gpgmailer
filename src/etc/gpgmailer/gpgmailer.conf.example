@@ -42,6 +42,9 @@ expiration_warning_threshold=14
 #   the gnupg database.
 key_database_reload_interval=5
 
+# main_loop_delay is the number of seconds between each check for queued emails.
+main_loop_delay=0.1
+
 # If send_unsigned_message is set to true, gpgmailer will send unsigned messages
 #   if the signing key is invalid or unavailable. If it is set to any other
 #   value, messages will not be sent unless signed.

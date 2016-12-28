@@ -24,9 +24,6 @@ import mailsender
 import os
 import time
 
-# TODO: Make this configurable.
-loop_wait_time = 0.1
-
 # TODO: Write more effective logging.
 class GpgMailer:
     def __init__(self, config, gpgkeyring):
@@ -56,7 +53,7 @@ class GpgMailer:
                 else:
                     self.logger.info('Message file read.')
 
-                    key_check_date = time.time() + loop_wait_time
+                    key_check_date = time.time() + self.config['main_loop_delay']
 
                     recipient_fingerprints = []
                     valid_recipient_fingerprints = []
@@ -107,8 +104,7 @@ class GpgMailer:
                             os.remove('%s%s' % (self.config['watch_dir'],file_name))
                             
 
-            # TODO: Make configurable.
-            time.sleep(loop_wait_time)
+            time.sleep(self.config['main_loop_delay'])
 
     # Read a message file and build a dictionary appropriate for gpgmailbuilder.
     def _read_message_file(self, file_name):
