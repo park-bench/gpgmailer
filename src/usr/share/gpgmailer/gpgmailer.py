@@ -31,7 +31,7 @@ class GpgMailer:
         self.config = config
         self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['send_unsigned_messages'])
-        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, loop_wait_time)
+        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config['main_loop_delay'], self.config)
         self.signing_key_warning_sent = False
         self.signing_key_soon_warning_sent = False
 
@@ -55,23 +55,8 @@ class GpgMailer:
 
                     key_check_date = time.time() + self.config['main_loop_delay']
 
-                    recipient_fingerprints = []
-                    valid_recipient_fingerprints = []
-                    for recipient in self.config['recipients']:
-                        recipient_fingerprints.append(recipient['fingerprint'])
-                        # TODO: Send an email for each individual expired key.
-
-                        if(self.gpgkeyring.is_expired(recipient['fingerprint'], check_date=key_check_date)):
-                            self.logger.error('Key with fingerprint %s is expired and will not be used.' % recipient['fingerprint'])
-                            # TODO: Send message
-
-                        elif not(self.gpgkeyring.is_trusted(recipient['fingerprint'], check_date=key_check_date)):
-                            self.logger.error('Key with fingerprint %s is not trusted and will not be used.' % recipient['fingerprint'])
-                            # TODO: Send message
-
-                        else:
-                            self.logger.debug('Key with fingerprint %s is valid and will be used.' % recipient['fingerprint'])
-                            valid_recipient_fingerprints.append(recipient['fingerprint'])
+                    recipient_fingerprints = [key['fingerprint'] for key in self.config['recipients']]
+                    valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
 
                     if(valid_recipient_fingerprints == []):
                         self.logger.critical('No recipient keys available. Exiting.')
@@ -84,6 +69,7 @@ class GpgMailer:
 
                     key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], recipient_fingerprints)
                     message_dict['body'] = '%s%s%s' % (sender_expiration_message, key_expiration_message, message_dict['body'])
+                    # TODO: Implement the default subject
 
                     # Try to encrypt the message.
                     encrypted_message = self.gpgmailbuilder.build_message(message_dict, valid_recipient_fingerprints, self.config['sender']['fingerprint'], \
@@ -125,6 +111,7 @@ class GpgMailer:
 
         return message_dict
 
+    # TODO: Move this method to gpgkeyverifier
     # Checks whether a signing key warning has been sent already and queues one if it has not.
     def _send_signing_key_warning(self, key_expiration_message):
         self.logger.debug('Signing key expired or expiring soon.')

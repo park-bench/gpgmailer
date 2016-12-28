@@ -22,7 +22,9 @@ class GpgKeyRing:
             self.keys[key['fingerprint']] = { 'expires': key['expires'],
                 'ownertrust': key['ownertrust'],
                 'email': None,
-                'fingerprint': key['fingerprint']
+                'fingerprint': key['fingerprint'],
+                'expired_email': False,
+                'expiring_soon_email': False
             }
 
 
