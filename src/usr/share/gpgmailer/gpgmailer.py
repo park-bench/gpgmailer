@@ -32,8 +32,6 @@ class GpgMailer:
         self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['send_unsigned_messages'])
         self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config['main_loop_delay'], self.config)
-        self.signing_key_warning_sent = False
-        self.signing_key_soon_warning_sent = False
 
         self.mailsender = mailsender.MailSender(self.config)
 
@@ -64,8 +62,6 @@ class GpgMailer:
 
                     sender_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], \
                         [self.config['sender']['fingerprint']])
-
-                    self._send_signing_key_warning(sender_expiration_message)
 
                     key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], recipient_fingerprints)
                     message_dict['body'] = '%s%s%s' % (sender_expiration_message, key_expiration_message, message_dict['body'])
@@ -110,24 +106,3 @@ class GpgMailer:
             self.logger.error('Exception: %s\n' % e.message);
 
         return message_dict
-
-    # TODO: Move this method to gpgkeyverifier
-    # Checks whether a signing key warning has been sent already and queues one if it has not.
-    def _send_signing_key_warning(self, key_expiration_message):
-        self.logger.debug('Signing key expired or expiring soon.')
-
-        if((key_expiration_message.find("will be expiring on date") >= 0) and not(self.signing_key_soon_warning_sent)):
-            self.logger.warn('Signing key expiring soon. Sending email.')
-            message = gpgmailmessage.GpgMailMessage()
-            message.set_subject(self.config["default_subject"])
-            message.set_body('The signing key will be expiring soon. Please update it or set a new one.')
-            message.queue_for_sending()
-            self.signing_key_soon_warning_sent = True
-
-        elif not(self.signing_key_warning_sent):
-            self.logger.warn('Signing key expired. Sending email.')
-            message = gpgmailmessage.GpgMailMessage()
-            message.set_subject(self.config["default_subject"])
-            message.set_body('The signing key is expired. Please update it or set a new one.')
-            message.queue_for_sending()
-            self.signing_key_warning_sent = True
