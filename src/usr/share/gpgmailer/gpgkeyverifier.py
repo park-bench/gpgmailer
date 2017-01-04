@@ -30,9 +30,7 @@ class GpgKeyVerifier:
 
         return valid_keys
 
-    def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list):
-        # TODO: handle initial notifications specially
-        #   - no 'key added' text
+    def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list, first_run=False):
 
         self.logger.info('Building key expiration message.')
         expired_messages = []
@@ -43,7 +41,10 @@ class GpgKeyVerifier:
         for key_fingerprint in key_fingerprint_list:
             key_dict_list.append(self.gpgkeyring.get_key_data(key_fingerprint))
 
-        added_messages = []
+        if first_run:
+            added_messages = ['Initial key expiration digest.']
+        else:
+            added_messages = []
 
         for key_dict in key_dict_list:
             self.logger.debug('Checking if key <%s> (%s) with expiration date <%s> has expired.' \
@@ -51,8 +52,9 @@ class GpgKeyVerifier:
 
             if (self.gpgkeyring.is_expired(key_dict['fingerprint'])):
                 if not(self.gpgkeyring.keys[key_dict['fingerprint']]['expired_email']):
-                    added_messages.append('Added key %s to expiration message.' % key_dict['fingerprint'])
                     self.gpgkeyring.keys[key_dict['fingerprint']]['expired_email'] = True
+                    if not(first_run):
+                        added_messages.append('Added key %s to expiration message.' % key_dict['fingerprint'])
 
                 message = 'Key <%s> (%s) is expired!' % (key_dict['fingerprint'], key_dict['email'])
                 expired_messages.append(message)
@@ -60,8 +62,9 @@ class GpgKeyVerifier:
 
             elif self.gpgkeyring.is_expired(key_dict['fingerprint'], check_date = time.time() + expiration_warning_threshold):
                 if not(self.gpgkeyring.keys[key_dict['fingerprint']]['expiring_soon_email']):
-                    added_messages.append('Added key %s to expiration message.' % key_dict['fingerprint'])
                     self.gpgkeyring.keys[key_dict['fingerprint']]['expiring_soon_email'] = True
+                    if not(first_run):
+                        added_messages.append('Added key %s to expiration message.' % key_dict['fingerprint'])
 
                 pretty_expiration_date = datetime.datetime.fromtimestamp(key_dict['expires']).strftime('%Y-%m-%d %H:%M:%S')
                 message = 'Key <%s> (%s) will be expiring on date <%s>!' % \
@@ -71,8 +74,7 @@ class GpgKeyVerifier:
 
         added_message = '\n'.join(added_messages)
 
-        self._queue_warning_email(added_messages)
-        self.logger.info('Pretended to send digest message.')
+        self._queue_warning_email(added_message)
 
         joined_expired_messages = '\n'.join(expired_messages)
         joined_expiring_soon_messages = '\n'.join(expiring_soon_messages)
