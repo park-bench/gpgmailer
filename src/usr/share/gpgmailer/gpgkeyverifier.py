@@ -31,6 +31,9 @@ class GpgKeyVerifier:
         return valid_keys
 
     def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list):
+        # TODO: handle initial notifications specially
+        #   - no 'key added' text
+
         self.logger.info('Building key expiration message.')
         expired_messages = []
         expiring_soon_messages = []
@@ -40,28 +43,36 @@ class GpgKeyVerifier:
         for key_fingerprint in key_fingerprint_list:
             key_dict_list.append(self.gpgkeyring.get_key_data(key_fingerprint))
 
+        added_messages = []
+
         for key_dict in key_dict_list:
             self.logger.debug('Checking if key <%s> (%s) with expiration date <%s> has expired.' \
                 % (key_dict['fingerprint'], key_dict['email'], key_dict['expires']))
 
-            if (key_dict['fingerprint'] == self.config['sender']['fingerprint']):
-                signing_key_note = 'This is the signing key.'
-            else:
-                signing_key_note = ''
-
             if (self.gpgkeyring.is_expired(key_dict['fingerprint'])):
+                if not(self.gpgkeyring.keys[key_dict['fingerprint']]['expired_email']):
+                    added_messages.append('Added key %s to expiration message.' % key_dict['fingerprint'])
+                    self.gpgkeyring.keys[key_dict['fingerprint']]['expired_email'] = True
+
                 message = 'Key <%s> (%s) is expired!' % (key_dict['fingerprint'], key_dict['email'])
                 expired_messages.append(message)
                 self.logger.warn(message)
-                self._queue_warning_email(key_dict['fingerprint'], True, '%s\n%s' % (signing_key_note, message))
 
             elif self.gpgkeyring.is_expired(key_dict['fingerprint'], check_date = time.time() + expiration_warning_threshold):
+                if not(self.gpgkeyring.keys[key_dict['fingerprint']]['expiring_soon_email']):
+                    added_messages.append('Added key %s to expiration message.' % key_dict['fingerprint'])
+                    self.gpgkeyring.keys[key_dict['fingerprint']]['expiring_soon_email'] = True
+
                 pretty_expiration_date = datetime.datetime.fromtimestamp(key_dict['expires']).strftime('%Y-%m-%d %H:%M:%S')
                 message = 'Key <%s> (%s) will be expiring on date <%s>!' % \
                     (key_dict['fingerprint'], key_dict['email'], pretty_expiration_date)
                 expiring_soon_messages.append(message)
                 self.logger.warn(message)
-                self._queue_warning_email(key_dict['fingerprint'], False, '%s\n%s' % (signing_key_note, message))
+
+        added_message = '\n'.join(added_messages)
+
+        self._queue_warning_email(added_messages)
+        self.logger.info('Pretended to send digest message.')
 
         joined_expired_messages = '\n'.join(expired_messages)
         joined_expiring_soon_messages = '\n'.join(expiring_soon_messages)
@@ -70,17 +81,10 @@ class GpgKeyVerifier:
         return full_message
 
     # This should queue a warning email for expired or soon to expire keys.
-    def _queue_warning_email(self, fingerprint, expiring_soon, message_body):
+    def _queue_warning_email(self, message_body):
         if(message_body):
-            if((expiring_soon and not(self.gpgkeyring.keys[fingerprint]['expiring_soon_email'])) or \
-                (not(expiring_soon) and not(self.gpgkeyring.keys[fingerprint]['expired_email']))):
-                self.logger.info('Sending key warning message for %s.' % fingerprint)
-                message = gpgmailmessage.GpgMailMessage()
-                message.set_subject(self.config['default_subject'])
-                message.set_body(message_body)
-                message.queue_for_sending()
-                
-                if(expiring_soon):
-                    self.gpgkeyring.keys[fingerprint]['expiring_soon_email'] = True
-                else:
-                    self.gpgkeyring.keys[fingerprint]['expiring_email'] = True
+            self.logger.info('Sending key warning digest.')
+            message = gpgmailmessage.GpgMailMessage()
+            message.set_subject(self.config['default_subject'])
+            message.set_body(message_body)
+            message.queue_for_sending()

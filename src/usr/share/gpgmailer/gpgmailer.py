@@ -35,6 +35,8 @@ class GpgMailer:
 
         self.mailsender = mailsender.MailSender(self.config)
 
+        # TODO: Run gpgkeyverifier.build_key_expiration_message to send notifications.
+
         self.logger.info('GpgMailer initialized.')
 
     def start_monitoring(self, directory):

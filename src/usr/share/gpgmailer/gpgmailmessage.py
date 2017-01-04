@@ -73,19 +73,28 @@ class GpgMailMessage:
         # Write message to filesystem.
         message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
-        # Write to a draft directory to so the message doesn't get picked up before it is
-        #   fully created.
-        draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
-        message_file = open(draft_pathname, 'w+')
-        message_file.write(message_json)
-        message_file.close()
 
-        # Move the file to the outbox which should be an atomic operation
-        outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
-        shutil.move(draft_pathname, outbox_pathname)
+        try:
+            # Write to a draft directory to so the message doesn't get picked up before it is
+            #   fully created.
+            draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
+            message_file = open(draft_pathname, 'w+')
+            message_file.write(message_json)
+            message_file.close()
 
-        # Causes all future methods calls to fail.
-        self.saved = True
+            # Move the file to the outbox which should be an atomic operation
+            outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
+            shutil.move(draft_pathname, outbox_pathname)
+
+            # Causes all future methods calls to fail.
+            self.saved = True
+        except Exception:
+            # TODO: Log stuff here. The full try/except model is here (as opposed
+            #   to using a smaller, prettier context object) because we should
+            #   use the exception later, but for now it just shouldn't crash.
+            pass
+
+        return self.saved
 
     # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
