@@ -135,11 +135,9 @@ for recipient in recipients_raw_list:
         logger.info('Adding recipient key for %s.' % recipient_key['email'])
         config['recipients'].append(recipient_key)
     else:
-        # TODO: The remaining users should be notified of this via e-mail if this occurs.
-        #   Explicit, separate emails.
         logger.error('Recipient key for %s not available or invalid.' % recipient)
         expiration_message = gpgmailmessage.GpgMailMessage()
-        expiration_message.set_body('The encryption key for %s has expired.' % recipient_key['email'])
+        expiration_message.set_body('The encryption key for %s is not available or is invalid.' % recipient_key['email'])
         expiration_message.queue_for_sending()
 
 

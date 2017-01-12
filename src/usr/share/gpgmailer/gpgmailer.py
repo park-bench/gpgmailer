@@ -82,6 +82,7 @@ class GpgMailer:
 
                     if encrypted_message == None:
                         # TODO: Move corrupted files to a new directory
+                        # TODO: Crash if signature failed and send_unsigned_messages is false
                         self.logger.error('Encrypting or signing message %s failed.' % file_name)
 
                     else:
