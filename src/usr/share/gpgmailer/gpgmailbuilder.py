@@ -17,8 +17,15 @@ class GpgMailBuilder:
         self.gpg = gnupg.GPG(gnupghome=gpg_home)
         self.send_unsigned_messages = send_unsigned_messages
 
+        self.signature_error = False
+        self.encryption_error = False
+
     # Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
     def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_password):
+
+        # Reinitialize the error variables
+        self.signature_error = False
+        self.encryption_error = False
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
@@ -30,7 +37,6 @@ class GpgMailBuilder:
 
         # We need all encryption keys in a list
         good_fingerprints = []
-        encryption_error = False
 
         for fingerprint in recipient_fingerprints:
             if self.gpgkeyring.is_trusted(fingerprint) and not(self.gpgkeyring.is_expired(fingerprint)):
@@ -38,7 +44,7 @@ class GpgMailBuilder:
 
         if(good_fingerprints == []):
             self.logger.critical('No keys usable for encryption.')
-            encryption_error = True
+            self.encryption_error = True
 
         else:
             self.logger.debug('good fingerprints: %s' % good_fingerprints)
@@ -50,7 +56,7 @@ class GpgMailBuilder:
             # This ok variable is not the status result we need. It only indicates failure.
             if(encrypted_payload_result.ok == False):
                 self.logger.error('Error while encrypting message: %s.' % encrypted_payload_result.status)
-                encryption_error = True
+                self.encryption_error = True
 
             encrypted_part.set_payload(encrypted_payload)
 
@@ -60,7 +66,7 @@ class GpgMailBuilder:
             encrypted_message.attach(pgp_version)
             encrypted_message.attach(encrypted_part)
 
-        if encryption_error:
+        if self.encryption_error:
             return None
         else:
             return str(encrypted_message)
@@ -87,7 +93,6 @@ class GpgMailBuilder:
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.
 
-        signature_error = False
         signed_message = None
 
         signature_test = self.gpg.sign('I\'ve got a lovely bunch of coconuts', detach=True,
@@ -98,12 +103,12 @@ class GpgMailBuilder:
             #   status variable in the documentation. It could be caused by a few
             #   things, but usually either the key password is wrong or the key is
             #   not trusted.
-            signature_error = True
+            self.signature_error = True
             self.logger.error('Error during signature test.')
         else:
             self.logger.debug(signature_test)
 
-        if(signature_error and self.send_unsigned_messages):
+        if(self.signature_error and self.send_unsigned_messages):
             # Prepend warning text to message body and build plaintext message
 
             self.logger.error('Message could not be signed, sending unsigned message with warning.')
@@ -112,7 +117,7 @@ class GpgMailBuilder:
                 % message_dict['body']
             signed_message = self._build_plaintext_message(message_dict)
 
-        elif(signature_error):
+        elif(self.signature_error):
             # Log message and leave signed_message as None
             self.logger('Message could not be signed, not sending.')
 
