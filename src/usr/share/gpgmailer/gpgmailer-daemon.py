@@ -24,6 +24,7 @@ import mailermonitor
 import os
 from daemon import pidlockfile
 import signal
+import subprocess
 import sys
 import traceback
 
@@ -59,6 +60,33 @@ config['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_se
 config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
+
+# Mount the parent watch directory as a ramdisk and create the draft and outbox subfolders.
+# Exit if any part of this operation fails.
+pathname = os.path.normpath(config['watch_dir'])
+
+def check_if_mounted(path):
+   return 'none on {0} type tmpfs'.format(path) in subprocess.check_output('mount')
+
+if os.path.isdir(pathname) == False:
+   os.makedirs(pathname)
+
+if os.listdir(pathname) == [] and check_if_mounted(pathname) == False:
+   logger.info("Attempting to mount the path as a ramdisk.")
+   subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', pathname])
+
+if check_if_mounted(pathname) == False:
+   logger.critical("Path was not mounted as a ramdisk. Startup failed.")
+   sys.exit(1)
+
+if os.path.isdir(os.path.join(pathname, 'outbox')) == False:
+   os.makedirs(os.path.join(pathname, 'outbox'))
+if os.path.isdir(os.path.join(pathname, 'drafts')) == False:
+   os.makedirs(os.path.join(pathname, 'drafts'))
+
+if os.path.isdir(os.path.join(pathname, 'outbox')) == False or os.path.isdir(os.path.join(pathname, 'drafts')) == False:
+   logger.critical("Could not create required sub-directories. Startup failed.")
+   sys.exit(1)
 
 # init gnupg so we can verify keys
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])

@@ -11,11 +11,11 @@ log_level=info
 # gpg_dir should be the gnupg keyring directory containing all of the
 # keys you intend to use.  This is not included yet, you should set
 # this up yourself first.
-gpg_dir=/etc/gpgmailer/gnupg/
+gpg_dir=/etc/gpgmailer/gnupg
 
 # watch_dir sets the directory that gpgmailer checks for new mail objects to
 # send.
-watch_dir=/tmp/gpgmailer/outbox/
+watch_dir=/tmp/gpgmailer
 
 # Standard email server details
 smtp_user=

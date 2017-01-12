@@ -14,15 +14,39 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import confighelper
+import ConfigParser
 import base64
 import datetime
 import hashlib
 import json
+import logging
 import os
 import shutil
+import sys
 
-# TODO: Remove hard-coded mail directory.
-mail_dir = '/tmp/gpgmailer'
+mail_dir = None
+
+# Returns gpgmailer watch directory after checking to make sure it exists.
+# This method assumes a logger has been instantiated.
+def configure():
+    config_file = ConfigParser.SafeConfigParser()
+    config_file.read('/etc/gpgmailer/gpgmailer.conf')
+
+    config_helper = confighelper.ConfigHelper()
+    logger = logging.getLogger('GpgMailMessage')
+
+    mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
+
+    if not(os.path.exists(mail_dir)):
+        logger.critical('Watch directory does not exist. Quitting.')
+        sys.exit(1)
+
+# if gpgmailer config file exists
+    # If watch directory is populated AND it exists
+        # Return watch directory
+    # else exit
+# else exit
 
 # Constructs an e-mail message and serializes it to the mail queue directory.
 #   Messages are queued in json format.
@@ -34,6 +58,7 @@ mail_dir = '/tmp/gpgmailer'
 class GpgMailMessage:
 
     # Initializes the class.
+    # TODO: Make sure mail directory has been set.
     def __init__(self):
         self.saved = False
         self.message = {}
@@ -76,7 +101,7 @@ class GpgMailMessage:
         # Write message to filesystem.
         message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
-        # Write to a draft directory to so the message doesn't get picked up before it is
+        # Write to a draft directory so the message doesn't get picked up before it is
         #   fully created.
         draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
         message_file = open(draft_pathname, 'w+')

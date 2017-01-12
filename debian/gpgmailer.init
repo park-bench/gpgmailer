@@ -37,7 +37,6 @@ DAEMON=/usr/share/gpgmailer/gpgmailer-daemon.py
 DAEMON_ARGS=
 PIDFILE=/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
-MAIL_DIR=/tmp/gpgmailer
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -58,35 +57,6 @@ MAIL_DIR=/tmp/gpgmailer
 #
 do_start()
 {
-    # Yeah, we should probably do this in gpgmailer.py but we need to get this done.
-    # TODO: This does not honor the config and should be fixed. Probably best to move
-    #   this into gpgmailer-daemon.py
-
-    # Create /tmp if it doesn't exist (it should exist)    
-    if [ ! -d "$MAIL_DIR" ]; then
-        mkdir -p "$MAIL_DIR"
-    fi
-    # If $MAIL_DIR is empty and not mounted as a ramdisk, mount it as a ramdisk.
-    if ! -z find / -type d -path "$MAIL_DIR" 2> /dev/null && ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
-        echo "Attempting to mount $MAIL_DIR as a ramdisk."
-        mount -t tmpfs -o size=25% none "$MAIL_DIR"
-    fi
-    # If $MAIL_DIR is not mounted as a ramdisk, something is wrong. Bail!
-    if ! mount | grep -q "^none on $MAIL_DIR type tmpfs"; then
-        echo "Count not mount $MAIL_DIR as a ramdisk. Startup failed."
-        return 2
-    fi
-    if [ ! -d "$MAIL_DIR/outbox" ]; then
-        mkdir "$MAIL_DIR/outbox"
-    fi
-    if [ ! -d "$MAIL_DIR/draft" ]; then
-        mkdir "$MAIL_DIR/draft"
-    fi
-    if [ ! -d "$MAIL_DIR/outbox" ] || [ ! -d "$MAIL_DIR/draft" ]; then
-        echo "Count not create required sub directories in $MAIL_DIR/. Startup failed."
-        return 2
-    fi
-    
     # Return
     #   0 if daemon has been started
     #   1 if daemon was already running

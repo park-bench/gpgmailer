@@ -40,12 +40,13 @@ class mailer_monitor():
             # check for new files and send them with _sendmail()
             # TODO: decide how to handle directories in the watch_dir
             # TODO: add a way to handle invalid json objects/non-json files
-            file_list = next(os.walk(self.config['watch_dir']))[2]
+            outbox_dir = os.path.join(self.config['watch_dir'], 'outbox')
+            file_list = next(os.walk(outbox_dir))[2]
             # Sort the file name list (which should be timestamps) to ensure you process the
-            #   files in cronological order.
+            #   files in chronological order.
             file_list.sort()
             for file_name in file_list:
-                file_handle = open('%s%s' % (self.config['watch_dir'], file_name), 'r')
+                file_handle = open('%s%s' % (outbox_dir, file_name), 'r')
                 # TODO: Should the try catch be around more stuff?
                 try:
                     file_dict = json.loads(file_handle.read())
@@ -61,7 +62,7 @@ class mailer_monitor():
                     self.the_mailer.sendmail(file_dict)
 
                     # Remove the file after it has been sent.
-                    os.remove('%s%s' % (self.config['watch_dir'],file_name))
+                    os.remove('%s%s' % (outbox_dir, file_name))
                 except Exception as e:
                     self.logger.error("Exception: %s\n" % e.message);
                     file_handle.close()
