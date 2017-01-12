@@ -36,7 +36,6 @@ class GpgMailer:
 
         self.mailsender = mailsender.MailSender(self.config)
 
-        # TODO: Run gpgkeyverifier.build_key_expiration_message to send notifications.
         all_key_fingerprints = [key['fingerprint'] for key in self.config['recipients']]
         if not(self.config['sender']['fingerprint'] in all_key_fingerprints):
             all_key_fingerprints.append(self.config['sender']['fingerprint'])
