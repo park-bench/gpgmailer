@@ -70,7 +70,11 @@ class GpgMailer:
                     sender_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], \
                         [self.config['sender']['fingerprint']])
 
-                    key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], recipient_fingerprints)
+                    # Remove sender key from message, as it will be prepended later
+                    unique_recipient_fingerprints = list(recipient_fingerprints)
+                    unique_recipient_fingerprints.remove(self.config['sender']['fingerprint'])
+
+                    key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], unique_recipient_fingerprints)
                     message_dict['body'] = '%s%s%s' % (sender_expiration_message, key_expiration_message, message_dict['body'])
 
                     if not(message_dict['subject']):
