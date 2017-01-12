@@ -72,7 +72,9 @@ class GpgMailer:
 
                     key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], recipient_fingerprints)
                     message_dict['body'] = '%s%s%s' % (sender_expiration_message, key_expiration_message, message_dict['body'])
-                    # TODO: Implement the default subject
+
+                    if not(message_dict['subject']):
+                        message_dict['subject'] = self.config['default_subject']
 
                     # Try to encrypt the message.
                     encrypted_message = self.gpgmailbuilder.build_message(message_dict, valid_recipient_fingerprints, self.config['sender']['fingerprint'], \
