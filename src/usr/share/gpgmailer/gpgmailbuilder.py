@@ -46,7 +46,7 @@ class GpgMailBuilder:
             self.logger.critical('No keys usable for encryption.')
             self.encryption_error = True
 
-        else:
+        elif signed_message:
             self.logger.debug('good fingerprints: %s' % good_fingerprints)
             # Encrypt the message
             encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
@@ -65,6 +65,8 @@ class GpgMailBuilder:
             encrypted_message['Subject'] = message_dict['subject']
             encrypted_message.attach(pgp_version)
             encrypted_message.attach(encrypted_part)
+        else:
+            self.logger.debug('Not attempting to encrypt an empty message.')
 
         if self.encryption_error:
             return None
@@ -106,7 +108,7 @@ class GpgMailBuilder:
             self.signature_error = True
             self.logger.error('Error during signature test.')
         else:
-            self.logger.debug(signature_test)
+            self.logger.trace('Signature test passed.')
 
         if(self.signature_error and self.send_unsigned_messages):
             # Prepend warning text to message body and build plaintext message
@@ -119,7 +121,7 @@ class GpgMailBuilder:
 
         elif(self.signature_error):
             # Log message and leave signed_message as None
-            self.logger('Message could not be signed, not sending.')
+            self.logger.error('Message could not be signed, not sending.')
 
         else:
             # Continue building the signature pieces

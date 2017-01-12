@@ -111,14 +111,11 @@ if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
     logger.critical('Signing key is not trusted. Exiting.');
     sys.exit(1)
 
-if not(gpgkeyring.is_expired(sender_key['fingerprint'])):
-    signing_key_expired = False
-
 if not config['send_unsigned_messages']:
     # Check signing key
     logger.info('send_unsigned_messages is not enabled, checking signing key.')
 
-    if signing_key_expired:
+    if gpgkeyring.is_expired(sender_key['fingerprint']):
         # Log critical error and quit
         logger.critical('Sender key expired. Exiting.')
         sys.exit(1)

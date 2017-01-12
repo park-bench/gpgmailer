@@ -22,6 +22,7 @@ import json
 import logging
 import mailsender
 import os
+import sys
 import time
 
 # TODO: Write more effective logging.
@@ -80,10 +81,15 @@ class GpgMailer:
                     encrypted_message = self.gpgmailbuilder.build_message(message_dict, valid_recipient_fingerprints, self.config['sender']['fingerprint'], \
                         self.config['sender']['password'])
 
-                    if encrypted_message == None:
-                        # TODO: Move corrupted files to a new directory
-                        # TODO: Crash if signature failed and send_unsigned_messages is false
-                        self.logger.error('Encrypting or signing message %s failed.' % file_name)
+
+                    if self.gpgmailbuilder.signature_error and not(self.config['send_unsigned_messages']):
+                        # TODO: Handle signing/encryption errors properly
+                        self.logger.critical('Signing message %s failed and sending unsigned messages is not allowed. Exiting.' % file_name)
+                        sys.exit(1)
+
+                    elif self.gpgmailbuilder.encryption_error:
+                        # TODO: Handle signing/encryption errors properly
+                        self.logger.error('Encrypting message %s failed.' % file_name)
 
                     else:
                         self.logger.info('Successfully read message %s.' % file_name)
