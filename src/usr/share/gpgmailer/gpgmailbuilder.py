@@ -26,6 +26,8 @@ class GpgMailBuilder:
         # Reinitialize the error variables
         self.signature_error = False
         self.encryption_error = False
+        
+        encrypted_message = None
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
