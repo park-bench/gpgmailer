@@ -3,6 +3,7 @@ gpgmailer (0.7) UNRELEASED; urgency=low
   * Gpgmailer now performs key checking and alerts recipients about expiring keys.
   * Improved daemonization with python-daemon.
   * Made the interface considerably less ugly.
+  * Restructured the entire program.
 
  -- Andrew Klapp <andklapp@null.net>  Tue, 02 Aug 2016 19:01:15 -0500
 
