@@ -81,10 +81,10 @@ if check_if_mounted(pathname) == False:
 
 if os.path.isdir(os.path.join(pathname, 'outbox')) == False:
    os.makedirs(os.path.join(pathname, 'outbox'))
-if os.path.isdir(os.path.join(pathname, 'drafts')) == False:
-   os.makedirs(os.path.join(pathname, 'drafts'))
+if os.path.isdir(os.path.join(pathname, 'draft')) == False:
+   os.makedirs(os.path.join(pathname, 'draft'))
 
-if os.path.isdir(os.path.join(pathname, 'outbox')) == False or os.path.isdir(os.path.join(pathname, 'drafts')) == False:
+if os.path.isdir(os.path.join(pathname, 'outbox')) == False or os.path.isdir(os.path.join(pathname, 'draft')) == False:
    logger.critical("Could not create required sub-directories. Startup failed.")
    sys.exit(1)
 

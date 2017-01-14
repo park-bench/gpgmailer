@@ -46,7 +46,7 @@ class mailer_monitor():
             #   files in chronological order.
             file_list.sort()
             for file_name in file_list:
-                file_handle = open('%s%s' % (outbox_dir, file_name), 'r')
+                file_handle = open('%s/%s' % (outbox_dir, file_name), 'r')
                 # TODO: Should the try catch be around more stuff?
                 try:
                     file_dict = json.loads(file_handle.read())
@@ -62,7 +62,7 @@ class mailer_monitor():
                     self.the_mailer.sendmail(file_dict)
 
                     # Remove the file after it has been sent.
-                    os.remove('%s%s' % (outbox_dir, file_name))
+                    os.remove('%s/%s' % (outbox_dir, file_name))
                 except Exception as e:
                     self.logger.error("Exception: %s\n" % e.message);
                     file_handle.close()
