@@ -29,6 +29,9 @@ import traceback
 
 PID_FILE = '/run/gpgmailer.pid'
 
+# TODO: Consider running in a chroot or jail.
+# TODO: Change 'drafts' to 'partial'.
+
 # After first commit
 # TODO: Clean up logging
 # TODO: Clean up method names
