@@ -44,6 +44,8 @@ class GpgMailer:
 
         self.logger.info('GpgMailer initialized.')
 
+    # Gpgmailer's main loop. Reads the watch directory and then calls other modules
+    #   to build and send email.
     def start_monitoring(self, directory):
         
         while True:

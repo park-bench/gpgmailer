@@ -34,6 +34,7 @@ PID_FILE = '/run/gpgmailer.pid'
 # After first commit
 # TODO: Clean up logging
 
+# Adds a key to the key ring and returns the key's data as a dictionary.
 def build_key_dict(key_config_string, gpgkeyring):
     final_key_dict = None
     key_config_list = key_config_string.split(':')

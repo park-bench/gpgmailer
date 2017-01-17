@@ -21,6 +21,7 @@ class GpgMailBuilder:
         self.encryption_error = False
 
     # Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
+    # Builds an encrypted and/or signed  email message from the passed message dictionary
     def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_password):
 
         # Reinitialize the error variables
@@ -75,6 +76,7 @@ class GpgMailBuilder:
         else:
             return str(encrypted_message)
 
+    # Builds the initial mulipart message to be signed and/or encrypted
     def _build_plaintext_message(self, message_dict):
         multipart_message = MIMEMultipart(_subtype="mixed")
 
@@ -93,6 +95,7 @@ class GpgMailBuilder:
         return multipart_message
 
 
+    # Attempts to build a signed PGP/MIME email
     def _build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_password):
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.

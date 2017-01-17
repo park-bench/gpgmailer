@@ -29,8 +29,6 @@ mail_dir = '/tmp/gpgmailer'
 #
 # This class is not thread safe.
 #
-# Note: Each method should check if this object has already been saved and
-#   throw an exception if it has.
 class GpgMailMessage:
 
     # Initializes the class.

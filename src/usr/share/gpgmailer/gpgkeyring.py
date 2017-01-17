@@ -28,7 +28,7 @@ class GpgKeyRing:
             }
 
 
-    # Check if key fingerprint is expired at date and return a boolean.
+    # Check if key fingerprint is expired at date and return True or False.
     def is_expired(self, fingerprint, check_date=time.time()):
         # TODO: Also check the encryption subkey.
         expired = True
@@ -41,7 +41,7 @@ class GpgKeyRing:
         self.logger.debug('Expired: %s' % expired)
         return expired
 
-    # Check if key fingerprint is trusted and return a boolean.
+    # Check if key fingerprint is trusted and return a True or False.
     def is_trusted(self, fingerprint):
         trusted = False
 
@@ -61,6 +61,7 @@ class GpgKeyRing:
 
         return result
 
+    # Sets the passed email address for the given key.
     def set_key_email(self, fingerprint, email):
         success = False
         if self._valid_fingerprint(fingerprint):
@@ -69,6 +70,7 @@ class GpgKeyRing:
 
         return success
 
+    # Checks the formatting of a fingerprint string.
     def _valid_fingerprint(self, fingerprint):
         valid = False
 

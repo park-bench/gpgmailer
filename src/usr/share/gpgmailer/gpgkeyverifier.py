@@ -10,6 +10,8 @@ class GpgKeyVerifier:
         self.gpgkeyring = gpgkeyring
         self.config = config
 
+    # Accepts a list of keys and only returns the ones that do not expire by the
+    #   time the next loop starts and are trusted.
     def filter_valid_keys(self, fingerprint_list):
         self.logger.info('Filtering keys in list')
         valid_keys = []
@@ -30,6 +32,7 @@ class GpgKeyVerifier:
 
         return valid_keys
 
+    # Builds the expiration warnings that are prepended to each outgoing message.
     def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list, first_run=False):
 
         self.logger.info('Building key expiration message.')
@@ -82,7 +85,7 @@ class GpgKeyVerifier:
 
         return full_message
 
-    # This should queue a warning email for expired or soon to expire keys.
+    # This queues a warning email for expired or soon to expire keys.
     def _queue_warning_email(self, message_body):
         if(message_body):
             self.logger.info('Sending key warning digest.')

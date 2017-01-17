@@ -30,6 +30,7 @@ class MailSender:
         self._connect()
         self.lastSentTime = time.time()
 
+    # Attempts to connect to the configured mail server.
     def _connect(self):
         # TODO: Failed DNS lookups of the mail server might be eating messages. Investigate immediately.
         self.logger.info('Connecting.')
@@ -67,6 +68,7 @@ class MailSender:
                 # TODO: Make this configurable?
                 time.sleep(.1)
 
+    # Sends an email from a string.
     def sendmail(self, message_string):
         sent_successfully = False
 
