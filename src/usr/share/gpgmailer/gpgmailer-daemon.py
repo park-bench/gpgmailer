@@ -62,31 +62,40 @@ config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
 # Mount the parent watch directory as a ramdisk and create the draft and outbox subfolders.
-# Exit if any part of this operation fails.
+#   Exit if any part of this operation fails.
+
+logger.info('Setting up root watch directory.')
+
+# Checks if a directory is mounted as tmpfs.
+def check_if_mounted_as_tmpfs(pathname):
+    return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
+
 pathname = os.path.normpath(config['watch_dir'])
 
-def check_if_mounted(path):
-   return 'none on {0} type tmpfs'.format(path) in subprocess.check_output('mount')
-
 if os.path.isdir(pathname) == False:
-   os.makedirs(pathname)
+    os.makedirs(pathname)
 
-if os.listdir(pathname) == [] and check_if_mounted(pathname) == False:
-   logger.info("Attempting to mount the path as a ramdisk.")
-   subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', pathname])
+# If the root watch directory is empty and not already mounted as tmpfs, mount it as tmpfs.
+if os.listdir(pathname) == [] and check_if_mounted_as_tmpfs(pathname) == False:
+    logger.info("Attempting to mount the root watch directory as a ramdisk.")
+    subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', pathname])
 
-if check_if_mounted(pathname) == False:
-   logger.critical("Path was not mounted as a ramdisk. Startup failed.")
-   sys.exit(1)
+if check_if_mounted_as_tmpfs(pathname) == False:
+    logger.critical("Root watch directory was not mounted as a ramdisk. Startup failed.")
+    sys.exit(1)
 
-if os.path.isdir(os.path.join(pathname, 'outbox')) == False:
-   os.makedirs(os.path.join(pathname, 'outbox'))
-if os.path.isdir(os.path.join(pathname, 'draft')) == False:
-   os.makedirs(os.path.join(pathname, 'draft'))
+outbox_dir = os.path.join(pathname, 'outbox')
+draft_dir = os.path.join(pathname, 'draft')
 
-if os.path.isdir(os.path.join(pathname, 'outbox')) == False or os.path.isdir(os.path.join(pathname, 'draft')) == False:
-   logger.critical("Could not create required sub-directories. Startup failed.")
-   sys.exit(1)
+try:
+    if not os.path.exists(outbox_dir):
+        os.makedirs(outbox_dir)
+    if not os.path.exists(draft_dir):
+        os.makedirs(draft_dir)
+except Exception as e:
+    logger.critical("Could not create required watch sub-directories. %s: %s\n" % (type(e).__name__, e.message))
+    logger.error(traceback.format_exc())
+    sys.exit(1)
 
 # init gnupg so we can verify keys
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])

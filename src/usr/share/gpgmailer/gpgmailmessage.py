@@ -25,40 +25,37 @@ import os
 import shutil
 import sys
 
-mail_dir = None
-
-# Returns gpgmailer watch directory after checking to make sure it exists.
-# This method assumes a logger has been instantiated.
-def configure():
-    config_file = ConfigParser.SafeConfigParser()
-    config_file.read('/etc/gpgmailer/gpgmailer.conf')
-
-    config_helper = confighelper.ConfigHelper()
-    logger = logging.getLogger('GpgMailMessage')
-
-    mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
-
-    if not(os.path.exists(mail_dir)):
-        logger.critical('Watch directory does not exist. Quitting.')
-        sys.exit(1)
-
-# if gpgmailer config file exists
-    # If watch directory is populated AND it exists
-        # Return watch directory
-    # else exit
-# else exit
-
 # Constructs an e-mail message and serializes it to the mail queue directory.
 #   Messages are queued in json format.
 #
 # This class is not thread safe.
 #
+# This class assumes a logger has already been instantiated.
+#
 # Note: Each method should check if this object has already been saved and
 #   throw an exception if it has.
+
 class GpgMailMessage:
 
+    _mail_dir = None
+
+    # This method reads the gpgmailer config file to obtain the watch directory's path name.
+    @classmethod
+    def configure(cls):
+        logger = logging.getLogger('GpgMailMessage')
+
+        config_file = ConfigParser.SafeConfigParser()
+        config_file.read('/etc/gpgmailer/gpgmailer.conf')
+
+        config_helper = confighelper.ConfigHelper()
+
+        cls._mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
+
+        if not(os.path.exists(cls._mail_dir)):
+            logger.critical('Watch directory does not exist. Quitting.')
+            sys.exit(1)
+
     # Initializes the class.
-    # TODO: Make sure mail directory has been set.
     def __init__(self):
         self.saved = False
         self.message = {}
@@ -103,13 +100,15 @@ class GpgMailMessage:
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
         # Write to a draft directory so the message doesn't get picked up before it is
         #   fully created.
-        draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
+        # TODO: use os.path.join
+        draft_pathname = '%s/draft/%s-%s' % (self._mail_dir, time_string, message_sha256)
         message_file = open(draft_pathname, 'w+')
         message_file.write(message_json)
         message_file.close()
 
         # Move the file to the outbox which should be an atomic operation
-        outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
+        # TODO: use os.path.join
+        outbox_pathname = '%s/outbox/%s-%s' % (self._mail_dir, time_string, message_sha256)
         shutil.move(draft_pathname, outbox_pathname)
 
         # Causes all future methods calls to fail.
