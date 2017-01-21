@@ -2,20 +2,25 @@
 
 [General]
 
-# log_file is pretty self-explanatory
+# Specifies the location of the program's log file.
 log_file=/var/log/gpgmailer.log
 
-# log_level tells GpgMailer how much stuff to report
+# Specifies the verbosity of the program's log. Valid values are 'critical', 'error', 'info',
+#   'debug', and 'trace'. This value is case insensitive.
 log_level=info
 
-# gpg_dir should be the gnupg keyring directory containing all of the
-# keys you intend to use.  This is not included yet, you should set
-# this up yourself first.
+# The location of the GnuPG keyring containing all of the keys used for sending and receiving.
+#   It is the administrator's responsibility to create and manage this keyring.
 gpg_dir=/etc/gpgmailer/gnupg/
 
-# watch_dir sets the directory that gpgmailer checks for new mail objects to
-# send.
+# The directory that gpgmailer checks for new, specially formatted JSON mail objects to send.
 watch_dir=/tmp/gpgmailer/outbox/
+
+# The number of seconds between each main program loop iteration. It is 
+#   essentially how often the watch directory is checked for new e-mails. This value does not
+#   have to be a whole number. Setting this value too low can starve other processes of CPU
+#   time and increase power consumption but will reduce notification latency.
+main_loop_delay=0.1
 
 # Standard email server details
 smtp_user=
@@ -23,45 +28,49 @@ smtp_pass=
 smtp_server=
 smtp_port=
 
+
 # Less standard email server details
 
-# max_idle is the number of seconds until gpgmailer assumes an SMTP session
-# has ended.
+# The number of seconds until the program assumes an SMTP session has ended.
 smtp_max_idle=300
 
-# sending_timeout is how many seconds the mailer should wait for each message
-# to send.
+# How many seconds the mailer should wait until the program determines that the sending of an
+#   e-mail has failed.
 smtp_sending_timeout=30
 
-# Email and gpg settings
-# expiration_warning_threshold is the number of days before a key's expiration
-#   that gpgmailer should start attaching warnings.
+
+# Email and GPG settings
+
+# If a key will expire within this number of days, a warning e-mail is sent to all recipients. 
+#   Also, a warning message is included with all subquent messages until all the receipient keys
+#   are not expiring within this threshold and gpgmailer has been restarted. Further, each
+#   time gpgmailer is started, if a key is expiring within this threadhold, the warning mail is
+#   resent because gpgmailer does not yet have a way of remembering when a warning e-mail has
+#   already been sent.
 expiration_warning_threshold=14
 
-# main_loop_delay is the number of seconds between each check for queued emails.
-main_loop_delay=0.1
+# If set to true, gpgmailer will send unsigned messages when the signing key has expired. The
+#   program will still fail to start if the signing key does not exist in the keyring or is
+#   untrusted. If this option is set to any other value, the program will crash and refuse to
+#   start when the signing key has expired. This value is not case sensitive.
+allow_expired_signing_key=false
 
-# If send_unsigned_message is set to true, gpgmailer will send unsigned messages
-#   if the signing key is invalid or unavailable. If it is set to any other
-#   value, messages will not be sent unless signed.
-send_unsigned_messages=true
-
-# default_subject is the subject that will be assigned to all mail that does not
-#   otherwise have one defined.
+# The subject that will be applied to all mail that does not otherwise have a subject. No subject
+#   is valid.
 default_subject=
 
-# Sender should be one email address paired with a full PGP key fingerprint.
+
+# Specifies each messsage's from address and signing key fingerprint. Sender should be one email
+#   address paired with a full PGP key fingerprint.
 # For example:
 # sender=test@example.com:5A4228C8D952459F240626EA4289EC280D58338B
 sender=
 
-# signing_key_password is the password for the key you just defined in sender.
-#   A password is required.
-signing_key_password=
+# The passphrase for the sender's signing key. A passphrase is required.
+signing_key_passphrase=
 
-# recipients should be a comma-separated list of address and fingerprint pairs,
-# just like sender.  It can be multiline, but it must be indented, like so:
-
+# Specifies mail recipients formatted as a comma-separated list of address and fingerprint pairs,
+#   similiar to the sender option. It can be multiline, but it must be indented, like so:
 # recipients=test@example.com:5A4228C8D952459F240626EA4289EC280D58338B,
 #   test@example.com:5A4228C8D952459F240626EA4289EC280D58338B
 recipients=
