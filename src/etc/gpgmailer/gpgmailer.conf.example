@@ -13,8 +13,7 @@ log_level=info
 # this up yourself first.
 gpg_dir=/etc/gpgmailer/gnupg
 
-# watch_dir sets the directory that gpgmailer checks for new mail objects to
-# send.
+# The root directory that gpgmailer checks for new JSON mail objects to send.
 watch_dir=/tmp/gpgmailer
 
 # Standard email server details

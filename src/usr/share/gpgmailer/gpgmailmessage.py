@@ -1,5 +1,7 @@
 #!/usr/bin/env python2
-# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
+
+# Copyright 2015-2017 Joel Allen Luellwitz, Andrew Klapp and Brittney
+# Scaccia.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +28,7 @@ import shutil
 import sys
 
 # Constructs an e-mail message and serializes it to the mail queue directory.
-#   Messages are queued in json format.
+#   Messages are queued in JSON format.
 #
 # This class is not thread safe.
 #
@@ -34,12 +36,12 @@ import sys
 #
 # Note: Each method should check if this object has already been saved and
 #   throw an exception if it has.
-
 class GpgMailMessage:
 
     _mail_dir = None
 
-    # This method reads the gpgmailer config file to obtain the watch directory's path name.
+    # Reads the gpgmailer config file to obtain the watch directory's path name.
+    #   This method must be called before any instances are created.
     @classmethod
     def configure(cls):
         logger = logging.getLogger('GpgMailMessage')
@@ -57,6 +59,12 @@ class GpgMailMessage:
 
     # Initializes the class.
     def __init__(self):
+
+        # Verify the 'configure' class method was called.
+        if self._mail_dir == None:
+            raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
+                'can be created.')
+
         self.saved = False
         self.message = {}
         self.message['attachments'] = []
@@ -82,10 +90,10 @@ class GpgMailMessage:
         self._check_if_saved()
 
         # Check for subject and message, throw an exception if they aren't there
-        if(self.message['subject'] == None):
+        if self.message['subject'] == None:
             raise Exception('Tried to save message without a subject.')
 
-        if(self.message['body'] == None):
+        if self.message['body'] == None:
             raise Exception('Tried to save message without a body.')
 
         # Encode any attachments as base64
@@ -100,15 +108,14 @@ class GpgMailMessage:
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
         # Write to a draft directory so the message doesn't get picked up before it is
         #   fully created.
-        # TODO: use os.path.join
-        draft_pathname = '%s/draft/%s-%s' % (self._mail_dir, time_string, message_sha256)
+        message_filename = '%s-%s' % (time_string, message_sha256)
+        draft_pathname = os.path.join(self._mail_dir, 'draft', message_filename)
         message_file = open(draft_pathname, 'w+')
         message_file.write(message_json)
         message_file.close()
 
         # Move the file to the outbox which should be an atomic operation
-        # TODO: use os.path.join
-        outbox_pathname = '%s/outbox/%s-%s' % (self._mail_dir, time_string, message_sha256)
+        outbox_pathname = os.path.join(self._mail_dir, 'outbox', message_filename)
         shutil.move(draft_pathname, outbox_pathname)
 
         # Causes all future methods calls to fail.
@@ -116,5 +123,5 @@ class GpgMailMessage:
 
     # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
-        if(self.saved):
+        if self.saved:
             raise Exception('Tried to save an already saved message.')

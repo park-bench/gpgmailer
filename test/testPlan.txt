@@ -1,0 +1,19 @@
+Note: These test cases are not yet complete.
+
+GPG Mailer Daemon:
+* /tmp/gpgmailer does not exist.
+* /tmp/gpgmailer exists.
+* /tmp/gpgmailer is not tmpfs and directory not empty.
+* /tmp/gpgmailer is not tmpfs and empty
+* /tmp/gpgmailer is tmpfs and empty
+* /tmp/gpgmailer is tmpfs and not empty
+* /tmp/gpgmailer fails to mount as tmpfs (move mount out of path).
+* outbox and draft already exists
+* outbox and draft do not exist
+* outbox and draft cannot be created (because they are files).
+* mail gets sent.
+
+Saving Messages:
+* Fail if watch directory does not exist.
+* Fail if configure has not been called.
+* Message saved successfully and is sent.

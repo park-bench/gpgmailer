@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 
-# Copyright 2015 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2017 Joel Allen Luellwitz, Andrew Klapp and Brittney
+# Scaccia.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,6 +35,10 @@ PID_FILE = '/run/gpgmailer.pid'
 # TODO: Clean up logging
 # TODO: Clean up method names
 # TODO: Consider making this a class somehow.
+# TODO: Add an option to disable the ramdisk.
+# TODO: Consider renaming 'watch directory' to 'drop directory'.
+# TODO: Move other major sections into helper methods.
+# TODO: Change most exceptions to RuntimeErrors.
 
 print('Loading configuration.')
 config_file = ConfigParser.RawConfigParser()
@@ -61,41 +66,61 @@ config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port
 config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
 config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
-# Mount the parent watch directory as a ramdisk and create the draft and outbox subfolders.
-#   Exit if any part of this operation fails.
-
-logger.info('Setting up root watch directory.')
-
 # Checks if a directory is mounted as tmpfs.
 def check_if_mounted_as_tmpfs(pathname):
     return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
 
-pathname = os.path.normpath(config['watch_dir'])
+# Mounts the parent watch directory as a ramdisk and creates the draft and outbox subfolders.
+#   Exit if any part of this method fails.
+def create_watch_directories():
 
-if os.path.isdir(pathname) == False:
-    os.makedirs(pathname)
+    logger.info('Creating watch directories.')
 
-# If the root watch directory is empty and not already mounted as tmpfs, mount it as tmpfs.
-if os.listdir(pathname) == [] and check_if_mounted_as_tmpfs(pathname) == False:
-    logger.info("Attempting to mount the root watch directory as a ramdisk.")
-    subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', pathname])
+    # Method normpath reduces the path to its simplist form.
+    watch_dir = os.path.normpath(config['watch_dir'])
 
-if check_if_mounted_as_tmpfs(pathname) == False:
-    logger.critical("Root watch directory was not mounted as a ramdisk. Startup failed.")
-    sys.exit(1)
+    try:
+        if os.path.isdir(watch_dir) == False:
+            os.makedirs(watch_dir)
+    except Exception as e:
+        logger.critical('Could not create root watch directory. %s: %s\n' %
+            (type(e).__name__, e.message))
+        logger.error(traceback.format_exc())
+        sys.exit(1)
 
-outbox_dir = os.path.join(pathname, 'outbox')
-draft_dir = os.path.join(pathname, 'draft')
+    mounted_as_tmpfs = check_if_mounted_as_tmpfs(watch_dir)
 
-try:
-    if not os.path.exists(outbox_dir):
-        os.makedirs(outbox_dir)
-    if not os.path.exists(draft_dir):
-        os.makedirs(draft_dir)
-except Exception as e:
-    logger.critical("Could not create required watch sub-directories. %s: %s\n" % (type(e).__name__, e.message))
-    logger.error(traceback.format_exc())
-    sys.exit(1)
+    # If directory is not mounted as tmpfs and there is something in the directory, fail to
+    #   start.
+    if os.listdir(watch_dir) != [] and mounted_as_tmpfs == False:
+        logger.critical('Root watch directory is not empty and not mounted as a ramdisk. ' + \
+            'Startup failed.')
+        sys.exit(1)
+
+    # If the root watch directory is empty and not already mounted as tmpfs, mount it as tmpfs.
+    if mounted_as_tmpfs == False:
+        logger.info('Attempting to mount the root watch directory as a ramdisk.')
+        subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', watch_dir])
+
+    if check_if_mounted_as_tmpfs(watch_dir) == False:
+        logger.critical('Root watch directory was not mounted as a ramdisk. Startup failed.')
+        sys.exit(1)
+
+    outbox_dir = os.path.join(watch_dir, 'outbox')
+    draft_dir = os.path.join(watch_dir, 'draft')
+
+    try:
+        if not os.path.exists(outbox_dir):
+            os.makedirs(outbox_dir)
+        if not os.path.exists(draft_dir):
+            os.makedirs(draft_dir)
+    except Exception as e:
+        logger.critical('Could not create required watch sub-directories. %s: %s\n' %
+            (type(e).__name__, e.message))
+        logger.error(traceback.format_exc())
+        sys.exit(1)
+
+create_watch_directories()
 
 # init gnupg so we can verify keys
 config['gpg'] = gnupg.GPG(gnupghome=config['gpg_dir'])
