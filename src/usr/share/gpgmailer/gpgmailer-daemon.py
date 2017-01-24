@@ -183,6 +183,8 @@ daemon_context = daemon.DaemonContext(
     umask = 0
     )
 
+daemon_context.files_preserve = [config_helper.get_log_file_handle()]
+
 # TODO: Make a real cleanup method for this.
 daemon_context.signal_map = {
     signal.SIGTERM : sig_term_handler
