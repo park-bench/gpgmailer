@@ -1,0 +1,33 @@
+Note: These test cases are not yet complete.
+
+GPG Mailer Daemon - directory management:
+* /tmp/gpgmailer does not exist or is not a directory.
+    - Create it, mount tmpfs and continue
+* /tmp/gpgmailer exists and is a directory.
+    - Mount tmpfs and continue
+* /tmp/gpgmailer is not tmpfs and directory not empty.
+    - Crash
+* /tmp/gpgmailer is not tmpfs and empty
+    - Mount tmpfs and continue
+* /tmp/gpgmailer is tmpfs and empty
+    - Create subdirectories and continue
+* /tmp/gpgmailer is tmpfs and not empty
+    - Attempt to continue
+* /tmp/gpgmailer fails to mount as tmpfs (ex: move /bin/mount out of path)
+    - Crash
+* outbox and draft already exists
+    - Continue
+* outbox and draft do not exist
+    - Create and continue
+* outbox and draft cannot be created (ex: because they are files)
+    - Crash
+* mail exists in outbox.
+    - It should be sent
+
+gpgmailmessage: 
+* watch directory does not exist
+    - crash
+* GpgMailMessage.configure has not been called
+    - crash
+* otherwise
+    - Mail is saved successfully and sent.

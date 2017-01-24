@@ -1,5 +1,7 @@
 #!/usr/bin/env python2
-# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
+
+# Copyright 2015-2017 Joel Allen Luellwitz, Andrew Klapp and Brittney
+# Scaccia.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,27 +16,59 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import confighelper
+import ConfigParser
 import base64
 import datetime
 import hashlib
 import json
+import logging
 import os
 import shutil
-
-# TODO: Remove hard-coded mail directory.
-mail_dir = '/tmp/gpgmailer'
+import sys
 
 # Constructs an e-mail message and serializes it to the mail queue directory.
-#   Messages are queued in json format.
+#   Messages are queued in JSON format.
 #
 # This class is not thread safe.
+#
+# This class assumes a logger has already been instantiated.
 #
 # Note: Each method should check if this object has already been saved and
 #   throw an exception if it has.
 class GpgMailMessage:
 
+    _outbox_dir = None
+    _draft_dir = None
+
+    # Reads the gpgmailer config file to obtain the watch directory's path name.
+    #   This method must be called before any instances are created.
+    @classmethod
+    def configure(cls):
+        logger = logging.getLogger('GpgMailMessage')
+
+        config_file = ConfigParser.SafeConfigParser()
+        config_file.read('/etc/gpgmailer/gpgmailer.conf')
+
+        config_helper = confighelper.ConfigHelper()
+
+
+        mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
+        cls._outbox_dir = os.path.join(mail_dir, 'outbox')
+        cls._draft_dir = os.path.join(mail_dir, 'draft')
+
+        if not(os.path.isdir(cls._outbox_dir)) or not(os.path.isdir(cls._draft_dir)):
+            logger.critical('A watch subdirectory does not exist. Quitting.')
+            sys.exit(1)
+
     # Initializes the class.
     def __init__(self):
+
+        # Verify the 'configure' class method was called.
+        if (self._outbox_dir == None) or (self._draft_dir == None):
+            raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
+                'can be created.')
+
         self.saved = False
         self.message = {}
         self.message['attachments'] = []
@@ -60,10 +94,10 @@ class GpgMailMessage:
         self._check_if_saved()
 
         # Check for subject and message, throw an exception if they aren't there
-        if(self.message['subject'] == None):
+        if self.message['subject'] == None:
             raise Exception('Tried to save message without a subject.')
 
-        if(self.message['body'] == None):
+        if self.message['body'] == None:
             raise Exception('Tried to save message without a body.')
 
         # Encode any attachments as base64
@@ -76,15 +110,16 @@ class GpgMailMessage:
         # Write message to filesystem.
         message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
-        # Write to a draft directory to so the message doesn't get picked up before it is
+        # Write to a draft directory so the message doesn't get picked up before it is
         #   fully created.
-        draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
+        message_filename = '%s-%s' % (time_string, message_sha256)
+        draft_pathname = os.path.join(self._draft_dir, message_filename)
         message_file = open(draft_pathname, 'w+')
         message_file.write(message_json)
         message_file.close()
 
         # Move the file to the outbox which should be an atomic operation
-        outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
+        outbox_pathname = os.path.join(self._outbox_dir, message_filename)
         shutil.move(draft_pathname, outbox_pathname)
 
         # Causes all future methods calls to fail.
@@ -92,5 +127,5 @@ class GpgMailMessage:
 
     # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
-        if(self.saved):
+        if self.saved:
             raise Exception('Tried to save an already saved message.')
