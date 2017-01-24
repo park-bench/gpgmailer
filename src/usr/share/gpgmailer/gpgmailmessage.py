@@ -38,7 +38,8 @@ import sys
 #   throw an exception if it has.
 class GpgMailMessage:
 
-    _mail_dir = None
+    _outbox_dir = None
+    _draft_dir = None
 
     # Reads the gpgmailer config file to obtain the watch directory's path name.
     #   This method must be called before any instances are created.
@@ -51,17 +52,20 @@ class GpgMailMessage:
 
         config_helper = confighelper.ConfigHelper()
 
-        cls._mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
 
-        if not(os.path.exists(cls._mail_dir)):
-            logger.critical('Watch directory does not exist. Quitting.')
+        mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
+        cls._outbox_dir = os.path.join(mail_dir, 'outbox')
+        cls._draft_dir = os.path.join(mail_dir, 'draft')
+
+        if not(os.path.isdir(cls._outbox_dir)) or not(os.path.isdir(cls._draft_dir)):
+            logger.critical('A watch subdirectory does not exist. Quitting.')
             sys.exit(1)
 
     # Initializes the class.
     def __init__(self):
 
         # Verify the 'configure' class method was called.
-        if self._mail_dir == None:
+        if (self._outbox_dir == None) or (self._draft_dir == None):
             raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
                 'can be created.')
 
@@ -109,13 +113,13 @@ class GpgMailMessage:
         # Write to a draft directory so the message doesn't get picked up before it is
         #   fully created.
         message_filename = '%s-%s' % (time_string, message_sha256)
-        draft_pathname = os.path.join(self._mail_dir, 'draft', message_filename)
+        draft_pathname = os.path.join(self._draft_dir, message_filename)
         message_file = open(draft_pathname, 'w+')
         message_file.write(message_json)
         message_file.close()
 
         # Move the file to the outbox which should be an atomic operation
-        outbox_pathname = os.path.join(self._mail_dir, 'outbox', message_filename)
+        outbox_pathname = os.path.join(self._outbox_dir, message_filename)
         shutil.move(draft_pathname, outbox_pathname)
 
         # Causes all future methods calls to fail.

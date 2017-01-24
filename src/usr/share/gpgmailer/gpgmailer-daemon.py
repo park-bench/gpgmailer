@@ -110,9 +110,9 @@ def create_watch_directories():
     draft_dir = os.path.join(watch_dir, 'draft')
 
     try:
-        if not os.path.exists(outbox_dir):
+        if not os.path.isdir(outbox_dir):
             os.makedirs(outbox_dir)
-        if not os.path.exists(draft_dir):
+        if not os.path.isdir(draft_dir):
             os.makedirs(draft_dir)
     except Exception as e:
         logger.critical('Could not create required watch sub-directories. %s: %s\n' %
