@@ -1,14 +1,14 @@
 Note: These test cases are not yet complete.
 
 GPG Mailer Daemon - directory management:
-* /tmp/gpgmailer does not exist.
+* /tmp/gpgmailer does not exist or is not a directory.
     - Create it, mount tmpfs and continue
-* /tmp/gpgmailer exists.
+* /tmp/gpgmailer exists and is a directory.
     - Mount tmpfs and continue
 * /tmp/gpgmailer is not tmpfs and directory not empty.
     - Crash
 * /tmp/gpgmailer is not tmpfs and empty
-    - Crash
+    - Mount tmpfs and continue
 * /tmp/gpgmailer is tmpfs and empty
     - Create subdirectories and continue
 * /tmp/gpgmailer is tmpfs and not empty
