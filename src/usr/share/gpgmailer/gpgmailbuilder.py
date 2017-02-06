@@ -25,18 +25,18 @@ import logging
 import time
 
 class GpgMailBuilder:
-    def __init__(self, gpg_home, send_unsigned_messages):
+    def __init__(self, gpg_home, allow_expired_signing_key):
         self.logger = logging.getLogger('GpgMailBuilder')
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
         self.gpg = gnupg.GPG(gnupghome=gpg_home)
-        self.send_unsigned_messages = send_unsigned_messages
+        self.allow_expired_signing_key = allow_expired_signing_key
 
         self.signature_error = False
         self.encryption_error = False
 
     # Builds an encrypted and/or signed email message from the passed message dictionary.
     #   Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
-    def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_password):
+    def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_passphrase):
 
         # Reinitialize the error variables
         self.signature_error = False
@@ -50,7 +50,7 @@ class GpgMailBuilder:
         pgp_version.set_payload("Version: 1\n")
 
         # Sign the message
-        signed_message = self._build_signed_message(message_dict, signing_key_fingerprint, signing_key_password)
+        signed_message = self._build_signed_message(message_dict, signing_key_fingerprint, signing_key_passphrase)
 
         # We need all encryption keys in a list
         good_fingerprints = []
@@ -110,14 +110,14 @@ class GpgMailBuilder:
 
 
     # Attempts to build a signed PGP/MIME email
-    def _build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_password):
+    def _build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_passphrase):
         # this will sign the message text and attachments and puts them all together
         # Make a multipart message to contain the attachments and main message text.
 
         signed_message = None
 
         signature_test = self.gpg.sign('I\'ve got a lovely bunch of coconuts', detach=True,
-            keyid=signing_key_fingerprint, passphrase=signing_key_password)
+            keyid=signing_key_fingerprint, passphrase=signing_key_passphrase)
 
         if(str(signature_test).strip() == ''):
             # The library we are using contains a bug and does not actually set the
@@ -129,7 +129,7 @@ class GpgMailBuilder:
         else:
             self.logger.trace('Signature test passed.')
 
-        if(self.signature_error and self.send_unsigned_messages):
+        if(self.signature_error and self.allow_expired_signing_key):
             # Prepend warning text to message body and build plaintext message
 
             self.logger.error('Message could not be signed, sending unsigned message with warning.')
@@ -150,7 +150,7 @@ class GpgMailBuilder:
             message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
 
             # Make the signature component
-            signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint, passphrase=signing_key_password)
+            signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint, passphrase=signing_key_passphrase)
             signature_text = str(signature_result)
 
             signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)

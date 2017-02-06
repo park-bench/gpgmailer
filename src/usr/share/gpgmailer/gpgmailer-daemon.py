@@ -79,10 +79,10 @@ config['expiration_warning_threshold'] = config_helper.verify_number_exists(conf
 
 config['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay')
 
-if(config_helper.verify_string_exists(config_file, 'send_unsigned_messages').lower() == 'true'):
-    config['send_unsigned_messages'] = True
+if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
+    config['allow_expired_signing_key'] = True
 else:
-    config['send_unsigned_messages'] = False
+    config['allow_expired_signing_key'] = False
 
 config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
@@ -95,7 +95,7 @@ gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 
 # parse sender config.  <email>:<key fingerprint>
 sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
-sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_password')
+sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
 
 sender_key = build_key_dict(sender_key_string, gpgkeyring)
 
@@ -112,9 +112,9 @@ if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
     logger.critical('Signing key is not trusted. Exiting.');
     sys.exit(1)
 
-if not config['send_unsigned_messages']:
+if not config['allow_expired_signing_key']:
     # Check signing key
-    logger.info('send_unsigned_messages is not enabled, checking signing key.')
+    logger.info('allow_expired_signing_key is not enabled, checking signing key.')
 
     if gpgkeyring.is_expired(sender_key['fingerprint']):
         # Log critical error and quit

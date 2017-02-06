@@ -31,7 +31,7 @@ class GpgMailer:
         self.logger = logging.getLogger('GpgMailer')
         self.config = config
         self.gpgkeyring = gpgkeyring
-        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['send_unsigned_messages'])
+        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['allow_expired_signing_key'])
         self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config['main_loop_delay'], self.config)
 
         self.mailsender = mailsender.MailSender(self.config)
@@ -87,7 +87,7 @@ class GpgMailer:
                         self.config['sender']['password'])
 
 
-                    if self.gpgmailbuilder.signature_error and not(self.config['send_unsigned_messages']):
+                    if self.gpgmailbuilder.signature_error and not(self.config['allow_expired_signing_key']):
                         # TODO: Handle signing/encryption errors properly
                         self.logger.critical('Signing message %s failed and sending unsigned messages is not allowed. Exiting.' % file_name)
                         sys.exit(1)
