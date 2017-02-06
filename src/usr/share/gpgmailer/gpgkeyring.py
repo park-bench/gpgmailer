@@ -22,19 +22,21 @@ key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
 valid_owner_trust_levels = ('u', 'f', 'm')
 
 class GpgKeyRing:
+
     def __init__(self, gnupg_home):
         self.logger = logging.getLogger('GpgKeyRing')
         self.gpg = gnupg.GPG(gnupghome=gnupg_home)
         self.keys = {}
 
         for key in self.gpg.list_keys():
+            
             if key['expires'] == '':
                 key['expires'] = None
-
             else:
                 key['expires'] = int(key['expires'])
 
-            self.keys[key['fingerprint']] = { 'expires': key['expires'],
+            self.keys[key['fingerprint']] = {
+                'expires': key['expires'],
                 'ownertrust': key['ownertrust'],
                 'email': None,
                 'fingerprint': key['fingerprint'],
@@ -56,7 +58,7 @@ class GpgKeyRing:
         self.logger.debug('Expired: %s' % expired)
         return expired
 
-    # Check if key fingerprint is trusted and return a True or False.
+    # Check if key fingerprint is trusted and return True or False.
     def is_trusted(self, fingerprint):
         trusted = False
 

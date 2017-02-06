@@ -18,6 +18,7 @@ import gpgmailmessage
 import logging
 import time
 
+# TODO: Comment.
 class GpgKeyVerifier:
     def __init__(self, gpgkeyring, expiration_margin, config):
         self.logger = logging.getLogger('GpgKeyVerifier')
@@ -25,8 +26,8 @@ class GpgKeyVerifier:
         self.gpgkeyring = gpgkeyring
         self.config = config
 
-    # Accepts a list of keys and only returns the ones that do not expire by the
-    #   time the next loop starts and are trusted.
+    # Accepts a list of keys and only returns the ones that are trusted and do not expire by the
+    #   time the next loop starts.
     def filter_valid_keys(self, fingerprint_list):
         self.logger.info('Filtering keys in list')
         valid_keys = []

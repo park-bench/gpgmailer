@@ -164,10 +164,10 @@ daemon_context.signal_map = {
 
 daemon_context.files_preserve = [config_helper.get_log_file_handle()]
 
-logger.debug('Daemonizing')
+logger.info('Daemonizing...')
 with daemon_context:
     try:
-        logger.info('Starting GpgMailer.')
+        logger.debug('Initializing GpgMailer.')
         the_watcher = gpgmailer.GpgMailer(config, gpgkeyring)
         the_watcher.start_monitoring(config['watch_dir'])
 

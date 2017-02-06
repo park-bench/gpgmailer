@@ -34,8 +34,8 @@ class GpgMailBuilder:
         self.signature_error = False
         self.encryption_error = False
 
-    # Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
-    # Builds an encrypted and/or signed  email message from the passed message dictionary
+    # Builds an encrypted and/or signed email message from the passed message dictionary.
+    #   Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
     def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_password):
 
         # Reinitialize the error variables
@@ -163,4 +163,3 @@ class GpgMailBuilder:
             signed_message.attach(signature_part)
 
         return signed_message
-
