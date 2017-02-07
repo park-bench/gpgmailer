@@ -24,19 +24,25 @@ import gpgkeyring
 import logging
 import time
 
+# TODO: Class-level comment.
 class GpgMailBuilder:
+    # TODO: GpgMailBuilder should not care about allow_expired_signing_key.
+    # TODO: Add max_operation_time variable to add time to expiration checks.
+    # TODO: Should have 3 exposed methods for signing, encrypting, and both.
     def __init__(self, gpg_home, allow_expired_signing_key):
         self.logger = logging.getLogger('GpgMailBuilder')
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
         self.gpg = gnupg.GPG(gnupghome=gpg_home)
         self.allow_expired_signing_key = allow_expired_signing_key
 
+        # TODO: Handle these with exceptions and return values, not class variables.
         self.signature_error = False
         self.encryption_error = False
 
     # Builds an encrypted and/or signed email message from the passed message dictionary.
     #   Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
-    def build_message(self, message_dict, recipient_fingerprints, signing_key_fingerprint, signing_key_passphrase):
+    # TODO: Have two separate methods for building signed and unsigned messages.
+    def build_message(self, message_dict, encryption_fingerprints, signing_key_fingerprint, signing_key_passphrase):
 
         # Reinitialize the error variables
         self.signature_error = False
@@ -53,29 +59,33 @@ class GpgMailBuilder:
         signed_message = self._build_signed_message(message_dict, signing_key_fingerprint, signing_key_passphrase)
 
         # We need all encryption keys in a list
-        good_fingerprints = []
+        valid_encryption_fingerprints = []
 
-        for fingerprint in recipient_fingerprints:
+        for fingerprint in encryption_fingerprints:
             if self.gpgkeyring.is_trusted(fingerprint) and not(self.gpgkeyring.is_expired(fingerprint)):
-                good_fingerprints.append(fingerprint)
+                valid_encryption_fingerprints.append(fingerprint)
 
-        if(good_fingerprints == []):
+        if(valid_encryption_fingerprints == []):
             self.logger.critical('No keys usable for encryption.')
+            # TODO: Throw exception here.
             self.encryption_error = True
 
+        # TODO: Handle errors first here.
         elif signed_message:
-            self.logger.debug('good fingerprints: %s' % good_fingerprints)
+            self.logger.debug('Encrypting with valid fingerprints: %s' % valid_encryption_fingerprints)
             # Encrypt the message
             encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
-            encrypted_payload_result = self.gpg.encrypt(data=signed_message.as_string(), recipients=good_fingerprints)
-            encrypted_payload = str(encrypted_payload_result)
+            encrypted_payload = self.gpg.encrypt(data=signed_message.as_string(), recipients=valid_encryption_fingerprints)
+            encrypted_payload_string = str(encrypted_payload)
 
-            # This ok variable is not the status result we need. It only indicates failure.
-            if(encrypted_payload_result.ok == False):
-                self.logger.error('Error while encrypting message: %s.' % encrypted_payload_result.status)
+            # This ok variable is not as granular as we would like it to be.
+            #   The gnupg library does not provide more information.
+            if(encrypted_payload.ok == False):
+                self.logger.error('Error while encrypting message: %s.' % encrypted_payload.status)
+                # TODO: Throw an exception here instead.
                 self.encryption_error = True
 
-            encrypted_part.set_payload(encrypted_payload)
+            encrypted_part.set_payload(encrypted_payload_string)
 
             # Pack it all into one big message
             encrypted_message = MIMEMultipart(_subtype="encrypted", protocol="application/pgp-encrypted")
@@ -84,10 +94,12 @@ class GpgMailBuilder:
             encrypted_message.attach(encrypted_part)
         else:
             self.logger.debug('Not attempting to encrypt an empty message.')
+            # TODO: Throw an exception here.
 
         if self.encryption_error:
             return None
         else:
+            # TODO: Explain why this works and is necessary. Maybe method-level.
             return str(encrypted_message)
 
     # Builds the initial mulipart message to be signed and/or encrypted
@@ -100,15 +112,16 @@ class GpgMailBuilder:
         # Loop over the attachments
         if('attachments' in message_dict.keys()):
             for attachment in message_dict['attachments']:
-                mime_base = MIMEBase('application', 'octet-stream')
-                mime_base.set_payload(base64.b64encode(attachment['data']))
-                mime_base.add_header('Content-Transfer-Encoding', 'base64')
-                mime_base.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
-                multipart_message.attach(mime_base)
+                attachment_part = MIMEBase('application', 'octet-stream')
+                attachment_part.set_payload(base64.b64encode(attachment['data']))
+                attachment_part.add_header('Content-Transfer-Encoding', 'base64')
+                attachment_part.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
+                multipart_message.attach(attachment_part)
 
         return multipart_message
 
 
+    # TODO: Move detailed explanation to class comment.
     # Attempts to build a signed PGP/MIME email
     def _build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_passphrase):
         # this will sign the message text and attachments and puts them all together
@@ -116,6 +129,7 @@ class GpgMailBuilder:
 
         signed_message = None
 
+        # TODO: Move signature test to gpgmailer-daemon and store the result.
         signature_test = self.gpg.sign('I\'ve got a lovely bunch of coconuts', detach=True,
             keyid=signing_key_fingerprint, passphrase=signing_key_passphrase)
 
@@ -132,6 +146,8 @@ class GpgMailBuilder:
         if(self.signature_error and self.allow_expired_signing_key):
             # Prepend warning text to message body and build plaintext message
 
+            # TODO: This should be responsibility of caller.
+            # TODO: Throw exception and log.
             self.logger.error('Message could not be signed, sending unsigned message with warning.')
 
             message_dict['body'] = 'Warning: message is not signed. Check signing key expiration and passphrase.\n%s' \

@@ -19,6 +19,7 @@ import smtplib
 import time
 import traceback
 
+# TODO: Class-level comments.
 class MailSender:
     def __init__(self, config):
         self.logger = logging.getLogger('MailSender')
@@ -27,6 +28,8 @@ class MailSender:
         self.smtp = None
 
         self._connect()
+
+        # Used to determine smtp session idle time.
         self.lastSentTime = time.time()
 
     # Attempts to connect to the configured mail server.
@@ -65,12 +68,17 @@ class MailSender:
             except Exception, e:
                 self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Make this configurable?
+                # TODO: Log full stack trace.
                 time.sleep(.1)
 
     # Sends an email from a string.
     def sendmail(self, message_string):
+        # TODO: Errors should throw exceptions, not set a return code.
         sent_successfully = False
 
+        # TODO: Consider making this bug a feature.
+        # TODO: Consider having it send gibberish emails to addresses with expired
+        #   and untrusted keys.
         # Get a list of recipients from config
         recipients = []
         for recipient in self.config['recipients']:

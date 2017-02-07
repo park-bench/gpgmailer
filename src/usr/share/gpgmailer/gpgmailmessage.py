@@ -28,6 +28,9 @@ mail_dir = '/tmp/gpgmailer'
 #
 # This class is not thread safe.
 #
+
+# Note: Each method should check if this object has already been saved and
+#   throw an exception if it has.
 class GpgMailMessage:
 
     # Initializes the class.
@@ -35,6 +38,7 @@ class GpgMailMessage:
         self.saved = False
         self.message = {}
         self.message['attachments'] = []
+        self.message['subject'] = None
 
     # Adds the subject of the message.
     def set_subject(self, subject):
@@ -71,6 +75,7 @@ class GpgMailMessage:
         message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
 
+        # TODO: Find out why this is in a try/except block. It probably shouldn't be.
         try:
             # Write to a draft directory to so the message doesn't get picked up before it is
             #   fully created.

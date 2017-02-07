@@ -33,20 +33,28 @@ PID_FILE = '/run/gpgmailer.pid'
 
 # After first commit
 # TODO: Clean up logging
+# TODO: More helper methods, program should mostly be helper methods.
+# TODO: Evaluate error conditions first.
 
 # Adds a key to the key ring and returns the key's data as a dictionary.
 def build_key_dict(key_config_string, gpgkeyring):
-    final_key_dict = None
-    key_config_list = key_config_string.split(':')
+    key_split = key_config_string.split(':')
 
+    # TODO: Make this method less clunky. Don't build it to clear a variable.
+    # TODO: Support multiple addresses for the same fingerprint.
     key_dict = {}
-    key_dict['fingerprint'] = key_config_list[1].strip()
-    key_dict['email'] = key_config_list[0].strip()
+    key_dict['email'] = key_split[0].strip()
+    key_dict['fingerprint'] = key_split[1].strip()
 
     if not gpgkeyring.set_key_email(key_dict['fingerprint'], key_dict['email']):
         key_dict = {}
 
     return key_dict
+
+# Quit when SIGTERM is received
+def sig_term_handler(signal, stack_frame):
+    logger.info("Quitting.")
+    sys.exit(0)
 
 print('Loading configuration.')
 config_file = ConfigParser.RawConfigParser()
@@ -89,6 +97,8 @@ config['default_subject'] = config_helper.get_string_if_exists(config_file, 'def
 # init gnupg so we can verify keys
 config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 
+# TODO: Close config file.
+
 # Parse and check keys.
 
 gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
@@ -99,6 +109,7 @@ sender_key_password = config_helper.verify_password_exists(config_file, 'signing
 
 sender_key = build_key_dict(sender_key_string, gpgkeyring)
 
+# TODO: Evaluate error conditions first, first block does not need conditional.
 if not(sender_key == {}):
     logger.info('Using sender %s' % sender_key['email'])
     sender_key['password'] = sender_key_password
@@ -122,7 +133,7 @@ if not config['allow_expired_signing_key']:
         sys.exit(1)
 
 
-# parse recipient config.  Comma-delimited list of objects like sender
+# parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
 # <email>:<key fingerprint>,<email>:<key fingerprint>
 config['recipients'] = []
 recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
@@ -145,10 +156,6 @@ if config['recipients'] == []:
     
 logger.info('Verification complete')
 
-# Quit when SIGTERM is received
-def sig_term_handler(signal, stack_frame):
-    logger.info("Quitting.")
-    sys.exit(0)
 
 # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
 daemon_context = daemon.DaemonContext(
@@ -162,6 +169,8 @@ daemon_context.signal_map = {
     signal.SIGTERM : sig_term_handler
     }
 
+# TODO: Might cause an undetected conflict. Look for a copy of this line when merging
+#   with master.
 daemon_context.files_preserve = [config_helper.get_log_file_handle()]
 
 logger.info('Daemonizing...')
