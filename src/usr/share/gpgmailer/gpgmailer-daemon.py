@@ -133,6 +133,7 @@ if not config['allow_expired_signing_key']:
         sys.exit(1)
 
 
+# TODO: Check for trust here and crash if any recipients are not trusted.
 # parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
 # <email>:<key fingerprint>,<email>:<key fingerprint>
 config['recipients'] = []

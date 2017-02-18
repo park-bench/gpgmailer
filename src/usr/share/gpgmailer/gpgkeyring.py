@@ -19,10 +19,11 @@ import re
 import time
 
 key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
+# TODO: Short explain trust levels.
 valid_owner_trust_levels = ('u', 'f', 'm')
 
+# TODO: Class-level comment
 class GpgKeyRing:
-
     def __init__(self, gnupg_home):
         self.logger = logging.getLogger('GpgKeyRing')
         self.gpg = gnupg.GPG(gnupghome=gnupg_home)
@@ -30,6 +31,8 @@ class GpgKeyRing:
 
         for key in self.gpg.list_keys():
             
+            # Key expiration dates are in Unix time. An expiration date of None
+            #   means that the key does not expire.
             if key['expires'] == '':
                 key['expires'] = None
             else:
@@ -40,16 +43,22 @@ class GpgKeyRing:
                 'ownertrust': key['ownertrust'],
                 'email': None,
                 'fingerprint': key['fingerprint'],
+                # TODO: Add _sent to the end of both of these keys.
                 'expired_email': False,
                 'expiring_soon_email': False
             }
 
 
-    # Check if key fingerprint is expired at date and return True or False.
+    # TODO: Flip the conditions here, use is_not_expired instead.
+    # TODO: Change name to is_current
+    # TODO: check_date should not have a default.
+    # Check if key fingerprint is expired at check_date and return True or False.
     def is_expired(self, fingerprint, check_date=time.time()):
-        # TODO: Also check the encryption subkey.
+        # TODO: Also check the encryption subkey. It may not be easily accessible
+        #   with the gnupg library, and is more work than we plan for at this time.
         expired = True
 
+        # TODO: Finish the log messages here.
         if self._valid_fingerprint(fingerprint):
             self.logger.debug('Expiration: %s, check date: %s' % (self.keys[fingerprint]['expires'], check_date))
             if (self.keys[fingerprint]['expires'] == None) or (self.keys[fingerprint]['expires'] > check_date):
@@ -68,16 +77,21 @@ class GpgKeyRing:
 
         return trusted
 
+    # TODO: Fix the comment. Explain when it can return None.
     # Returns the key's expiration date in Unix time.
     def get_key_data(self, fingerprint):
+        # TODO: Check if fingerprint is in key store, return none if not.
+        # TODO: Check if fingerprint is a valid fingerprint, throw an exception if it isn't.
         result = None
 
         if self._valid_fingerprint(fingerprint):
             if fingerprint in self.keys.keys():
+                # TODO: deepcopy the result.
                 result = self.keys[fingerprint]
 
         return result
 
+    # TODO: Move this method's functionality to gpgkeyverifier.
     # Sets the passed email address for the given key.
     def set_key_email(self, fingerprint, email):
         success = False
@@ -87,18 +101,21 @@ class GpgKeyRing:
 
         return success
 
-    # Checks the formatting of a fingerprint string.
+    # Checks the formatting of a fingerprint string and looks for it in the keyring.
     def _valid_fingerprint(self, fingerprint):
+        # TODO: Throw an exception here instead of using a return value.
         valid = False
 
         if not(key_fingerprint_regex.match(fingerprint)):
             self.logger.error('Key fingerprint %s is not a valid PGP fingerprint.' % fingerprint)
+            # TODO: Throw an exception.
         
         elif not(fingerprint in self.keys.keys()):
             self.logger.error('Key fingerprint %s not found in GPG key store.' % fingerprint)
+            # TODO: Throw an exception.
 
         else:
-            self.logger.debug('Key fingerprint %s is good.' % fingerprint)
+            self.logger.trace('Key fingerprint %s is good.' % fingerprint)
             valid = True
 
         return valid

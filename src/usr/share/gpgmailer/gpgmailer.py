@@ -49,6 +49,7 @@ class GpgMailer:
         if not(self.config['sender']['fingerprint'] in all_key_fingerprints):
             all_key_fingerprints.append(self.config['sender']['fingerprint'])
 
+        # TODO: Don't send email with the constructor.
         self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], all_key_fingerprints, first_run=True)
 
         self.logger.info('GpgMailer initialized.')
