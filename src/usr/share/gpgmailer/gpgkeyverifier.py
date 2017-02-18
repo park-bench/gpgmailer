@@ -73,6 +73,7 @@ class GpgKeyVerifier:
         key_dict_list = []
 
         for key_fingerprint in key_fingerprint_list:
+            # TODO: get_key_data will become get_key_expiration_date
             key_dict_list.append(self.gpgkeyring.get_key_data(key_fingerprint))
 
         # TODO: Clear up added_messages
