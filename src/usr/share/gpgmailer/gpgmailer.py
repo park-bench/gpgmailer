@@ -38,8 +38,7 @@ class GpgMailer:
         self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['allow_expired_signing_key'])
 
-        # TODO: Don't pass in main_loop_delay, just read from config.
-        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config['main_loop_delay'], self.config)
+        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(gpgkeyring=self.gpgkeyring, config=self.config)
 
         self.mailsender = mailsender.MailSender(self.config)
 
@@ -60,8 +59,8 @@ class GpgMailer:
         # TODO: Remove unused parameter.
         # TODO: Use more helper methods.
 
-        # TODO: Put the contents of this loop in a try/catch block.
         while True:
+            # TODO: Put the contents of this loop in a try/catch block.
             # The first element of os.walk is the full path, the second is a
             #   list of directories, and the third is a list of non-directory
             #   files.
