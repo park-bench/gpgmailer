@@ -38,16 +38,22 @@ PID_FILE = '/run/gpgmailer.pid'
 
 # Adds a key to the key ring and returns the key's data as a dictionary.
 def build_key_dict(key_config_string, gpgkeyring):
+    key_dict = {}
     key_split = key_config_string.split(':')
 
-    # TODO: Make this method less clunky. Don't build it to clear a variable.
     # TODO: Support multiple addresses for the same fingerprint.
-    key_dict = {}
-    key_dict['email'] = key_split[0].strip()
-    key_dict['fingerprint'] = key_split[1].strip()
+    email = key_split[0].strip()
+    fingerprint = key_split[1].strip()
 
-    if not gpgkeyring.set_key_email(key_dict['fingerprint'], key_dict['email']):
-        key_dict = {}
+    if not(gpgkeyring.is_trusted(fingerprint)):
+        logger.critical("Key with fingerprint %s is not trusted. Exiting." % fingerprint)
+        sys.exit(1)
+    
+    key_dict = { 'fingerprint': fingerprint,
+        'email': email }
+
+    # TODO: Move this function to gpgkeyverifier.
+    gpgkeyring.set_key_email(fingerprint, email)
 
     return key_dict
 

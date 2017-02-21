@@ -29,6 +29,8 @@ class GpgKeyVerifier:
         self.expiration_margin = expiration_margin
         self.config = config
 
+        # TODO: Cycle through the key data and build the local key ring.
+
     # Accepts a list of keys and only returns the ones that are trusted and do not expire by the
     #   time the next loop starts.
     def filter_valid_keys(self, fingerprint_list):
