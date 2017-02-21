@@ -92,6 +92,7 @@ config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file,
 config['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
 
 config['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay')
+config['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration')
 
 if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
     config['allow_expired_signing_key'] = True

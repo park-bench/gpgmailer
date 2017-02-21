@@ -22,15 +22,83 @@ import time
 # TODO: Merge filter_valid_keys and build_expiration_message and use a dict
 #           to return lots of data.
 class GpgKeyVerifier:
-    def __init__(self, gpgkeyring, expiration_margin, config):
+    def __init__(self, gpgkeyring, config):
         self.logger = logging.getLogger('GpgKeyVerifier')
         self.gpgkeyring = gpgkeyring
-        # TODO: Read expiration_margin from config instead of passing it.
-        self.expiration_margin = expiration_margin
         self.config = config
 
-        # TODO: Cycle through the key data and build the local key ring.
+        self.recipient_index = {}
 
+        for recipient in config['recipients']:
+            recipient_dict = { 'fingerprint': recipient['fingerprint'],
+            'expired_email_sent': False,
+            'expiring_soon_email_sent': False }
+
+            self.recipient_index[recipient['email']] = recipient_dict
+
+        self.first_run = True
+
+    # This method processes all of the recipients in the config, returns a list of 
+    #   recipients with valid keys, the valid key fingerprints themselves, and
+    #   whether or not to send a separate expiration message email.
+    def get_recipient_info(self, loop_start_time):
+        valid_recipients = []
+        valid_keys = []
+        expired_messages = []
+        expiring_soon_messages = []
+        send_email = False
+
+        expiration_date = loop_start_time + self.config['main_loop_duration']
+        expiring_soon_date = expiring_time + self.config['expiration_warning_threshold']
+
+        if self.first_run:
+            send_email = True
+            self.first_run = False
+            expiration_message.append('Gpgmailer just restarted. Here is a list of keys that are expired or will be expiring soon.')
+
+        for email in self.recipient_index.keys():
+            # Check for expiry during the current loop.
+            #   Build an appropriate message and set
+            # Check for expiry during the expiration threshold
+            #   Build an appropriate message
+
+            fingerprint = self.recipient_index[email]['fingerprint']
+
+            if self.gpgkeyring.is_current(fingerprint, expiration_date):
+                message = 'Key <%s> (%s) is expired.' % (fingerprint, email)
+                self.logger.warn(message)
+                expired_messages.append(message)
+
+                if not(self.recipient_index[email]['expired_email_sent']):
+                    send_email = True
+                    self.recipient_index[email]['expired_email_sent'] = True
+
+            elif self.gpgkeyring.is_current(fingerprint, expiring_soon_date):
+                key_expiration_date = self.gpgkeyring.get_key_expiration_date(fingerprint)
+                pretty_expiration_date = datetime.datetime.fromtimestamp(key_expiration_date).strftime('%Y-%m-%d %H:%M:%S')
+                message = ('Key <%s> (%s) will expire soon on %s.' % (fingerprint, email, pretty_expiration_date)
+                self.logger.warn(message)
+                expiring_soon_messages.append(message)
+
+                if not(self.recipient_index[email]['expiring_soon_email_sent']):
+                    send_email = True
+                    self.recipient_index[email]['expiring_soon_email_sent'] = True
+
+            else:
+                self.logger.trace('Key %s is current.' % fingerprint
+                valid_recipients.append(email)
+                valid_keys.append(fingerprint)
+
+        
+        recipient_info = { 'valid_recipients': valid_recipients,
+            'valid_keys': valid_keys,
+            'expiration_message': expiration_message,
+            'send_email': send_email }
+
+        return recipient_info
+    
+
+    # TODO: Remove this method.
     # Accepts a list of keys and only returns the ones that are trusted and do not expire by the
     #   time the next loop starts.
     def filter_valid_keys(self, fingerprint_list):
@@ -60,7 +128,8 @@ class GpgKeyVerifier:
 
         return valid_keys
 
-    # TODO: Change first_run from a parameter to a class variable.
+    
+    # TODO: Remove this method.
     # Builds the expiration warnings that are prepended to each outgoing message
     #   and sends an email if this is the first time this method is run.
     def build_key_expiration_message(self, expiration_warning_threshold, key_fingerprint_list, first_run=False):
@@ -120,6 +189,7 @@ class GpgKeyVerifier:
 
         return full_message
 
+    # TODO: Move this functionality into gpgmailer
     # This queues a warning email for expired or soon to expire keys.
     def _queue_warning_email(self, message_body):
         # TODO: Build message and send using sendmail instead of saving it to disk.
