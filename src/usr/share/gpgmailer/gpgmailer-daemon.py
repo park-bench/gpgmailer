@@ -93,6 +93,7 @@ config['expiration_warning_threshold'] = config_helper.verify_number_exists(conf
 
 config['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay')
 config['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration')
+config['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval')
 
 if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
     config['allow_expired_signing_key'] = True

@@ -81,7 +81,7 @@ class GpgMailMessage:
             # Write to a draft directory to so the message doesn't get picked up before it is
             #   fully created.
             draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
-            message_file = open(draft_pathname, 'w+')
+            message_file = open(draft_pathname, 'w')
             message_file.write(message_json)
             message_file.close()
 

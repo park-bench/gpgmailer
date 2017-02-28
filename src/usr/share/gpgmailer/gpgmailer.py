@@ -52,6 +52,9 @@ class GpgMailer:
         # TODO: Don't send email with the constructor.
         # self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], all_key_fingerprints, first_run=True)
 
+        self.last_recipient_update = 0
+        self._update_recipient_info(time.time())
+
         self.logger.info('GpgMailer initialized.')
 
     # Gpgmailer's main loop. Reads the watch directory and then calls other modules
@@ -162,12 +165,14 @@ class GpgMailer:
     # Get recipient list, key list, expiration message, and whether to send an
     #   email from gpgkeyverifier.
     def _update_recipient_info(self, loop_start_time):
-        recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
 
-        self.recipients = recipient_info['valid_recipients']
-        self.keys = recipient_info['valid_keys']
-        self.expiration_message = recipient_info['expiration_message']
-        self.send_email = recipient_info['send_email']
+        if self.last_recipient_update + self.config['key_check_interval'] < loop_start_time:
+            recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
+
+            self.recipients = recipient_info['valid_recipients']
+            self.keys = recipient_info['valid_keys']
+            self.expiration_message = recipient_info['expiration_message']
+            self.send_email = recipient_info['send_email']
 
     # Send a warning email containing the expiration message.
     def _send_warning_email(self):

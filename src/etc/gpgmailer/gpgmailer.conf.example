@@ -22,6 +22,14 @@ watch_dir=/tmp/gpgmailer/outbox/
 #   time and increase power consumption but will reduce notification latency.
 main_loop_delay=0.1
 
+# The maximum number of seconds the main loop, including key checking, is expected to run.
+#   Using a large number of keys will make key checks take longer, and a marginally 
+#   higher than necessary value does not have any negative effects.
+main_loop_duration=3
+
+# The number of seconds allowed in between checking key expiration.
+key_check_interval=60
+
 # Standard email server details
 smtp_user=
 smtp_pass=
