@@ -55,8 +55,7 @@ class GpgMailer:
 
     # Gpgmailer's main loop. Reads the watch directory and then calls other modules
     #   to build and send email.
-    def start_monitoring(self, directory):
-        # TODO: Remove unused parameter.
+    def start_monitoring(self):
         # TODO: Use more helper methods.
 
         try:

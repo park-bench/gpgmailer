@@ -186,7 +186,7 @@ with daemon_context:
     try:
         logger.debug('Initializing GpgMailer.')
         the_watcher = gpgmailer.GpgMailer(config, gpgkeyring)
-        the_watcher.start_monitoring(config['watch_dir'])
+        the_watcher.start_monitoring()
 
     except Exception as e:
         logger.critical("Fatal %s: %s\n%s" % (type(e).__name__, e.message, traceback.format_exc()))
