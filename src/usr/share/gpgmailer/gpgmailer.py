@@ -80,29 +80,7 @@ class GpgMailer:
                     message_dict = self._read_message_file(file_name)
 
                     self.logger.trace('Message file %s read.' % file_name)
-                    '''
-                    # TODO: Do key checking on a time interval, keep key data in a class variable.
-                    # TODO: Use key_check_date for checking keys on an interval.
-                    key_check_date = time.time() + self.config['main_loop_delay']
 
-                    recipient_fingerprints = [key['fingerprint'] for key in self.config['recipients']]
-                    valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
-
-                    if(valid_recipient_fingerprints == []):
-                        self.logger.critical('No recipient keys available. Exiting.')
-                        sys.exit(1)
-
-                    # TODO: This should be done on a configurable interval, not every time it sends.
-                    sender_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], \
-                        [self.config['sender']['fingerprint']])
-
-                    # Remove sender key from message, as it will be prepended later
-                    unique_recipient_fingerprints = list(recipient_fingerprints)
-                    unique_recipient_fingerprints.remove(self.config['sender']['fingerprint'])
-
-                    key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], unique_recipient_fingerprints)
-                    message_dict['body'] = '%s%s%s' % (self.expiration_message, message_dict['body'])
-                    '''
                     # Set default subject if the queued message does not have one.
                     if message_dict['subject'] == None:
                         message_dict['subject'] = self.config['default_subject']

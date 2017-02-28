@@ -52,9 +52,6 @@ def build_key_dict(key_config_string, gpgkeyring):
     key_dict = { 'fingerprint': fingerprint,
         'email': email }
 
-    # TODO: Move this function to gpgkeyverifier.
-    gpgkeyring.set_key_email(fingerprint, email)
-
     return key_dict
 
 # Quit when SIGTERM is received
