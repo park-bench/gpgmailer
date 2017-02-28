@@ -52,12 +52,15 @@ class GpgKeyVerifier:
         expiration_date = loop_start_time + self.config['main_loop_duration']
         expiring_soon_date = expiring_time + self.config['expiration_warning_threshold']
 
+        sender_expiration = self._build_sender_expiration_message(loop_start_time)
+        send_email = sender_expiration['send_email']
+        sender_expiration_message = sender_expiration['expiration_message']
+
         if self.first_run:
             send_email = True
             self.first_run = False
             expiration_message.append('Gpgmailer just restarted. Here is a list of keys that are expired or will be expiring soon.')
 
-        # TODO: Check the sender key first.
 
         for email in self.recipient_index.keys():
             # Check for expiry during the current loop.
@@ -97,7 +100,7 @@ class GpgKeyVerifier:
         joined_expired_messages = '\n'.join(expired_messages)
         joined_expiring_soon_messages = '\n'.join(expiring_soon_messages)
 
-        expiration_message = '\n'.join([joined_expired_mesages, joined_expiring_soon_messages])
+        expiration_message = '\n'.join([sender_expiration_message, joined_expired_mesages, joined_expiring_soon_messages])
 
         
         recipient_info = { 'valid_recipients': valid_recipients,
