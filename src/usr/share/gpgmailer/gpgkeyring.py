@@ -60,12 +60,13 @@ class GpgKeyRing:
         self._fingerprint_is_valid(fingerprint)
 
         self.logger.trace('Checking expiration for key %s at date %s.' % (fingerprint,
-            self.keys[fingerprint]['expires']))
+            expiration_date))
 
         if ((self.keys[fingerprint]['expires'] == None) or 
              (self.keys[fingerprint]['expires'] < expiration_date)):
 
             current = True
+            self.logger.trace('Key %s is current.' % fingerprint)
 
         else:
             self.logger.warn('Key %s expires before date %s.' % (fingerprint, expiration_date))
@@ -101,6 +102,23 @@ class GpgKeyRing:
             result = self.keys[fingerprint]['expires']
 
         return result
+
+    # Try to sign a string, return True if there were no errors, False otherwise.
+    def signature_test(self, fingerprint, passphrase):
+        success = False
+        self._fingerprint_is_valid(fingerprint)
+
+        signature_test_result = self.gpg.sign('I\'ve got a lovely bunch of coconuts.',
+            detach=True, keyid=fingerprint, passphrase=passphrase)
+
+        if(str(signature_test).strip() == ''):
+            self.logger.warn('Signature test failed.')
+
+        else:
+            self.logger.trace('Signature test passed.')
+            success = True
+
+        return success
 
     # Check if a fingerprint is valid and is in the key store and throw an
     #   appropriate exception if necessary.

@@ -93,9 +93,10 @@ config['main_loop_duration'] = config_helper.verify_number_exists(config_file, '
 config['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval')
 
 if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
-    config['allow_expired_signing_key'] = True
+    allow_expired_signing_key = True
 else:
-    config['allow_expired_signing_key'] = False
+    allow_expired_signing_key = False
+
 
 config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
@@ -128,14 +129,35 @@ if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
     logger.critical('Signing key is not trusted. Exiting.');
     sys.exit(1)
 
-if not config['allow_expired_signing_key']:
+
+# Determine whether unsigned email must be sent.
+config['send_unsigned_email'] = False
+
+sender_key_can_sign = gpgkeyring.signature_test(config['sender']['fingerprint'],
+    config['signing_key_password'])
+sender_key_is_expired = gpgkeyring.is_expired(sender_key['fingerprint'])
+
+if not allow_expired_signing_key:
     # Check signing key
     logger.info('allow_expired_signing_key is not enabled, checking signing key.')
 
-    if gpgkeyring.is_expired(sender_key['fingerprint']):
+    if sender_key_is_expired:
         # Log critical error and quit
         logger.critical('Sender key expired. Exiting.')
         sys.exit(1)
+
+    elif not(sender_key_can_sign):
+        logger.critical('Sender key failed a signature test. Exiting.')
+        sys.exit(1)
+
+else:
+    if sender_key_is_expired:
+        logger.warn('Sender key is expired, will send unsigned email.')
+        config['send_unsigned_email'] = True
+
+    elif not(sender_key_can_sign):
+        logger.warn('Sender key failed a signature test, will send unsigned email.')
+        config['send_unsigned_email'] = True
 
 
 # TODO: Check for trust here and crash if any recipients are not trusted.

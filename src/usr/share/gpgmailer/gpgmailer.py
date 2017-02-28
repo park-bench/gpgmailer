@@ -64,6 +64,7 @@ class GpgMailer:
 
         try:
             while True:
+                self.logger.trace('Checking directory.')
                 # The first element of os.walk is the full path, the second is a
                 #   list of directories, and the third is a list of non-directory
                 #   files.
@@ -143,7 +144,6 @@ class GpgMailer:
     # Get recipient list, key list, expiration message, and whether to send an
     #   email from gpgkeyverifier.
     def _update_recipient_info(self, loop_start_time):
-
         if self.last_recipient_update + self.config['key_check_interval'] < loop_start_time:
             recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
 
@@ -151,6 +151,8 @@ class GpgMailer:
             self.keys = recipient_info['valid_keys']
             self.expiration_message = recipient_info['expiration_message']
             self.send_email = recipient_info['send_email']
+
+            self.last_recipient_update = loop_start_time
 
     # Send a warning email containing the expiration message.
     def _send_warning_email(self):
