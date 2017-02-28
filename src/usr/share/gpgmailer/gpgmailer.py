@@ -24,6 +24,7 @@ import mailsender
 import os
 import sys
 import time
+import traceback
 
 # TODO: Write more effective logging.
 # TODO: Class-level comments.
@@ -49,7 +50,7 @@ class GpgMailer:
             all_key_fingerprints.append(self.config['sender']['fingerprint'])
 
         # TODO: Don't send email with the constructor.
-        self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], all_key_fingerprints, first_run=True)
+        # self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], all_key_fingerprints, first_run=True)
 
         self.logger.info('GpgMailer initialized.')
 
@@ -60,86 +61,86 @@ class GpgMailer:
 
         try:
             while True:
-                # TODO: Put the contents of this loop in a try/catch block.
                 # The first element of os.walk is the full path, the second is a
                 #   list of directories, and the third is a list of non-directory
                 #   files.
                 file_list = next(os.walk(self.config['watch_dir']))[2]
+
+                loop_start_time = time.time()
+
+
+                # TODO: Do this on a configurable interval, not every loop.
+                self._update_recipient_info(loop_start_time)
+
                 for file_name in file_list:
                     self.logger.info("Found file %s." % file_name)
                     message_dict = self._read_message_file(file_name)
 
-                    # TODO: Remove this condition, it will be unnecessary with the
-                    #   main loop being in a try/except block.
-                    if message_dict == {}:
-                        # TODO: Some mechanism to ignore broken files
-                        self.logger.error('Message file %s could not be read.' % file_name)
+                    self.logger.trace('Message file %s read.' % file_name)
+                    '''
+                    # TODO: Do key checking on a time interval, keep key data in a class variable.
+                    # TODO: Use key_check_date for checking keys on an interval.
+                    key_check_date = time.time() + self.config['main_loop_delay']
+
+                    recipient_fingerprints = [key['fingerprint'] for key in self.config['recipients']]
+                    valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
+
+                    if(valid_recipient_fingerprints == []):
+                        self.logger.critical('No recipient keys available. Exiting.')
+                        sys.exit(1)
+
+                    # TODO: This should be done on a configurable interval, not every time it sends.
+                    sender_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], \
+                        [self.config['sender']['fingerprint']])
+
+                    # Remove sender key from message, as it will be prepended later
+                    unique_recipient_fingerprints = list(recipient_fingerprints)
+                    unique_recipient_fingerprints.remove(self.config['sender']['fingerprint'])
+
+                    key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], unique_recipient_fingerprints)
+                    message_dict['body'] = '%s%s%s' % (self.expiration_message, message_dict['body'])
+                    '''
+                    # Set default subject if the queued message does not have one.
+                    if message_dict['subject'] == None:
+                        message_dict['subject'] = self.config['default_subject']
+
+                    # Try to encrypt the message.
+                    # TODO: encrypted_message should return status information, not set class/instance variable.
+                    # TODO: gpgmailer.build_message should throw exceptions on errors.
+                    encrypted_message = self.gpgmailbuilder.build_message(message_dict, self.keys, self.config['sender']['fingerprint'], \
+                        self.config['sender']['password'])
+
+                    # TODO: Explain this, regardless of future changes.
+                    # TODO: Joel wants to see if we can distinguish different 
+                    #   kinds of failure for signing and only crash on some.
+                    if self.gpgmailbuilder.signature_error and not(self.config['allow_expired_signing_key']):
+                        self.logger.critical('Signing message %s failed and sending unsigned messages is not allowed. Exiting.' % file_name)
+                        sys.exit(1)
+
+                    # TODO: Find out if we can get more granular error info
+                    #   and handle it.
+                    if self.gpgmailbuilder.encryption_error:
+                        self.logger.error('Encrypting message %s failed.' % file_name)
 
                     else:
-                        self.logger.trace('Message file %s read.' % file_name)
+                        self.logger.trace('Successfully built message %s.' % file_name)
 
-                        # TODO: Do key checking on a time interval, keep key data in a class variable.
-                        # TODO: Use key_check_date for checking keys on an interval.
-                        key_check_date = time.time() + self.config['main_loop_delay']
-
-                        recipient_fingerprints = [key['fingerprint'] for key in self.config['recipients']]
-                        valid_recipient_fingerprints = self.gpgkeyverifier.filter_valid_keys(recipient_fingerprints)
-
-                        if(valid_recipient_fingerprints == []):
-                            self.logger.critical('No recipient keys available. Exiting.')
-                            sys.exit(1)
-
-                        # TODO: This should be done on a configurable interval, not every time it sends.
-                        sender_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], \
-                            [self.config['sender']['fingerprint']])
-
-                        # Remove sender key from message, as it will be prepended later
-                        unique_recipient_fingerprints = list(recipient_fingerprints)
-                        unique_recipient_fingerprints.remove(self.config['sender']['fingerprint'])
-
-                        key_expiration_message = self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], unique_recipient_fingerprints)
-                        message_dict['body'] = '%s%s%s' % (sender_expiration_message, key_expiration_message, message_dict['body'])
-
-                        # Set default subject if the queued message does not have one.
-                        if message_dict['subject'] == None:
-                            message_dict['subject'] = self.config['default_subject']
-
-                        # Try to encrypt the message.
-                        # TODO: encrypted_message should return status information, not set class/instance variable.
-                        # TODO: gpgmailer.build_message should throw exceptions on errors.
-                        encrypted_message = self.gpgmailbuilder.build_message(message_dict, valid_recipient_fingerprints, self.config['sender']['fingerprint'], \
-                            self.config['sender']['password'])
-
-                        # TODO: Explain this, regardless of future changes.
-                        # TODO: Joel wants to see if we can distinguish different 
-                        #   kinds of failure for signing and only crash on some.
-                        if self.gpgmailbuilder.signature_error and not(self.config['allow_expired_signing_key']):
-                            self.logger.critical('Signing message %s failed and sending unsigned messages is not allowed. Exiting.' % file_name)
-                            sys.exit(1)
-
-                        # TODO: Find out if we can get more granular error info
-                        #   and handle it.
-                        if self.gpgmailbuilder.encryption_error:
-                            self.logger.error('Encrypting message %s failed.' % file_name)
+                        # TODO: Don't put this in an if statement, throw exceptions
+                        #   for errors instead.
+                        if not(self.mailsender.sendmail(encrypted_message, self.recipients)):
+                            # TODO: Some mechanism to handle mail errors.
+                            self.logger.error('Failed to send message %s.' % file_name)
 
                         else:
-                            self.logger.trace('Successfully built message %s.' % file_name)
-
-                            # TODO: Don't put this in an if statement, throw exceptions
-                            #   for errors instead.
-                            if not(self.mailsender.sendmail(encrypted_message)):
-                                # TODO: Some mechanism to handle mail errors.
-                                self.logger.error('Failed to send message %s.' % file_name)
-
-                            else:
-                                self.logger.info('Message %s sent successfully.' % file_name)
-                                # TODO: Use os.path.join here instead.
-                                os.remove('%s%s' % (self.config['watch_dir'],file_name))
+                            self.logger.info('Message %s sent successfully.' % file_name)
+                            # TODO: Use os.path.join here instead.
+                            os.remove('%s%s' % (self.config['watch_dir'],file_name))
 
                 time.sleep(self.config['main_loop_delay'])
 
         except Exception as e:
             self.logger.error('Exception %s:%s.' % (type(e).__name__, e.message))
+            self.logger.debug(traceback.format_exc())
 
 
     # Read a message file and build a dictionary of message information 
@@ -148,18 +149,32 @@ class GpgMailer:
 
         message_dict = {}
 
-        # TODO: Move try/except statements to start_montiring.
-        try:
-            # TODO: Use os.path.join instead of string concatenation.
-            with open('%s%s' % (self.config['watch_dir'], file_name), 'r') as file_handle:
-                message_dict = json.loads(file_handle.read())
+        # TODO: Use os.path.join instead of string concatenation.
+        with open('%s%s' % (self.config['watch_dir'], file_name), 'r') as file_handle:
+            message_dict = json.loads(file_handle.read())
 
-            for attachment in message_dict['attachments']:
-                # Attachment data is assumed to be encoded in base64.
-                attachment['data'] = base64.b64decode(attachment['data'])
-            
-        except Exception as e:
-            # TODO: Log the stack trace in error level.
-            self.logger.error('Exception: %s\n' % e.message);
+        for attachment in message_dict['attachments']:
+            # Attachment data is assumed to be encoded in base64.
+            attachment['data'] = base64.b64decode(attachment['data'])
 
         return message_dict
+
+    # Get recipient list, key list, expiration message, and whether to send an
+    #   email from gpgkeyverifier.
+    def _update_recipient_info(self, loop_start_time):
+        recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
+
+        self.recipients = recipient_info['valid_recipients']
+        self.keys = recipient_info['valid_keys']
+        self.expiration_message = recipient_info['expiration_message']
+        self.send_email = recipient_info['send_email']
+
+    # Send a warning email containing the expiration message.
+    def _send_warning_email(self):
+        message_dict = { 'body': self.expiration_message,
+                    'subject': self.config['default_subject']}
+
+        encrypted_message = self.gpgmailbuilder.build_message(message_dict, self.keys, self.config['sender']['fingerprint'], \
+            self.config['sender']['password'])
+
+        self.mailsender.sendmail(encrypted_message, self.recipients)

@@ -72,17 +72,13 @@ class MailSender:
                 time.sleep(.1)
 
     # Sends an email from a string.
-    def sendmail(self, message_string):
+    def sendmail(self, message_string, recipients):
         # TODO: Errors should throw exceptions, not set a return code.
         sent_successfully = False
 
         # TODO: Consider making this bug a feature.
         # TODO: Consider having it send gibberish emails to addresses with expired
         #   and untrusted keys.
-        # Get a list of recipients from config
-        recipients = []
-        for recipient in self.config['recipients']:
-            recipients.append(recipient['email'])
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: There is probably also a hard session limit too.

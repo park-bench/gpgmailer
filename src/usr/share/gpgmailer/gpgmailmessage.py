@@ -20,6 +20,7 @@ import json
 import os
 import shutil
 
+# TODO: Check that the watch directory has the correct permissions.
 # TODO: Remove hard-coded mail directory.
 mail_dir = '/tmp/gpgmailer'
 

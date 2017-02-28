@@ -78,13 +78,13 @@ class GpgKeyRing:
         self.logger.trace('Checking expiration for key %s at date %s.' % (fingerprint,
             self.keys[fingerprint]['expires']))
 
-        if (self.keys[fingerprint]['expires'] == None) or 
-             (self.keys[fingerprint]['expires'] < expiration_date):
+        if ((self.keys[fingerprint]['expires'] == None) or 
+             (self.keys[fingerprint]['expires'] < expiration_date)):
+
             current = True
 
         else:
-            self.logger.warn('Key %s expires before date %s.' % (fingerprint,
-                self.keys[fingerprint]['expires']))
+            self.logger.warn('Key %s expires before date %s.' % (fingerprint, expiration_date))
 
         return current
 
