@@ -36,7 +36,7 @@ class GPGKeyExpiredException(Exception):
 class GPGKeyUntrustedException(Exception):
     ''' Thrown when attempting to use an untrusted key. '''
 
-# TODO: Class-level comment.
+# Builds, signs, and encrypts multipart emails from dictionaries.
 class GpgMailBuilder:
     def __init__(self, gpg_home, max_operation_time):
         self.logger = logging.getLogger('GpgMailBuilder')
@@ -44,27 +44,33 @@ class GpgMailBuilder:
         self.gpg = gnupg.GPG(gnupghome=gpg_home)
         self.max_operation_time = max_operation_time
 
-    def build_encrypted_message(self):
-        # Set build_start_time
-        # Call _build_plaintext_message
-        # Call _encrypt_message
-        # set subject
-        pass
+    def build_encrypted_message(self, message_dict, encryption_keys):
+        build_start_time = time.time()
 
-    def build_signed_message(self):
-        # Set build_start_time
-        # Call _build_plaintext_message
-        # Call _sign_message
-        # set subject
-        pass
+        plain_message = self._build_plaintext_message(message_dict)
+        encrypted_message = self._encrypt_message(message, encryption_keys)
+        encrypted_message['Subject'] = message_dict['subject']
 
-    def build_signed_encrypted_message(self):
-        # Set build_start_time
-        # Call _build_plaintext_message
-        # Call _sign_message
-        # Call _encrypt_message
-        # set subject
-        pass
+        return str(encrypted_message)
+
+    def build_signed_message(self, message_dict, signing_key, singing_key_passphrase):
+        build_start_time = time.time()
+
+        plain_message = self._build_plaintext_message(message_dict)
+        signed_message = self._sign_message(message, signing_key, signing_key_passphrase)
+        signed_message['Subject'] = message_dict['subject']
+
+        return str(signed_message)
+
+    def build_signed_encrypted_message(self, message_dict, signing_key, signing_key_passphrase, encryption_keys):
+        build_start_time = time.time()
+
+        plain_message = self._build_plaintext_message(message_dict)
+        signed_message = self._sign_message(message, build_start_time, signing_key, signing_key_passphrase)
+        encrypted_message = self._encrypt_message(message, build_start_time, encryption_keys)
+        encrypted_message['Subject'] = message_dict['subject']
+
+        return str(encrypted_message)
 
     # Build and add a signature part to a message object.
     def _sign_message(self, message, build_start_time, signing_key_fingerprint, singing_key_passphrase):

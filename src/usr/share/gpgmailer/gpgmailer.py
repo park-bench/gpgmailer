@@ -37,7 +37,7 @@ class GpgMailer:
 
         self.config = config
         self.gpgkeyring = gpgkeyring
-        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['allow_expired_signing_key'])
+        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['main_loop_duration'])
 
         self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(gpgkeyring=self.gpgkeyring, config=self.config)
 
@@ -48,9 +48,6 @@ class GpgMailer:
         # Add the sender key if it isn't already in the list.
         if not(self.config['sender']['fingerprint'] in all_key_fingerprints):
             all_key_fingerprints.append(self.config['sender']['fingerprint'])
-
-        # TODO: Don't send email with the constructor.
-        # self.gpgkeyverifier.build_key_expiration_message(self.config['expiration_warning_threshold'], all_key_fingerprints, first_run=True)
 
         self.last_recipient_update = 0
         self._update_recipient_info(time.time())
@@ -72,8 +69,6 @@ class GpgMailer:
 
                 loop_start_time = time.time()
 
-
-                # TODO: Do this on a configurable interval, not every loop.
                 self._update_recipient_info(loop_start_time)
 
                 for file_name in file_list:
@@ -86,31 +81,12 @@ class GpgMailer:
                     if message_dict['subject'] == None:
                         message_dict['subject'] = self.config['default_subject']
 
-                    # Try to encrypt the message.
-                    # TODO: encrypted_message should return status information, not set class/instance variable.
-                    # TODO: gpgmailer.build_message should throw exceptions on errors.
-                    encrypted_message = self.gpgmailbuilder.build_message(message_dict, self.keys, self.config['sender']['fingerprint'], \
-                        self.config['sender']['password'])
+                    encrypted_message = self._build_encrypted_message(message_dict)
 
-                    # TODO: Explain this, regardless of future changes.
-                    # TODO: Joel wants to see if we can distinguish different 
-                    #   kinds of failure for signing and only crash on some.
-                    if self.gpgmailbuilder.signature_error and not(self.config['allow_expired_signing_key']):
-                        self.logger.critical('Signing message %s failed and sending unsigned messages is not allowed. Exiting.' % file_name)
-                        sys.exit(1)
+                    self.mailsender.sendmail(encrypted_message, self.recipients)
+                    self.logger.info('Message %s sent successfully.' % file_name)
 
-                    # TODO: Find out if we can get more granular error info
-                    #   and handle it.
-                    if self.gpgmailbuilder.encryption_error:
-                        self.logger.error('Encrypting message %s failed.' % file_name)
-
-                    else:
-                        self.logger.trace('Successfully built message %s.' % file_name)
-
-                        self.mailsender.sendmail(encrypted_message, self.recipients)
-                        self.logger.info('Message %s sent successfully.' % file_name)
-
-                        os.remove(os.path.join(self.config['watch_dir'], file_name))
+                    os.remove(os.path.join(self.config['watch_dir'], file_name))
 
                 time.sleep(self.config['main_loop_delay'])
 
@@ -125,8 +101,7 @@ class GpgMailer:
 
         message_dict = {}
 
-        # TODO: Use os.path.join instead of string concatenation.
-        with open('%s%s' % (self.config['watch_dir'], file_name), 'r') as file_handle:
+        with open(os.path.join(self.config['watch_dir'], file_name), 'r') as file_handle:
             message_dict = json.loads(file_handle.read())
 
         for attachment in message_dict['attachments']:
@@ -160,4 +135,11 @@ class GpgMailer:
 
     # Build an encrypted email string with a signature if possible.
     def _build_encrypted_message(self, message_dict):
-        pass
+        if(config['send_unsigned_email']):
+            message = self.gpgmailbuilder.build_encrypted_message(message_dict, self.keys)
+
+        else:
+            message = self.gpgmailbuilder.build_signed_encrypted_message(message_dict,
+                self.config['sender']['fingerprint'], self.config['sender']['password'], self.keys)
+
+        return message
