@@ -107,16 +107,10 @@ class GpgMailer:
                     else:
                         self.logger.trace('Successfully built message %s.' % file_name)
 
-                        # TODO: Don't put this in an if statement, throw exceptions
-                        #   for errors instead.
-                        if not(self.mailsender.sendmail(encrypted_message, self.recipients)):
-                            # TODO: Some mechanism to handle mail errors.
-                            self.logger.error('Failed to send message %s.' % file_name)
+                        self.mailsender.sendmail(encrypted_message, self.recipients)
+                        self.logger.info('Message %s sent successfully.' % file_name)
 
-                        else:
-                            self.logger.info('Message %s sent successfully.' % file_name)
-                            # TODO: Use os.path.join here instead.
-                            os.remove('%s%s' % (self.config['watch_dir'],file_name))
+                        os.remove(os.path.join(self.config['watch_dir'], file_name))
 
                 time.sleep(self.config['main_loop_delay'])
 
@@ -163,3 +157,7 @@ class GpgMailer:
             self.config['sender']['password'])
 
         self.mailsender.sendmail(encrypted_message, self.recipients)
+
+    # Build an encrypted email string with a signature if possible.
+    def _build_encrypted_message(self, message_dict):
+        pass

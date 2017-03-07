@@ -19,6 +19,7 @@ import smtplib
 import time
 import traceback
 
+
 # TODO: Class-level comments.
 class MailSender:
     def __init__(self, config):
@@ -73,34 +74,25 @@ class MailSender:
 
     # Sends an email from a string.
     def sendmail(self, message_string, recipients):
-        # TODO: Errors should throw exceptions, not set a return code.
-        sent_successfully = False
-
-        # TODO: Consider making this bug a feature.
-        # TODO: Consider having it send gibberish emails to addresses with expired
-        #   and untrusted keys.
+        # TODO: Eventually, consider sending encrypted messages to all recipients,
+        #   regardless of whether it was encrypted with their key, so that they
+        #   are aware that mail is being sent.
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: There is probably also a hard session limit too.
         if (time.time() - self.lastSentTime) > self.config['smtp_max_idle']:
-            self.logger.info("Assuming the connection is dead.")
+            self.logger.info('Assuming the connection is dead.')
             self._connect()
 
+        try:
+            self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
+        except Exception as e:
+            self.logger.error('Failed to send: %s: %s\n' % (type(e).__name__, e.message))
+            self.logger.debug(traceback.format_exc())
+            self.logger.info('Retrying.')
 
-        if not(message_string == None):
-            try:
-                self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
-                sent_successfully = True
-            except Exception as e:
-                self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
-                self.logger.error(traceback.format_exc())
+            # Try reconnecting and resending
+            self._connect()
+            self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
 
-                # Try reconnecting and resending
-                self._connect()
-                self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
-                sent_successfully = True
-            self.lastSentTime = time.time()
-        else:
-            self.logger.error('Message is empty, encryption or signing failed, not sending.')
-
-        return sent_successfully
+        self.lastSentTime = time.time()

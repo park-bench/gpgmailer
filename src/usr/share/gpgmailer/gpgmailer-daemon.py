@@ -115,14 +115,13 @@ sender_key_password = config_helper.verify_password_exists(config_file, 'signing
 
 sender_key = build_key_dict(sender_key_string, gpgkeyring)
 
-# TODO: Evaluate error conditions first, first block does not need conditional.
-if not(sender_key == {}):
-    logger.info('Using sender %s' % sender_key['email'])
-    sender_key['password'] = sender_key_password
-    config['sender'] = sender_key
-else:
+if not(sender_key):
     logger.critical('Sender key not defined or not in keyring. Exiting.')
     sys.exit(1)
+
+logger.info('Using sender %s' % sender_key['email'])
+sender_key['password'] = sender_key_password
+config['sender'] = sender_key
 
 # The signing key should always be present and trusted.
 if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
@@ -160,7 +159,6 @@ else:
         config['send_unsigned_email'] = True
 
 
-# TODO: Check for trust here and crash if any recipients are not trusted.
 # parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
 # <email>:<key fingerprint>,<email>:<key fingerprint>
 config['recipients'] = []
