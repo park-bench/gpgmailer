@@ -38,29 +38,24 @@ class GPGKeyUntrustedException(Exception):
 
 # TODO: Class-level comment.
 class GpgMailBuilder:
-    # TODO: GpgMailBuilder should not care about allow_expired_signing_key.
-    # TODO: Add max_operation_time variable to add time to expiration checks.
-    # TODO: Should have 3 exposed methods for signing, encrypting, and both.
     def __init__(self, gpg_home, max_operation_time):
         self.logger = logging.getLogger('GpgMailBuilder')
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
         self.gpg = gnupg.GPG(gnupghome=gpg_home)
         self.max_operation_time = max_operation_time
 
-        # TODO: Handle these with exceptions and return values, not class variables.
-        self.signature_error = False
-        self.encryption_error = False
-
     def build_encrypted_message(self):
         # Set build_start_time
         # Call _build_plaintext_message
         # Call _encrypt_message
+        # set subject
         pass
 
     def build_signed_message(self):
         # Set build_start_time
         # Call _build_plaintext_message
         # Call _sign_message
+        # set subject
         pass
 
     def build_signed_encrypted_message(self):
@@ -68,6 +63,7 @@ class GpgMailBuilder:
         # Call _build_plaintext_message
         # Call _sign_message
         # Call _encrypt_message
+        # set subject
         pass
 
     # Build and add a signature part to a message object.
@@ -99,8 +95,39 @@ class GpgMailBuilder:
         return signed_message
 
     # Encrypt a message object.
-    def _encrypt_message(self, message, build_start_time):
-        pass
+    def _encrypt_message(self, message, build_start_time, encryption_keys):
+        # Check all encryption keys
+        # Build pgp-version part
+        # Build encrypted payload
+        # Build encrypted part
+        # Put both parts into a multipart message
+
+        for fingerprint in encryption_keys:
+            self._validate_key(fingerprint, build_start_time)
+
+        # PGP needs a version attachment
+        pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
+        pgp_version["Content-Description"] = "PGP/MIME version identification"
+        pgp_version.set_payload("Version: 1\n")
+
+        # Encrypt the message
+        encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
+        encrypted_payload = self.gpg.encrypt(data=str(message), recipients=encryption_keys)
+        encrypted_payload_string = str(encrypted_payload)
+
+        # This ok variable is not as granular as we would like it to be.
+        #   The gnupg library does not provide more information.
+        if(encrypted_payload.ok == False):
+            raise GPGEncryptionError('Error while encrypting message: %s.' % encrypted_payload.status)
+
+        encrypted_part.set_payload(encrypted_payload_string)
+
+        # Pack it all into one big message
+        encrypted_message = MIMEMultipart(_subtype="encrypted", protocol="application/pgp-encrypted")
+        encrypted_message.attach(pgp_version)
+        encrypted_message.attach(encrypted_part)
+
+        return encrypted_message
 
     # Builds the initial mulipart message to be signed and/or encrypted
     def _build_plaintext_message(self, message_dict):
@@ -130,66 +157,3 @@ class GpgMailBuilder:
 
         if not(self.gpgkeyring.is_expired(fingerprint, expiration_date)):
             raise GPGKeyExpiredException('Key %s is expired.' % fingerprint)
-
-    # Builds an encrypted and/or signed email message from the passed message dictionary.
-    #   Formerly known as eldtdritch_crypto_magic. #NoFunAllowed
-    # TODO: Have two separate methods for building signed and unsigned messages.
-    def build_message(self, message_dict, encryption_fingerprints, signing_key_fingerprint, signing_key_passphrase):
-
-        # Reinitialize the error variables
-        self.signature_error = False
-        self.encryption_error = False
-        
-        encrypted_message = None
-
-        # PGP needs a version attachment
-        pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
-        pgp_version["Content-Description"] = "PGP/MIME version identification"
-        pgp_version.set_payload("Version: 1\n")
-
-        # Sign the message
-        signed_message = self._build_signed_message(message_dict, signing_key_fingerprint, signing_key_passphrase)
-
-        # We need all encryption keys in a list
-        valid_encryption_fingerprints = []
-
-        for fingerprint in encryption_fingerprints:
-            if self.gpgkeyring.is_trusted(fingerprint) and not(self.gpgkeyring.is_expired(fingerprint)):
-                valid_encryption_fingerprints.append(fingerprint)
-
-        if(valid_encryption_fingerprints == []):
-            self.logger.critical('No keys usable for encryption.')
-            # TODO: Throw exception here.
-            self.encryption_error = True
-
-        # TODO: Handle errors first here.
-        elif signed_message:
-            self.logger.debug('Encrypting with valid fingerprints: %s' % valid_encryption_fingerprints)
-            # Encrypt the message
-            encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
-            encrypted_payload = self.gpg.encrypt(data=signed_message.as_string(), recipients=valid_encryption_fingerprints)
-            encrypted_payload_string = str(encrypted_payload)
-
-            # This ok variable is not as granular as we would like it to be.
-            #   The gnupg library does not provide more information.
-            if(encrypted_payload.ok == False):
-                self.logger.error('Error while encrypting message: %s.' % encrypted_payload.status)
-                # TODO: Throw an exception here instead.
-                self.encryption_error = True
-
-            encrypted_part.set_payload(encrypted_payload_string)
-
-            # Pack it all into one big message
-            encrypted_message = MIMEMultipart(_subtype="encrypted", protocol="application/pgp-encrypted")
-            encrypted_message['Subject'] = message_dict['subject']
-            encrypted_message.attach(pgp_version)
-            encrypted_message.attach(encrypted_part)
-        else:
-            self.logger.debug('Not attempting to encrypt an empty message.')
-            # TODO: Throw an exception here.
-
-        if self.encryption_error:
-            return None
-        else:
-            # TODO: Explain why this works and is necessary. Maybe method-level.
-            return str(encrypted_message)
