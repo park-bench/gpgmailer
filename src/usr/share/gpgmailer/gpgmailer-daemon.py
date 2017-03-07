@@ -133,7 +133,8 @@ if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
 config['send_unsigned_email'] = False
 
 sender_key_can_sign = gpgkeyring.signature_test(config['sender']['fingerprint'],
-    config['signing_key_password'])
+    config['sender']['password'])
+# TODO: Update this to use is_current.
 sender_key_is_expired = gpgkeyring.is_expired(sender_key['fingerprint'])
 
 if not allow_expired_signing_key:

@@ -110,7 +110,7 @@ class GpgKeyRing:
         signature_test_result = self.gpg.sign('I\'ve got a lovely bunch of coconuts.',
             detach=True, keyid=fingerprint, passphrase=passphrase)
 
-        if(str(signature_test).strip() == ''):
+        if(str(signature_test_result).strip() == ''):
             self.logger.warn('Signature test failed.')
 
         else:
