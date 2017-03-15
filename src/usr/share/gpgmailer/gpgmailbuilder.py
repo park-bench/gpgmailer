@@ -48,7 +48,7 @@ class GpgMailBuilder:
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
-        encrypted_message = self._encrypt_message(message, encryption_keys)
+        encrypted_message = self._encrypt_message(message_dict, build_start_time, encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
 
         return str(encrypted_message)
@@ -156,10 +156,10 @@ class GpgMailBuilder:
     # Checks if the given fingerprint is expired or untrusted and throws an
     #   appropriate exception in either case. Never returns anything.
     def _validate_key(self, fingerprint, build_start_time):
-        expiration_date = build_start_time + self.expiration_padding
+        expiration_date = build_start_time + self.max_operation_time
 
         if not(self.gpgkeyring.is_trusted(fingerprint)):
             raise GPGKeyUntrustedException('Key %s is not trusted.' % fingerprint)
 
-        if not(self.gpgkeyring.is_expired(fingerprint, expiration_date)):
+        if not(self.gpgkeyring.is_current(fingerprint, expiration_date)):
             raise GPGKeyExpiredException('Key %s is expired.' % fingerprint)

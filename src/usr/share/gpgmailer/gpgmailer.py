@@ -52,6 +52,8 @@ class GpgMailer:
         self.last_recipient_update = 0
         self._update_recipient_info(time.time())
 
+        self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
+
         self.logger.info('GpgMailer initialized.')
 
     # Gpgmailer's main loop. Reads the watch directory and then calls other modules
@@ -61,11 +63,10 @@ class GpgMailer:
 
         try:
             while True:
-                self.logger.trace('Checking directory.')
                 # The first element of os.walk is the full path, the second is a
                 #   list of directories, and the third is a list of non-directory
                 #   files.
-                file_list = next(os.walk(self.config['watch_dir']))[2]
+                file_list = next(os.walk(self.outbox_path))[2]
 
                 loop_start_time = time.time()
 
@@ -73,7 +74,9 @@ class GpgMailer:
 
                 for file_name in file_list:
                     self.logger.info("Found file %s." % file_name)
-                    message_dict = self._read_message_file(file_name)
+
+                    fullpath = os.path.join(self.outbox_path, file_name)
+                    message_dict = self._read_message_file(fullpath)
 
                     self.logger.trace('Message file %s read.' % file_name)
 
@@ -86,7 +89,7 @@ class GpgMailer:
                     self.mailsender.sendmail(encrypted_message, self.recipients)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
-                    os.remove(os.path.join(self.config['watch_dir'], file_name))
+                    os.remove(os.path.join(self.outbox_path, file_name))
 
                 time.sleep(self.config['main_loop_delay'])
 
@@ -97,11 +100,11 @@ class GpgMailer:
 
     # Read a message file and build a dictionary of message information 
     #   appropriate for gpgmailbuilder.
-    def _read_message_file(self, file_name):
+    def _read_message_file(self, fullpath):
 
         message_dict = {}
 
-        with open(os.path.join(self.config['watch_dir'], file_name), 'r') as file_handle:
+        with open(fullpath, 'r') as file_handle:
             message_dict = json.loads(file_handle.read())
 
         for attachment in message_dict['attachments']:
@@ -135,7 +138,7 @@ class GpgMailer:
 
     # Build an encrypted email string with a signature if possible.
     def _build_encrypted_message(self, message_dict):
-        if(config['send_unsigned_email']):
+        if(self.config['send_unsigned_email']):
             message = self.gpgmailbuilder.build_encrypted_message(message_dict, self.keys)
 
         else:

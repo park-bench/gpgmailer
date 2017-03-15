@@ -27,6 +27,7 @@ import os
 from daemon import pidlockfile
 import signal
 import sys
+import time
 import traceback
 
 PID_FILE = '/run/gpgmailer.pid'
@@ -135,13 +136,15 @@ config['send_unsigned_email'] = False
 sender_key_can_sign = gpgkeyring.signature_test(config['sender']['fingerprint'],
     config['sender']['password'])
 # TODO: Update this to use is_current.
-sender_key_is_expired = gpgkeyring.is_expired(sender_key['fingerprint'])
+
+expiration_date = time.time() + config['main_loop_delay'] + config['main_loop_duration'] + config['key_check_interval']
+sender_key_is_current = not(gpgkeyring.is_current(sender_key['fingerprint'], expiration_date))
 
 if not allow_expired_signing_key:
     # Check signing key
     logger.info('allow_expired_signing_key is not enabled, checking signing key.')
 
-    if sender_key_is_expired:
+    if not(sender_key_is_current):
         # Log critical error and quit
         logger.critical('Sender key expired. Exiting.')
         sys.exit(1)
@@ -151,7 +154,7 @@ if not allow_expired_signing_key:
         sys.exit(1)
 
 else:
-    if sender_key_is_expired:
+    if not(sender_key_is_current):
         logger.warn('Sender key is expired, will send unsigned email.')
         config['send_unsigned_email'] = True
 
