@@ -59,7 +59,7 @@ class GpgMailBuilder:
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
-        signed_message = self._sign_message(message=plain_message, signing_key=signing_key, 
+        signed_message = self._sign_message(message=plain_message, signing_key_fingerprint=signing_key, 
             build_start_time=build_start_time, signing_key_passphrase=signing_key_passphrase)
         signed_message['Subject'] = message_dict['subject']
 
@@ -70,7 +70,7 @@ class GpgMailBuilder:
 
         plain_message = self._build_plaintext_message(message_dict)
         signed_message = self._sign_message(message=plain_message, build_start_time=build_start_time, 
-            signing_key=signing_key, signing_key_passphrase=signing_key_passphrase)
+            signing_key_fingerprint=signing_key, signing_key_passphrase=signing_key_passphrase)
 
         encrypted_message = self._encrypt_message(message=signed_message, 
             build_start_time=build_start_time, encryption_keys=encryption_keys)

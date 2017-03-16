@@ -64,7 +64,12 @@ class GpgMailer:
                 loop_start_time = time.time()
 
                 self._update_recipient_info(loop_start_time)
-                # TODO: Send warning email
+
+                if(self.send_warning_email):
+                    self.logger.info('Sending an expiration warning email.')
+                    self._send_warning_email()
+                    self.send_warning_email = False
+
 
                 for file_name in file_list:
                     self.logger.info("Found file %s." % file_name)
@@ -116,7 +121,7 @@ class GpgMailer:
             self.recipients = recipient_info['valid_recipients']
             self.keys = recipient_info['valid_keys']
             self.expiration_message = recipient_info['expiration_message']
-            self.send_email = recipient_info['send_email']
+            self.send_warning_email = recipient_info['send_email']
 
             self.last_recipient_update = loop_start_time
 
