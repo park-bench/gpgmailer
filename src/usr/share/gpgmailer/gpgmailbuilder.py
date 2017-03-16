@@ -68,13 +68,13 @@ class GpgMailBuilder:
 
         plain_message = self._build_plaintext_message(message_dict)
         signed_message = self._sign_message(plain_message, build_start_time, signing_key, signing_key_passphrase)
-        encrypted_message = self._encrypt_message(message, build_start_time, encryption_keys)
+        encrypted_message = self._encrypt_message(signed_message, build_start_time, encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
 
         return str(encrypted_message)
 
     # Build and add a signature part to a message object.
-    def _sign_message(self, message, build_start_time, signing_key_fingerprint, singing_key_passphrase):
+    def _sign_message(self, message, build_start_time, signing_key_fingerprint, signing_key_passphrase):
         self._validate_key(signing_key_fingerprint, build_start_time)
 
         # Removes the first line and replaces LF with CR/LF
