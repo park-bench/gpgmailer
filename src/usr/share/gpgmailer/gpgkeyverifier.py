@@ -18,7 +18,7 @@ import gpgmailmessage
 import logging
 import time
 
-# TODO: Comment.
+# Manages a list of addresses and PGP keys associated with them.
 class GpgKeyVerifier:
     def __init__(self, gpgkeyring, config):
         self.logger = logging.getLogger('GpgKeyVerifier')

@@ -27,8 +27,9 @@ import time
 import traceback
 
 # TODO: Write more effective logging.
-# TODO: Class-level comments.
 # TODO: Prefer named parameters for more than one parameter.
+# Manages all of the other classes to send emails based on the files in the
+#   outbox directory.
 class GpgMailer:
     # TODO: Document the constructor.
     def __init__(self, config, gpgkeyring):
@@ -39,15 +40,9 @@ class GpgMailer:
         self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['main_loop_duration'])
 
-        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(gpgkeyring=self.gpgkeyring, config=self.config)
+        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config)
 
         self.mailsender = mailsender.MailSender(self.config)
-
-        all_key_fingerprints = [key['fingerprint'] for key in self.config['recipients']]
-
-        # Add the sender key if it isn't already in the list.
-        if not(self.config['sender']['fingerprint'] in all_key_fingerprints):
-            all_key_fingerprints.append(self.config['sender']['fingerprint'])
 
         self.last_recipient_update = 0
         self._update_recipient_info(time.time())
@@ -59,8 +54,6 @@ class GpgMailer:
     # Gpgmailer's main loop. Reads the watch directory and then calls other modules
     #   to build and send email.
     def start_monitoring(self):
-        # TODO: Use more helper methods.
-
         try:
             while True:
                 # The first element of os.walk is the full path, the second is a
@@ -71,6 +64,7 @@ class GpgMailer:
                 loop_start_time = time.time()
 
                 self._update_recipient_info(loop_start_time)
+                # TODO: Send warning email
 
                 for file_name in file_list:
                     self.logger.info("Found file %s." % file_name)
@@ -86,7 +80,7 @@ class GpgMailer:
 
                     encrypted_message = self._build_encrypted_message(message_dict)
 
-                    self.mailsender.sendmail(encrypted_message, self.recipients)
+                    self.mailsender.sendmail(message_string=encrypted_message, recipients=self.recipients)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
@@ -131,18 +125,20 @@ class GpgMailer:
         message_dict = { 'body': self.expiration_message,
                     'subject': self.config['default_subject']}
 
-        encrypted_message = self.gpgmailbuilder.build_message(message_dict, self.keys, self.config['sender']['fingerprint'], \
-            self.config['sender']['password'])
+        encrypted_message = self._build_encrypted_message(message_dict)
 
         self.mailsender.sendmail(encrypted_message, self.recipients)
 
     # Build an encrypted email string with a signature if possible.
     def _build_encrypted_message(self, message_dict):
         if(self.config['send_unsigned_email']):
-            message = self.gpgmailbuilder.build_encrypted_message(message_dict, self.keys)
+            message = self.gpgmailbuilder.build_encrypted_message(message_dict=message_dict, 
+                encryption_keys=self.keys)
 
         else:
-            message = self.gpgmailbuilder.build_signed_encrypted_message(message_dict,
-                self.config['sender']['fingerprint'], self.config['sender']['password'], self.keys)
+            message = self.gpgmailbuilder.build_signed_encrypted_message(message_dict=message_dict,
+                signing_key=self.config['sender']['fingerprint'], 
+                signing_key_passphrase=self.config['sender']['password'], 
+                encryption_keys=self.keys)
 
         return message

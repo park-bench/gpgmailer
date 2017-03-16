@@ -93,10 +93,6 @@ config['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'mai
 config['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration')
 config['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval')
 
-if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
-    allow_expired_signing_key = True
-else:
-    allow_expired_signing_key = False
 
 
 config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
@@ -104,12 +100,11 @@ config['default_subject'] = config_helper.get_string_if_exists(config_file, 'def
 # init gnupg so we can verify keys
 config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 
-# TODO: Close config file.
-
 # Parse and check keys.
 
 gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 
+# TODO: Parsing sender config should be a helper method
 # parse sender config.  <email>:<key fingerprint>
 sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
 sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
@@ -130,7 +125,14 @@ if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
     sys.exit(1)
 
 
+# TODO: This should be a helper method
 # Determine whether unsigned email must be sent.
+
+if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
+    allow_expired_signing_key = True
+else:
+    allow_expired_signing_key = False
+
 config['send_unsigned_email'] = False
 
 sender_key_can_sign = gpgkeyring.signature_test(config['sender']['fingerprint'],
@@ -165,6 +167,7 @@ else:
         logger.debug('Sending signed email.')
 
 
+# TODO: Building the recipient data should be a helper method
 # parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
 # <email>:<key fingerprint>,<email>:<key fingerprint>
 config['recipients'] = []

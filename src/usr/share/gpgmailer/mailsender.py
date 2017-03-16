@@ -20,7 +20,7 @@ import time
 import traceback
 
 
-# TODO: Class-level comments.
+# Maintains an SMTP connection and sends emails.
 class MailSender:
     def __init__(self, config):
         self.logger = logging.getLogger('MailSender')
@@ -35,7 +35,6 @@ class MailSender:
 
     # Attempts to connect to the configured mail server.
     def _connect(self):
-        # TODO: Failed DNS lookups of the mail server might be eating messages. Investigate immediately.
         self.logger.info('Connecting.')
         if (self.smtp != None):
             # I originally tried to quit the existing SMTP session here, but that just slowed things down
@@ -68,13 +67,13 @@ class MailSender:
                 time.sleep(.1)
             except Exception, e:
                 self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.debug(traceback.format_exc())
                 # TODO: Make this configurable?
-                # TODO: Log full stack trace.
                 time.sleep(.1)
 
     # Sends an email from a string.
     def sendmail(self, message_string, recipients):
-        # TODO: Eventually, consider sending encrypted messages to all recipients,
+        # TODO: Eventually, send encrypted messages to all recipients,
         #   regardless of whether it was encrypted with their key, so that they
         #   are aware that mail is being sent.
 

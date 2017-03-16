@@ -48,7 +48,8 @@ class GpgMailBuilder:
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
-        encrypted_message = self._encrypt_message(plain_message, build_start_time, encryption_keys)
+        encrypted_message = self._encrypt_message(message=plain_message, 
+            build_start_time=build_start_time, encryption_keys=encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
 
 
@@ -58,7 +59,8 @@ class GpgMailBuilder:
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
-        signed_message = self._sign_message(plain_message, signing_key, signing_key_passphrase)
+        signed_message = self._sign_message(message=plain_message, signing_key=signing_key, 
+            build_start_time=build_start_time, signing_key_passphrase=signing_key_passphrase)
         signed_message['Subject'] = message_dict['subject']
 
         return str(signed_message)
@@ -67,8 +69,11 @@ class GpgMailBuilder:
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
-        signed_message = self._sign_message(plain_message, build_start_time, signing_key, signing_key_passphrase)
-        encrypted_message = self._encrypt_message(signed_message, build_start_time, encryption_keys)
+        signed_message = self._sign_message(message=plain_message, build_start_time=build_start_time, 
+            signing_key=signing_key, signing_key_passphrase=signing_key_passphrase)
+
+        encrypted_message = self._encrypt_message(message=signed_message, 
+            build_start_time=build_start_time, encryption_keys=encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
 
         return str(encrypted_message)
@@ -103,12 +108,6 @@ class GpgMailBuilder:
 
     # Encrypt a message object.
     def _encrypt_message(self, message, build_start_time, encryption_keys):
-        # Check all encryption keys
-        # Build pgp-version part
-        # Build encrypted payload
-        # Build encrypted part
-        # Put both parts into a multipart message
-
         for fingerprint in encryption_keys:
             self._validate_key(fingerprint, build_start_time)
 
