@@ -55,6 +55,54 @@ def build_key_dict(key_config_string, gpgkeyring):
 
     return key_dict
 
+# Reads and checks the sender key configuration, exiting during appropriate conditions,
+#   and returns a dictionary of sender information.
+def parse_sender_config(config_file, gpgkeyring):
+    # parse sender config.  <email>:<key fingerprint>
+    sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
+    sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
+
+    sender_key = build_key_dict(sender_key_string, gpgkeyring)
+
+    if not(sender_key):
+        logger.critical('Sender key not defined or not in keyring. Exiting.')
+        sys.exit(1)
+
+    # The signing key should always be present and trusted.
+    if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
+        logger.critical('Signing key is not trusted. Exiting.');
+        sys.exit(1)
+
+    sender_key['password'] = sender_key_password
+
+    return sender_key
+    
+# Reads and checks recipient key information, and returns a dict of valid
+#   recipients. If a recipient's fingerprint is invalid or unavailable, a warning
+#   email is queued. If no recipients are valid, the program exits.
+def parse_recipient_config(config_file, gpgkeyring):
+    # parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
+    # <email>:<key fingerprint>,<email>:<key fingerprint>
+    recipient_list = []
+    recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
+    recipients_raw_list = recipients_raw_string.split(',')
+    for recipient in recipients_raw_list:
+        recipient_key = build_key_dict(recipient, gpgkeyring)
+        if recipient_key:
+            logger.info('Adding recipient key for %s.' % recipient_key['email'])
+            recipient_list.append(recipient_key)
+        else:
+            logger.error('Recipient key for %s not available or invalid.' % recipient)
+            expiration_message = gpgmailmessage.GpgMailMessage()
+            expiration_message.set_body('The encryption key for %s is not available or is invalid.' % recipient_key['email'])
+            expiration_message.queue_for_sending()
+
+    if recipient_list == []:
+        logger.critical('No valid recipients. Exiting.')
+        sys.exit(1)
+
+    return recipient_list
+
 # Quit when SIGTERM is received
 def sig_term_handler(signal, stack_frame):
     logger.info("Quitting.")
@@ -93,37 +141,18 @@ config['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'mai
 config['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration')
 config['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval')
 
-
-
 config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
 # init gnupg so we can verify keys
 config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
+gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 
 # Parse and check keys.
 
-gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
+config['sender'] = parse_sender_config(config_file, gpgkeyring)
+logger.info('Using sender %s' % config['sender']['email'])
 
-# TODO: Parsing sender config should be a helper method
-# parse sender config.  <email>:<key fingerprint>
-sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
-sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
-
-sender_key = build_key_dict(sender_key_string, gpgkeyring)
-
-if not(sender_key):
-    logger.critical('Sender key not defined or not in keyring. Exiting.')
-    sys.exit(1)
-
-logger.info('Using sender %s' % sender_key['email'])
-sender_key['password'] = sender_key_password
-config['sender'] = sender_key
-
-# The signing key should always be present and trusted.
-if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
-    logger.critical('Signing key is not trusted. Exiting.');
-    sys.exit(1)
-
+config['recipients'] = parse_recipient_config(config_file, gpgkeyring)
 
 # TODO: This should be a helper method
 # Determine whether unsigned email must be sent.
@@ -139,7 +168,7 @@ sender_key_can_sign = gpgkeyring.signature_test(config['sender']['fingerprint'],
     config['sender']['password'])
 
 expiration_date = time.time() + config['main_loop_delay'] + config['main_loop_duration'] + config['key_check_interval']
-sender_key_is_current = gpgkeyring.is_current(sender_key['fingerprint'], expiration_date)
+sender_key_is_current = gpgkeyring.is_current(config['sender']['fingerprint'], expiration_date)
 
 if not allow_expired_signing_key:
     # Check signing key
@@ -167,31 +196,11 @@ else:
         logger.debug('Sending signed email.')
 
 
-# TODO: Building the recipient data should be a helper method
-# parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
-# <email>:<key fingerprint>,<email>:<key fingerprint>
-config['recipients'] = []
-recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
-recipients_raw_list = recipients_raw_string.split(',')
-for recipient in recipients_raw_list:
-    recipient_key = build_key_dict(recipient, gpgkeyring)
-    if recipient_key:
-        logger.info('Adding recipient key for %s.' % recipient_key['email'])
-        config['recipients'].append(recipient_key)
-    else:
-        logger.error('Recipient key for %s not available or invalid.' % recipient)
-        expiration_message = gpgmailmessage.GpgMailMessage()
-        expiration_message.set_body('The encryption key for %s is not available or is invalid.' % recipient_key['email'])
-        expiration_message.queue_for_sending()
 
-
-if config['recipients'] == []:
-    logger.critical('No valid recipients. Exiting.')
-    sys.exit(1)
-    
 logger.info('Verification complete')
 
 
+# TODO: Either warn or crash when the config file is readable by everyone.
 # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
 daemon_context = daemon.DaemonContext(
     working_directory = '/',
