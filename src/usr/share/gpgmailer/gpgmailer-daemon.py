@@ -135,10 +135,9 @@ config['send_unsigned_email'] = False
 
 sender_key_can_sign = gpgkeyring.signature_test(config['sender']['fingerprint'],
     config['sender']['password'])
-# TODO: Update this to use is_current.
 
 expiration_date = time.time() + config['main_loop_delay'] + config['main_loop_duration'] + config['key_check_interval']
-sender_key_is_current = not(gpgkeyring.is_current(sender_key['fingerprint'], expiration_date))
+sender_key_is_current = gpgkeyring.is_current(sender_key['fingerprint'], expiration_date)
 
 if not allow_expired_signing_key:
     # Check signing key
@@ -161,6 +160,9 @@ else:
     elif not(sender_key_can_sign):
         logger.warn('Sender key failed a signature test, will send unsigned email.')
         config['send_unsigned_email'] = True
+
+    else:
+        logger.debug('Sending signed email.')
 
 
 # parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
