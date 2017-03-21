@@ -37,6 +37,84 @@ PID_FILE = '/run/gpgmailer.pid'
 # TODO: More helper methods, program should mostly be helper methods.
 # TODO: Evaluate error conditions first.
 
+logger = None
+
+# Parses the email:fingerprint format for keys in the config file.
+def parse_key_config(key_config_string):
+    key_dict = {}
+
+    key_split = key_config_string.split(':')
+
+    # TODO: Verify email format?
+    key_dict = {'email': key_split[0].strip(),
+        'fingerprint': key_split[1].strip()}
+
+    return key_dict
+
+# Read the config file, only performing the basic verification done in ConfigHelper,
+#   and return it.
+def build_config_dict():
+
+    print('Loading configuration.')
+    config_file = ConfigParser.RawConfigParser()
+    config_file.read('/etc/gpgmailer/gpgmailer.conf')
+
+    config_helper = confighelper.ConfigHelper()
+
+    # Figure out the logging options so that can start before anything else.
+    print('Configuring logger')
+    log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
+    log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
+
+    config_helper.configure_logger(log_file, log_level)
+
+    logger = logging.getLogger()
+
+    config_dict = {}
+
+    # Read SMTP configuration
+    config_dict['smtp_user'] = config_helper.verify_string_exists(config_file, 'smtp_user')
+    config_dict['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
+    config_dict['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_server')
+    config_dict['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
+    config_dict['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
+    config_dict['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
+
+    # Parse sender config.
+    sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
+    sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
+
+    sender_key = parse_key_config(sender_key_string)
+    sender_key['password'] = sender_key_password
+
+    config_dict['sender'] = sender_key
+
+    # parse recipient config. Comma-delimited list of recipents.
+    recipient_list = []
+    recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
+    recipients_raw_list = recipients_raw_string.split(',')
+
+    for recipient in recipients_raw_list:
+        recipient_list.append(parse_key_config(recipient))
+
+    config_dict['recipients'] = recipient_list
+
+
+    config_dict['watch_dir'] = config_helper.verify_string_exists(config_file, 'watch_dir')
+    config_dict['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
+
+    # Convert the key expiration threshold into seconds because expiry dates are
+    #   stored in unix time.
+    config_dict['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
+
+    config_dict['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay')
+    config_dict['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration')
+    config_dict['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval')
+
+    config_dict['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
+
+    return config_dict
+
 # Adds a key to the key ring and returns the key's data as a dictionary.
 def build_key_dict(key_config_string, gpgkeyring):
     key_dict = {}
@@ -103,48 +181,17 @@ def parse_recipient_config(config_file, gpgkeyring):
 
     return recipient_list
 
+
 # Quit when SIGTERM is received
 def sig_term_handler(signal, stack_frame):
     logger.info("Quitting.")
     sys.exit(0)
 
-print('Loading configuration.')
-config_file = ConfigParser.RawConfigParser()
-config_file.read('/etc/gpgmailer/gpgmailer.conf')
-
-# Figure out the logging options so that can start before anything else.
 print('Verifying configuration.')
-config_helper = confighelper.ConfigHelper()
-log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
-log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
 
-config_helper.configure_logger(log_file, log_level)
+config = build_config_dict()
 
-logger = logging.getLogger()
 
-logger.info('Verifying non-logging config')
-config = {}
-
-config['watch_dir'] = config_helper.verify_string_exists(config_file, 'watch_dir')
-config['smtp_user'] = config_helper.verify_string_exists(config_file, 'smtp_user')
-config['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
-config['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_server')
-config['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
-config['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
-config['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
-
-# Convert the key expiration threshold into seconds because expiry dates are
-#   stored in unix time.
-config['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
-
-config['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay')
-config['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration')
-config['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval')
-
-config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
-
-# init gnupg so we can verify keys
-config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 
 # Parse and check keys.
@@ -216,6 +263,9 @@ daemon_context.signal_map = {
 # TODO: Might cause an undetected conflict. Look for a copy of this line when merging
 #   with master.
 daemon_context.files_preserve = [config_helper.get_log_file_handle()]
+
+# TODO: Delete this line after organizing the init code. It's just for testing.
+sys.exit(0)
 
 logger.info('Daemonizing...')
 with daemon_context:
