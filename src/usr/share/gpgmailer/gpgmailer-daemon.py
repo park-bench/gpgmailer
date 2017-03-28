@@ -32,11 +32,6 @@ import traceback
 
 PID_FILE = '/run/gpgmailer.pid'
 
-# After first commit
-# TODO: Clean up logging
-# TODO: More helper methods, program should mostly be helper methods.
-# TODO: Evaluate error conditions first.
-
 logger = None
 
 # Parses the email:fingerprint format for keys in the config file.
@@ -202,7 +197,6 @@ def build_key_dict(key_config_string, gpgkeyring):
     key_dict = {}
     key_split = key_config_string.split(':')
 
-    # TODO: Support multiple addresses for the same fingerprint.
     email = key_split[0].strip()
     fingerprint = key_split[1].strip()
 
@@ -251,9 +245,6 @@ daemon_context.signal_map = {
 # TODO: Might cause an undetected conflict. Look for a copy of this line when merging
 #   with master.
 daemon_context.files_preserve = [log_file_handle]
-
-# TODO: Delete this line after organizing the init code. It's just for testing.
-sys.exit(0)
 
 logger.info('Daemonizing...')
 with daemon_context:
