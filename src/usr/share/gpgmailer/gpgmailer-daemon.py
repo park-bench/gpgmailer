@@ -46,6 +46,7 @@ def parse_key_config(key_config_string):
     key_split = key_config_string.split(':')
 
     # TODO: Verify email format?
+
     key_dict = {'email': key_split[0].strip(),
         'fingerprint': key_split[1].strip()}
 
@@ -68,6 +69,7 @@ def build_config_dict():
 
     config_helper.configure_logger(log_file, log_level)
 
+    global logger
     logger = logging.getLogger()
 
     config_dict = {}
@@ -113,7 +115,65 @@ def build_config_dict():
 
     config_dict['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
-    return config_dict
+    log_file_handle = config_helper.get_log_file_handle()
+
+    return config_dict, log_file_handle
+
+# Checks an individual key. Crashes if it is not trusted or not in keyring.
+#   Returns False if key will expire within the configured time for the first
+#   loop, otherwise returns True.
+def key_is_usable(fingerprint, gpgkeyring):
+    usable = False
+
+    if not(gpgkeyring.is_trusted(fingerprint)):
+        logger.critical('Key with fingerprint %s is not trusted. Exiting' % fingerprint)
+        sys.exit(1)
+
+    # TODO: Check expiration, too.
+    else:
+        logger.debug('Key with fingerprint %s is usable.' % fingerprint)
+        usable = True
+
+    return usable
+
+def send_warning_email(message_body):
+    pass
+
+# Checks every key in the config file and crashes if necessary. Also checks and
+#   stores whether the sender key can be used to sign.
+def check_all_keys(config_dict, gpgkeyring):
+    logger.info('Starting initial key check')
+
+    if not(key_is_usable(config['sender']['fingerprint'], gpgkeyring)):
+        # TODO: Queue warning email.
+        logger.warn('Sender key is expired.')
+
+    if not(gpgkeyring.signature_test(config['sender']['fingerprint'], config['sender']['password'])):
+        logger.warn('Sender key failed signature test.')
+        config['sender']['can_sign'] = False
+
+    else:
+        logger.debug('Sender key passed signature test.')
+        config['sender']['can_sign'] = True
+
+    valid_recipients = []
+
+    for recipient in config['recipients']:
+        if(key_is_usable(recipient['fingerprint'], gpgkeyring)):
+            valid_recipients.append(recipient)
+        
+    logger.debug('Finished initial key check.')
+
+    if(valid_recipients == []):
+        logger.critical('No recipients are valid. Exiting.')
+        sys.exit(1)
+
+    else:
+        config['recipients'] = valid_recipients
+
+
+def set_send_unsigned_email(config_dict):
+    pass
 
 # Adds a key to the key ring and returns the key's data as a dictionary.
 def build_key_dict(key_config_string, gpgkeyring):
@@ -189,21 +249,20 @@ def sig_term_handler(signal, stack_frame):
 
 print('Verifying configuration.')
 
-config = build_config_dict()
-
+config, log_file_handle = build_config_dict()
 
 gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
+check_all_keys(config, gpgkeyring)
 
-# Parse and check keys.
+set_send_unsigned_email(config)
 
-config['sender'] = parse_sender_config(config_file, gpgkeyring)
-logger.info('Using sender %s' % config['sender']['email'])
+# TODO: Check directory existence and permissions.
 
-config['recipients'] = parse_recipient_config(config_file, gpgkeyring)
 
 # TODO: This should be a helper method
 # Determine whether unsigned email must be sent.
 
+'''
 if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
     allow_expired_signing_key = True
 else:
@@ -241,6 +300,7 @@ else:
 
     else:
         logger.debug('Sending signed email.')
+'''
 
 
 
@@ -262,7 +322,7 @@ daemon_context.signal_map = {
 
 # TODO: Might cause an undetected conflict. Look for a copy of this line when merging
 #   with master.
-daemon_context.files_preserve = [config_helper.get_log_file_handle()]
+daemon_context.files_preserve = [log_file_handle]
 
 # TODO: Delete this line after organizing the init code. It's just for testing.
 sys.exit(0)
