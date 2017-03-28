@@ -70,7 +70,7 @@ def build_config_dict():
     config_helper.configure_logger(log_file, log_level)
 
     global logger
-    logger = logging.getLogger()
+    logger = logging.getLogger('GpgMailer-Daemon')
 
     config_dict = {}
 
@@ -124,14 +124,16 @@ def build_config_dict():
 # Checks an individual key. Crashes if it is not trusted or not in keyring.
 #   Returns False if key will expire within the configured time for the first
 #   loop, otherwise returns True.
-def key_is_usable(fingerprint, gpgkeyring):
+def key_is_usable(fingerprint, expiration_date, gpgkeyring):
     usable = False
 
     if not(gpgkeyring.is_trusted(fingerprint)):
         logger.critical('Key with fingerprint %s is not trusted. Exiting' % fingerprint)
         sys.exit(1)
 
-    # TODO: Check expiration, too.
+    elif not(gpgkeyring.is_current(fingerprint, expiration_date)):
+        logger.warn('Key with fingerprint %s is expired.' % fingerprint)
+
     else:
         logger.debug('Key with fingerprint %s is usable.' % fingerprint)
         usable = True
@@ -148,7 +150,9 @@ def queue_warning_email(message_body):
 def check_all_keys(config_dict, gpgkeyring):
     logger.info('Starting initial key check')
 
-    if not(key_is_usable(config['sender']['fingerprint'], gpgkeyring)):
+    expiration_date = time.time() + config['main_loop_duration'] + config['main_loop_delay']
+
+    if not(key_is_usable(config['sender']['fingerprint'], expiration_date, gpgkeyring)):
         logger.warn('Sender key is expired.')
 
     if not(gpgkeyring.signature_test(config['sender']['fingerprint'], config['sender']['password'])):
@@ -162,7 +166,7 @@ def check_all_keys(config_dict, gpgkeyring):
     valid_recipients = []
 
     for recipient in config['recipients']:
-        if(key_is_usable(recipient['fingerprint'], gpgkeyring)):
+        if(key_is_usable(recipient['fingerprint'], expiration_date, gpgkeyring)):
             valid_recipients.append(recipient)
         
     logger.debug('Finished initial key check.')
@@ -226,7 +230,7 @@ check_all_keys(config, gpgkeyring)
 set_send_unsigned_email(config)
 
 # TODO: Check directory existence and permissions.
-# TODO: Move default outbox directory to /var/lib/gpgmailer
+# TODO: Move default outbox directory to /var/spool/gpgmailer
 
 logger.info('Verification complete')
 
