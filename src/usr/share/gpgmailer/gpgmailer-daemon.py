@@ -45,7 +45,7 @@ def parse_key_config(key_config_string):
 
     key_split = key_config_string.split(':')
 
-    # TODO: Verify email format?
+    # TODO: Eventually verify email format.
 
     key_dict = {'email': key_split[0].strip(),
         'fingerprint': key_split[1].strip()}
@@ -115,6 +115,8 @@ def build_config_dict():
 
     config_dict['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
+    config_dict['allow_expired_signing_key'] = (config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true')
+
     log_file_handle = config_helper.get_log_file_handle()
 
     return config_dict, log_file_handle
@@ -136,8 +138,10 @@ def key_is_usable(fingerprint, gpgkeyring):
 
     return usable
 
-def send_warning_email(message_body):
-    pass
+def queue_warning_email(message_body):
+    warning_message = gpgmailmessage.GpgMailMessage()
+    warning_message.set_body(message_body)
+    warning_message.queue_for_sending()
 
 # Checks every key in the config file and crashes if necessary. Also checks and
 #   stores whether the sender key can be used to sign.
@@ -145,7 +149,6 @@ def check_all_keys(config_dict, gpgkeyring):
     logger.info('Starting initial key check')
 
     if not(key_is_usable(config['sender']['fingerprint'], gpgkeyring)):
-        # TODO: Queue warning email.
         logger.warn('Sender key is expired.')
 
     if not(gpgkeyring.signature_test(config['sender']['fingerprint'], config['sender']['password'])):
@@ -171,9 +174,24 @@ def check_all_keys(config_dict, gpgkeyring):
     else:
         config['recipients'] = valid_recipients
 
-
+# Checks the sending key and configuration to determine if sending unsigned email
+#   is required. Crashes if the sending key cannot sign and sending unsigned email
+#   is disabled.
 def set_send_unsigned_email(config_dict):
-    pass
+    if(not(config['allow_expired_signing_key']) and not(config['sender']['can_sign'])):
+        logger.critical('The sender key with signature %s can not sign and \
+            unsigned email is not allowed. Exiting.' % config['sender']['fingerprint'])
+        sys.exit(1)
+
+    elif(config['allow_expired_signing_key'] and not(config['sender']['can_sign'])):
+        message = 'The sending key is unable to sign. It may be expired or the password may be incorrect. Gpgmailer will send unsigned messages.'
+        logger.warn(message)
+        queue_warning_email(message)
+        config['send_unsigned_email'] = True
+
+    else:
+        logger.debug('Sending signed emails.')
+        config['send_unsigned_email'] = False
 
 # Adds a key to the key ring and returns the key's data as a dictionary.
 def build_key_dict(key_config_string, gpgkeyring):
@@ -193,55 +211,6 @@ def build_key_dict(key_config_string, gpgkeyring):
 
     return key_dict
 
-# Reads and checks the sender key configuration, exiting during appropriate conditions,
-#   and returns a dictionary of sender information.
-def parse_sender_config(config_file, gpgkeyring):
-    # parse sender config.  <email>:<key fingerprint>
-    sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
-    sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
-
-    sender_key = build_key_dict(sender_key_string, gpgkeyring)
-
-    if not(sender_key):
-        logger.critical('Sender key not defined or not in keyring. Exiting.')
-        sys.exit(1)
-
-    # The signing key should always be present and trusted.
-    if not(gpgkeyring.is_trusted(sender_key['fingerprint'])):
-        logger.critical('Signing key is not trusted. Exiting.');
-        sys.exit(1)
-
-    sender_key['password'] = sender_key_password
-
-    return sender_key
-    
-# Reads and checks recipient key information, and returns a dict of valid
-#   recipients. If a recipient's fingerprint is invalid or unavailable, a warning
-#   email is queued. If no recipients are valid, the program exits.
-def parse_recipient_config(config_file, gpgkeyring):
-    # parse recipient config. Comma-delimited list of recipents, formatted similarly to sender.
-    # <email>:<key fingerprint>,<email>:<key fingerprint>
-    recipient_list = []
-    recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
-    recipients_raw_list = recipients_raw_string.split(',')
-    for recipient in recipients_raw_list:
-        recipient_key = build_key_dict(recipient, gpgkeyring)
-        if recipient_key:
-            logger.info('Adding recipient key for %s.' % recipient_key['email'])
-            recipient_list.append(recipient_key)
-        else:
-            logger.error('Recipient key for %s not available or invalid.' % recipient)
-            expiration_message = gpgmailmessage.GpgMailMessage()
-            expiration_message.set_body('The encryption key for %s is not available or is invalid.' % recipient_key['email'])
-            expiration_message.queue_for_sending()
-
-    if recipient_list == []:
-        logger.critical('No valid recipients. Exiting.')
-        sys.exit(1)
-
-    return recipient_list
-
-
 # Quit when SIGTERM is received
 def sig_term_handler(signal, stack_frame):
     logger.info("Quitting.")
@@ -257,52 +226,7 @@ check_all_keys(config, gpgkeyring)
 set_send_unsigned_email(config)
 
 # TODO: Check directory existence and permissions.
-
-
-# TODO: This should be a helper method
-# Determine whether unsigned email must be sent.
-
-'''
-if(config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true'):
-    allow_expired_signing_key = True
-else:
-    allow_expired_signing_key = False
-
-config['send_unsigned_email'] = False
-
-sender_key_can_sign = gpgkeyring.signature_test(config['sender']['fingerprint'],
-    config['sender']['password'])
-
-expiration_date = time.time() + config['main_loop_delay'] + config['main_loop_duration'] + config['key_check_interval']
-sender_key_is_current = gpgkeyring.is_current(config['sender']['fingerprint'], expiration_date)
-
-if not allow_expired_signing_key:
-    # Check signing key
-    logger.info('allow_expired_signing_key is not enabled, checking signing key.')
-
-    if not(sender_key_is_current):
-        # Log critical error and quit
-        logger.critical('Sender key expired. Exiting.')
-        sys.exit(1)
-
-    elif not(sender_key_can_sign):
-        logger.critical('Sender key failed a signature test. Exiting.')
-        sys.exit(1)
-
-else:
-    if not(sender_key_is_current):
-        logger.warn('Sender key is expired, will send unsigned email.')
-        config['send_unsigned_email'] = True
-
-    elif not(sender_key_can_sign):
-        logger.warn('Sender key failed a signature test, will send unsigned email.')
-        config['send_unsigned_email'] = True
-
-    else:
-        logger.debug('Sending signed email.')
-'''
-
-
+# TODO: Move default outbox directory to /var/lib/gpgmailer
 
 logger.info('Verification complete')
 
