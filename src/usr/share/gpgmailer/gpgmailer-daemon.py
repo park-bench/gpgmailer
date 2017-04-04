@@ -224,12 +224,12 @@ check_all_keys(config, gpgkeyring)
 set_send_unsigned_email(config)
 
 # TODO: Check directory existence and permissions.
-# TODO: Move default outbox directory to /var/spool/gpgmailer
+# TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
 
 logger.info('Verification complete')
 
 
-# TODO: Either warn or crash when the config file is readable by everyone.
+# TODO: Eventually, either warn or crash when the config file is readable by everyone.
 # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
 daemon_context = daemon.DaemonContext(
     working_directory = '/',
