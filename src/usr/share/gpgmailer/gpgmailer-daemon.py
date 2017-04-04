@@ -116,24 +116,17 @@ def build_config_dict():
 
     return config_dict, log_file_handle
 
-# Checks an individual key. Crashes if it is not trusted or not in keyring.
-#   Returns False if key will expire within the configured time for the first
-#   loop, otherwise returns True.
-def key_is_usable(fingerprint, expiration_date, gpgkeyring):
-    usable = False
+# Checks an individual key, but only to validate it as a key fingerprint string,
+#   whether it exists in the key store or not, and whether it is trusted. 
+#   Failing any of these checks will crash the program. Does not check for expiration.
+def key_is_usable(fingerprint, gpgkeyring):
 
     if not(gpgkeyring.is_trusted(fingerprint)):
         logger.critical('Key with fingerprint %s is not trusted. Exiting' % fingerprint)
         sys.exit(1)
 
-    elif not(gpgkeyring.is_current(fingerprint, expiration_date)):
-        logger.warn('Key with fingerprint %s is expired.' % fingerprint)
-
     else:
         logger.debug('Key with fingerprint %s is usable.' % fingerprint)
-        usable = True
-
-    return usable
 
 def queue_warning_email(message_body):
     warning_message = gpgmailmessage.GpgMailMessage()
@@ -147,7 +140,9 @@ def check_all_keys(config_dict, gpgkeyring):
 
     expiration_date = time.time() + config['main_loop_duration'] + config['main_loop_delay']
 
-    if not(key_is_usable(config['sender']['fingerprint'], expiration_date, gpgkeyring)):
+    key_is_usable(config['sender']['fingerprint'], gpgkeyring)
+
+    if not(gpgkeyring.is_current(config['sender']['fingerprint'], expiration_date)):
         logger.warn('Sender key is expired.')
 
     if not(gpgkeyring.signature_test(config['sender']['fingerprint'], config['sender']['password'])):
@@ -158,20 +153,10 @@ def check_all_keys(config_dict, gpgkeyring):
         logger.debug('Sender key passed signature test.')
         config['sender']['can_sign'] = True
 
-    valid_recipients = []
-
     for recipient in config['recipients']:
-        if(key_is_usable(recipient['fingerprint'], expiration_date, gpgkeyring)):
-            valid_recipients.append(recipient)
+        key_is_usable(recipient['fingerprint'], gpgkeyring)
         
     logger.debug('Finished initial key check.')
-
-    if(valid_recipients == []):
-        logger.critical('No recipients are valid. Exiting.')
-        sys.exit(1)
-
-    else:
-        config['recipients'] = valid_recipients
 
 # Checks the sending key and configuration to determine if sending unsigned email
 #   is required. Crashes if the sending key cannot sign and sending unsigned email
