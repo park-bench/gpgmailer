@@ -124,7 +124,7 @@ class GpgMailBuilder:
         # This ok variable is not as granular as we would like it to be.
         #   The gnupg library does not provide more information.
         if(encrypted_payload.ok == False):
-            raise GPGEncryptionError('Error while encrypting message: %s.' % encrypted_payload.status)
+            raise EncryptionError('Error while encrypting message: %s.' % encrypted_payload.status)
 
         encrypted_part.set_payload(encrypted_payload_string)
 

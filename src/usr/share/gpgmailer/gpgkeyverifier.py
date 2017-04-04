@@ -71,6 +71,7 @@ class GpgKeyVerifier:
 
             fingerprint = self.recipient_index[email]['fingerprint']
 
+            # TODO: Exclude the key if it is the same as the sender key.
             if not(self.gpgkeyring.is_current(fingerprint, expiration_date)):
                 message = 'Recipient key <%s> (%s) has expired.' % (fingerprint, email)
                 self.logger.warn(message)
@@ -83,13 +84,17 @@ class GpgKeyVerifier:
             elif not(self.gpgkeyring.is_current(fingerprint, expiring_soon_date)):
                 key_expiration_date = self.gpgkeyring.get_key_expiration_date(fingerprint)
                 pretty_expiration_date = datetime.datetime.fromtimestamp(key_expiration_date).strftime('%Y-%m-%d %H:%M:%S')
-                message = ('Recipient key <%s> (%s) will expire soon on date %s.' % (fingerprint, email, pretty_expiration_date))
+                message = ('Recipient key <%s> (%s) will expire on date %s.' % (fingerprint, email, pretty_expiration_date))
                 self.logger.warn(message)
                 expiring_soon_messages.append(message)
 
                 if not(self.recipient_index[email]['expiring_soon_email_sent']):
                     send_email = True
                     self.recipient_index[email]['expiring_soon_email_sent'] = True
+
+                valid_recipients.append(email)
+                if not(fingerprint in valid_keys):
+                    valid_keys.append(fingerprint)
 
             else:
                 self.logger.trace('Key %s is current.' % fingerprint)
@@ -137,7 +142,7 @@ class GpgKeyVerifier:
         elif not(self.gpgkeyring.is_current(fingerprint, expiring_soon_date)):
             key_expiration_date = self.gpgkeyring.get_key_expiration_date(fingerprint)
             pretty_expiration_date = datetime.datetime.fromtimestamp(key_expiration_date).strftime('%Y-%m-%d %H:%M:%S')
-            expiration_message = 'Sender key <%s> (%s) will be expiring soon on date %s.' % (fingerprint, email, pretty_expiration_date)
+            expiration_message = 'Sender key <%s> (%s) will expire on date %s.' % (fingerprint, email, pretty_expiration_date)
             if not(self.sender_key_expiring_soon_email_sent):
                 self.sender_key_expiring_soon_email_sent = True
                 send_email = True
