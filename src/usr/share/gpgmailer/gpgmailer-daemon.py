@@ -128,11 +128,6 @@ def key_is_usable(fingerprint, gpgkeyring):
     else:
         logger.debug('Key with fingerprint %s is usable.' % fingerprint)
 
-def queue_warning_email(message_body):
-    warning_message = gpgmailmessage.GpgMailMessage()
-    warning_message.set_body(message_body)
-    warning_message.queue_for_sending()
-
 # Checks every key in the config file and crashes if necessary. Also checks and
 #   stores whether the sender key can be used to sign.
 def check_all_keys(config_dict, gpgkeyring):
@@ -170,7 +165,6 @@ def set_send_unsigned_email(config_dict):
     elif(config['allow_expired_signing_key'] and not(config['sender']['can_sign'])):
         message = 'The sending key is unable to sign. It may be expired or the password may be incorrect. Gpgmailer will send unsigned messages.'
         logger.warn(message)
-        queue_warning_email(message)
         config['send_unsigned_email'] = True
 
     else:
