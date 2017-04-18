@@ -27,7 +27,7 @@ main_loop_delay=0.1
 #   higher than necessary value does not have any negative effects.
 main_loop_duration=3
 
-# The number of seconds allowed in between checking key expiration.
+# The number of seconds to wait in between checking key expiration.
 key_check_interval=60
 
 # Standard email server details
