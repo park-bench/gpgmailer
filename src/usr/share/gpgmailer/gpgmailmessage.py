@@ -76,26 +76,19 @@ class GpgMailMessage:
         message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
 
-        # TODO: Find out why this is in a try/except block. It probably shouldn't be.
-        try:
-            # Write to a draft directory to so the message doesn't get picked up before it is
-            #   fully created.
-            draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
-            message_file = open(draft_pathname, 'w')
-            message_file.write(message_json)
-            message_file.close()
+        # Write to a draft directory to so the message doesn't get picked up before it is
+        #   fully created.
+        draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
+        message_file = open(draft_pathname, 'w')
+        message_file.write(message_json)
+        message_file.close()
 
-            # Move the file to the outbox which should be an atomic operation
-            outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
-            shutil.move(draft_pathname, outbox_pathname)
+        # Move the file to the outbox which should be an atomic operation
+        outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
+        shutil.move(draft_pathname, outbox_pathname)
 
-            # Causes all future methods calls to fail.
-            self.saved = True
-        except Exception:
-            # TODO: Log stuff here. The full try/except model is here (as opposed
-            #   to using a smaller, prettier context object) because we should
-            #   use the exception later, but for now it just shouldn't crash.
-            pass
+        # Causes all future methods calls to fail.
+        self.saved = True
 
         return self.saved
 

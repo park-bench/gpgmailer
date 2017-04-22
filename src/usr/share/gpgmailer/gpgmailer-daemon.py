@@ -30,6 +30,8 @@ import sys
 import time
 import traceback
 
+# TODO: Separate methods with two lines to improve readability.
+
 PID_FILE = '/run/gpgmailer.pid'
 
 logger = None

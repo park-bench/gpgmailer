@@ -27,14 +27,18 @@ import time
 import traceback
 
 # TODO: Write more effective logging.
-# TODO: Prefer named parameters for more than one parameter.
+# TODO: Class comment is unclear.
 # Manages all of the other classes to send emails based on the files in the
 #   outbox directory.
+
+# Monitors the outbox directory (main loop)
+# Manages keys
+# Notifies recipients of expiring keys
 class GpgMailer:
     # TODO: Document the constructor.
     def __init__(self, config, gpgkeyring):
         self.logger = logging.getLogger('GpgMailer')
-        self.logger.info('Gpgmailer initializing.')
+        self.logger.info('Initializing gpgmailer module.')
 
         self.config = config
         self.gpgkeyring = gpgkeyring
@@ -44,12 +48,11 @@ class GpgMailer:
 
         self.mailsender = mailsender.MailSender(self.config)
 
-        self.last_recipient_update = 0
-        self._update_recipient_info(time.time())
+        self.last_key_check_timestamp = 0
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
-        self.logger.info('GpgMailer initialized.')
+        self.logger.info('Done initializing gpgmailer module.')
 
     # Gpgmailer's main loop. Reads the watch directory and then calls other modules
     #   to build and send email.
@@ -65,14 +68,15 @@ class GpgMailer:
 
                 self._update_recipient_info(loop_start_time)
 
-                if(self.send_warning_email):
+                # TODO: Move this to _update_recipient_info()
+                if self.send_warning_email:
                     self.logger.info('Sending an expiration warning email.')
                     self._send_warning_email()
                     self.send_warning_email = False
 
 
                 for file_name in file_list:
-                    self.logger.info("Found file %s." % file_name)
+                    self.logger.info("Found queued email in file %s." % file_name)
 
                     fullpath = os.path.join(self.outbox_path, file_name)
                     message_dict = self._read_message_file(fullpath)
@@ -94,7 +98,7 @@ class GpgMailer:
 
         except Exception as e:
             self.logger.error('Exception %s:%s.' % (type(e).__name__, e.message))
-            self.logger.debug(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
 
 
     # Read a message file and build a dictionary of message information 
@@ -112,20 +116,28 @@ class GpgMailer:
 
         return message_dict
 
+    # TODO: Change this method's name
     # Get recipient list, key list, expiration message, and whether to send an
     #   email from gpgkeyverifier.
     def _update_recipient_info(self, loop_start_time):
+        # TODO: Calculate and store next key check instead of calculating it every loop.
+        # TODO: Base next key check time on actual key check time, not loop time.
         if self.last_recipient_update + self.config['key_check_interval'] < loop_start_time:
             recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
 
             self.recipients = recipient_info['valid_recipients']
             self.keys = recipient_info['valid_keys']
             self.expiration_message = recipient_info['expiration_message']
+
+            # TODO: Change to text of warning email.
             self.send_warning_email = recipient_info['send_email']
 
             self.last_recipient_update = loop_start_time
 
-    # Send a warning email containing the expiration message.
+        # TODO: Send email if required
+
+    # TODO: Instead of "expiration message", call it "expiration warning message"
+    # Send an email containing the expiration warning message.
     def _send_warning_email(self):
         message_dict = { 'body': self.expiration_message,
                     'subject': self.config['default_subject']}
@@ -136,6 +148,8 @@ class GpgMailer:
 
     # Build an encrypted email string with a signature if possible.
     def _build_encrypted_message(self, message_dict):
+        # TODO: Sender key could expire during operation. Consider just calculating expiration here
+        #   instead of storing the config value.
         if(self.config['send_unsigned_email']):
             message = self.gpgmailbuilder.build_encrypted_message(message_dict=message_dict, 
                 encryption_keys=self.keys)

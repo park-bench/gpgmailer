@@ -49,6 +49,8 @@ class GpgKeyVerifier:
         first_run_message = ''
         expired_messages = []
         expiring_soon_messages = []
+
+        # TODO: Change this to warning email text
         send_email = False
 
         expiration_date = loop_start_time + self.config['main_loop_duration']
@@ -58,9 +60,9 @@ class GpgKeyVerifier:
         send_email = sender_expiration['send_email']
         expired_messages.append(sender_expiration['expiration_message'])
 
+        # TODO: Make sure this message doesn't get added inappropriately.
         if self.first_run:
             first_run_message = 'Gpgmailer just restarted.'
-            send_email = True
             self.first_run = False
             self.logger.debug(first_run_message)
 

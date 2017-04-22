@@ -30,7 +30,7 @@ class MailSender:
 
         self._connect()
 
-        # Used to determine smtp session idle time.
+        # Used to determine SMTP session idle time.
         self.lastSentTime = time.time()
 
     # Attempts to connect to the configured mail server.
@@ -67,27 +67,28 @@ class MailSender:
                 time.sleep(.1)
             except Exception, e:
                 self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
-                self.logger.debug(traceback.format_exc())
+                self.logger.error(traceback.format_exc())
                 # TODO: Make this configurable?
                 time.sleep(.1)
 
+    # TODO: Make this comment more useful.
     # Sends an email from a string.
     def sendmail(self, message_string, recipients):
         # TODO: Eventually, send encrypted messages to all recipients,
         #   regardless of whether it was encrypted with their key, so that they
-        #   are aware that mail is being sent.
+        #   are aware that mail is being sent. Make it an option.
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: There is probably also a hard session limit too.
         if (time.time() - self.lastSentTime) > self.config['smtp_max_idle']:
-            self.logger.info('Assuming the connection is dead.')
+            self.logger.info('Max idle time reached, assuming the SMTP connection has been remotely severed.')
             self._connect()
 
         try:
             self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
         except Exception as e:
             self.logger.error('Failed to send: %s: %s\n' % (type(e).__name__, e.message))
-            self.logger.debug(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             self.logger.info('Retrying.')
 
             # Try reconnecting and resending
