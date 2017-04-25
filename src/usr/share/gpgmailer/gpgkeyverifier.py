@@ -53,7 +53,6 @@ class GpgKeyVerifier:
         self.logger.trace('Recalculating the list of keys that are about to expire.')
         valid_recipients = []
         valid_keys = []
-        first_run_message = ''
         expired_messages = []
         expiring_soon_messages = []
 
@@ -67,13 +66,6 @@ class GpgKeyVerifier:
         sender_expiration = self._build_sender_expiration_message(loop_start_time)
         send_email = sender_expiration['send_email']
         expired_messages.append(sender_expiration['expiration_message'])
-
-        # TODO: Make sure this message doesn't get added inappropriately.
-        # TODO: Move this to gpgmailer class.
-        if self.first_run:
-            first_run_message = 'Gpgmailer just restarted.'
-            self.first_run = False
-            self.logger.debug(first_run_message)
 
         self.logger.trace('Checking recipient keys.')
 
@@ -125,25 +117,19 @@ class GpgKeyVerifier:
         if(expired_messages or expiring_soon_messages):
             expired_messages.insert(0, 'Here are the keys that have expired or will be expiring soon:')
 
-        # Join every item in these lists individually with a newline, unless it
-        #   is an empty string.
+        # Join every item in these lists individually with a newline, if it is
+        #   not an empty string.
         unique_expired_messages = [message for message in expired_messages if message != '']
         unique_expiring_soon_messages = [message for message in expiring_soon_messages if message != '']
 
-        joined_expiration_messages = '\n'.join(unique_expired_messages + unique_expiring_soon_messages)
-
-        message_list = [first_run_message, joined_expiration_messages]
-
-        # TODO: This should be removed when first_run bits are removed.
-        expiration_message = '\n\n'.join([s for s in message_list if s])
+        expiration_message = '\n'.join(unique_expired_messages + unique_expiring_soon_messages)
 
         # TODO: Raise an exception for not having any valid keys. Make sure
         #   the caller handles it and quits.
 
         recipient_info = { 'valid_recipients': valid_recipients,
             'valid_keys': valid_keys,
-            'expiration_message': expiration_message,
-            'send_email': send_email }
+            'expiration_message': expiration_message.strip()}
 
         return recipient_info
 

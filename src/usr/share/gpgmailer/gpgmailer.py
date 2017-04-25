@@ -52,6 +52,8 @@ class GpgMailer:
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
+        self.first_run = True
+
         self.logger.info('Done initializing gpgmailer module.')
 
     # Gpgmailer's main loop. Reads the watch directory and then calls other modules
@@ -67,13 +69,6 @@ class GpgMailer:
                 loop_start_time = time.time()
 
                 self._update_recipient_info(loop_start_time)
-
-                # TODO: Move this to _update_recipient_info()
-                if self.send_warning_email:
-                    self.logger.info('Sending an expiration warning email.')
-                    self._send_warning_email()
-                    self.send_warning_email = False
-
 
                 for file_name in file_list:
                     self.logger.info("Found queued email in file %s." % file_name)
@@ -122,23 +117,29 @@ class GpgMailer:
     def _update_recipient_info(self, loop_start_time):
         # TODO: Calculate and store next key check instead of calculating it every loop.
         # TODO: Base next key check time on actual key check time, not loop time.
-        if self.last_recipient_update + self.config['key_check_interval'] < loop_start_time:
+        if self.last_key_check_timestamp + self.config['key_check_interval'] < loop_start_time:
             recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
 
             self.recipients = recipient_info['valid_recipients']
             self.keys = recipient_info['valid_keys']
             self.expiration_message = recipient_info['expiration_message']
 
-            # TODO: Change to text of warning email.
-            self.send_warning_email = recipient_info['send_email']
+            self.last_key_check_timestamp = time.time()
 
-            self.last_recipient_update = loop_start_time
-
-        # TODO: Send email if required
+        if recipient_info['expiration_message']:
+            self.logger.info('Sending an expiration warning email.')
+            self._send_warning_email()
+            
 
     # TODO: Instead of "expiration message", call it "expiration warning message"
     # Send an email containing the expiration warning message.
     def _send_warning_email(self):
+        expiration_message = self.expiration_message
+
+        if self.first_run:
+            expiration_message = 'Gpgmailer just restarted.\n' + expiration_message
+            self.first_run = False
+            
         message_dict = { 'body': self.expiration_message,
                     'subject': self.config['default_subject']}
 
