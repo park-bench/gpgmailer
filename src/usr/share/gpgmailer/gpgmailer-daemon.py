@@ -32,7 +32,9 @@ import traceback
 
 # TODO: Separate methods with two lines to improve readability.
 
+# TODO: PID_FILE should be lowercase.
 PID_FILE = '/run/gpgmailer.pid'
+config_pathname = '/etc/gpgmailer/gpgmailer.conf'
 
 logger = None
 
@@ -49,13 +51,18 @@ def parse_key_config(key_config_string):
 
     return key_dict
 
+
 # Read the config file, only performing the basic verification done in ConfigHelper,
 #   and return it.
 def build_config_dict():
 
-    print('Loading configuration.')
+    # TODO: Some config numbers must be positive, add a verify_positive_number method
+    #   to confighelper for this, or verify_number_greater_than.
+
+    # TODO: Specify units in inline comments for all delays.
+    print('Reading %s...' % config_pathname)
     config_file = ConfigParser.RawConfigParser()
-    config_file.read('/etc/gpgmailer/gpgmailer.conf')
+    config_file.read(config_pathname)
 
     config_helper = confighelper.ConfigHelper()
 
@@ -72,10 +79,13 @@ def build_config_dict():
     config_dict = {}
 
     # Read SMTP configuration
-    config_dict['smtp_user'] = config_helper.verify_string_exists(config_file, 'smtp_user')
-    config_dict['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
+    # TODO: Change smtp_server to smtp_domain.
     config_dict['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_server')
     config_dict['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
+    # TODO: Change smtp_user to smtp_username.
+    config_dict['smtp_user'] = config_helper.verify_string_exists(config_file, 'smtp_user')
+    # TODO: Change smtp_pass to smtp_password.
+    config_dict['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
     config_dict['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
     config_dict['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
@@ -83,6 +93,7 @@ def build_config_dict():
     sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
     sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
 
+    # TODO: Do all parsing in a different method.
     sender_key = parse_key_config(sender_key_string)
     sender_key['password'] = sender_key_password
 
@@ -97,7 +108,6 @@ def build_config_dict():
         recipient_list.append(parse_key_config(recipient))
 
     config_dict['recipients'] = recipient_list
-
 
     config_dict['watch_dir'] = config_helper.verify_string_exists(config_file, 'watch_dir')
     config_dict['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
@@ -118,30 +128,37 @@ def build_config_dict():
 
     return config_dict, log_file_handle
 
+
+# TODO: Reword to remove "but only".
 # Checks an individual key, but only to validate it as a key fingerprint string,
 #   whether it exists in the key store or not, and whether it is trusted. 
 #   Failing any of these checks will crash the program. Does not check for expiration.
 def key_is_usable(fingerprint, gpgkeyring):
 
     if not(gpgkeyring.is_trusted(fingerprint)):
-        logger.critical('Key with fingerprint %s is not trusted. Exiting' % fingerprint)
+        logger.critical('Key with fingerprint %s is not trusted. Exiting.' % fingerprint)
         sys.exit(1)
 
     else:
-        logger.debug('Key with fingerprint %s is usable.' % fingerprint)
+        logger.debug('Key with fingerprint %s is trusted.' % fingerprint)
 
+
+# TODO: Explain when crashes are necessary. Note that it checks sender key expiration.
 # Checks every key in the config file and crashes if necessary. Also checks and
 #   stores whether the sender key can be used to sign.
 def check_all_keys(config_dict, gpgkeyring):
-    logger.info('Starting initial key check')
+    # TODO: This message should be more descriptive.
+    logger.info('Starting initial key check.')
 
     expiration_date = time.time() + config['main_loop_duration'] + config['main_loop_delay']
 
     key_is_usable(config['sender']['fingerprint'], gpgkeyring)
 
     if not(gpgkeyring.is_current(config['sender']['fingerprint'], expiration_date)):
+        # TODO: Also list sender key's expiration date.
         logger.warn('Sender key is expired.')
 
+    # TODO: Move signature test into this file.
     if not(gpgkeyring.signature_test(config['sender']['fingerprint'], config['sender']['password'])):
         logger.warn('Sender key failed signature test.')
         config['sender']['can_sign'] = False
@@ -150,52 +167,42 @@ def check_all_keys(config_dict, gpgkeyring):
         logger.debug('Sender key passed signature test.')
         config['sender']['can_sign'] = True
 
+    # TODO: Check keys for expiration also.
     for recipient in config['recipients']:
         key_is_usable(recipient['fingerprint'], gpgkeyring)
         
     logger.debug('Finished initial key check.')
 
+
 # Checks the sending key and configuration to determine if sending unsigned email
-#   is required. Crashes if the sending key cannot sign and sending unsigned email
+#   is allowed. Crashes if the sending key cannot sign and sending unsigned email
 #   is disabled.
+# TODO: Rename to set_allow_send_unsigned_emails.
+# TODO: Change config references to config_dict.
+# TODO: This config value does not need to be stored.
+# TODO: This function can probably be renamed to something about verifying.
 def set_send_unsigned_email(config_dict):
     if(not(config['allow_expired_signing_key']) and not(config['sender']['can_sign'])):
         logger.critical('The sender key with signature %s can not sign and \
             unsigned email is not allowed. Exiting.' % config['sender']['fingerprint'])
         sys.exit(1)
 
+    # TODO; allow_expired_signing_key can't be false while can_sign is false.
     elif(config['allow_expired_signing_key'] and not(config['sender']['can_sign'])):
         message = 'The sending key is unable to sign. It may be expired or the password may be incorrect. Gpgmailer will send unsigned messages.'
         logger.warn(message)
         config['send_unsigned_email'] = True
 
     else:
-        logger.debug('Sending signed emails.')
+        logger.debug('Outgoing emails will be signed.')
         config['send_unsigned_email'] = False
 
-# Adds a key to the key ring and returns the key's data as a dictionary.
-def build_key_dict(key_config_string, gpgkeyring):
-    key_dict = {}
-    key_split = key_config_string.split(':')
 
-    email = key_split[0].strip()
-    fingerprint = key_split[1].strip()
-
-    if not(gpgkeyring.is_trusted(fingerprint)):
-        logger.critical("Key with fingerprint %s is not trusted. Exiting." % fingerprint)
-        sys.exit(1)
-    
-    key_dict = { 'fingerprint': fingerprint,
-        'email': email }
-
-    return key_dict
-
-# Quit when SIGTERM is received
+# Quit when SIGTERM is received.
 def sig_term_handler(signal, stack_frame):
     logger.info("Quitting.")
     sys.exit(0)
 
-print('Verifying configuration.')
 
 config, log_file_handle = build_config_dict()
 
@@ -207,7 +214,7 @@ set_send_unsigned_email(config)
 # TODO: Check directory existence and permissions.
 # TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
 
-logger.info('Verification complete')
+logger.info('Verification complete.')
 
 
 # TODO: Eventually, either warn or crash when the config file is readable by everyone.

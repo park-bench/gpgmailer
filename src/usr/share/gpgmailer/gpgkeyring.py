@@ -18,6 +18,7 @@ import logging
 import re
 import time
 
+# TODO: Move docstrings to be above class declaration, put pass in class definition.
 class FingerprintSyntaxException(Exception):
     ''' This exception is thrown when a PGP fingerprint is not a 40-character
         hexadecimal string. '''
@@ -47,11 +48,13 @@ class GpgKeyRing:
             else:
                 key['expires'] = int(key['expires'])
 
+            # TODO: Change keys to fingerprint_to_key_dict
             self.keys[key['fingerprint']] = {
                 'expires': key['expires'],
                 'ownertrust': key['ownertrust'],
                 'fingerprint': key['fingerprint']
             }
+
 
     # Check if a key with the given fingerprint is still valid after the given date.
     def is_current(self, fingerprint, expiration_date):
@@ -68,9 +71,10 @@ class GpgKeyRing:
             self.logger.trace('Key %s is current.' % fingerprint)
 
         else:
-            self.logger.warn('Key %s expires before date %s.' % (fingerprint, expiration_date))
+            self.logger.trace('Key %s expires before date %s.' % (fingerprint, expiration_date))
 
         return current
+
 
     # Check if a key with the given fingerprint is trusted.
     def is_trusted(self, fingerprint):
@@ -85,23 +89,27 @@ class GpgKeyRing:
 
         return trusted
 
+
     # Looks up a key fingerprint and returns the expiration date if it exists,
     #   returns None if key is not found.
     def get_key_expiration_date(self, fingerprint):
         result = None
+        self._fingerprint_is_valid(fingerprint)
 
         if not(fingerprint in self.keys.keys()):
             self.logger.warn('Key with fingerprint %s not found in key store.' % fingerprint)
 
         elif not(key_fingerprint_regex.match(fingerprint)):
             self.logger.error('String %s is not a valid PGP fingerprint.' % fingerprint)
-            raise FingerprintSyntaxException("String %s is not a valid PGP fingerprint." % fingerprint)
+            raise FingerprintSyntaxException('String %s is not a valid PGP fingerprint.' % fingerprint)
 
         else:
             result = self.keys[fingerprint]['expires']
 
         return result
 
+
+    # TODO: Move this bit.
     # Try to sign a string, return True if there were no errors, False otherwise.
     def signature_test(self, fingerprint, passphrase):
         success = False
@@ -119,12 +127,14 @@ class GpgKeyRing:
 
         return success
 
+
     # Check if a fingerprint is valid and is in the key store and throw an
     #   appropriate exception if necessary.
     def _fingerprint_is_valid(self, fingerprint):
+        # TODO: Define messages once and use twice.
         if not(key_fingerprint_regex.match(fingerprint)):
             self.logger.error('String %s is not a valid PGP fingerprint.' % fingerprint)
-            raise FingerprintSyntaxException("String %s is not a valid PGP fingerprint." % fingerprint)
+            raise FingerprintSyntaxException('String %s is not a valid PGP fingerprint.' % fingerprint)
 
         elif not(fingerprint in self.keys.keys()):
             self.logger.error('Key fingerprint %s not found in GPG key store.' % fingerprint)

@@ -24,27 +24,34 @@ import gpgkeyring
 import logging
 import time
 
+# TODO: Change 'Thrown' to 'Raised'
 class SignatureError(Exception):
     ''' Thrown when something goes wrong with a GnuPG signature. '''
 
 class EncryptionError(Exception):
     ''' Thrown when something goes wrong with GnuPG encryption. '''
 
+# TODO: Replace GPG with Gpg.
 class GPGKeyExpiredException(Exception):
     ''' Thrown when attempting to use an expired key. '''
 
 class GPGKeyUntrustedException(Exception):
     ''' Thrown when attempting to use an untrusted key. '''
 
-# Builds, signs, and encrypts multipart emails from dictionaries.
+# Builds, signs, and encrypts PGP/MIME emails with attachments.
 class GpgMailBuilder:
+    # TODO: Explain init's parameters.
+    # TODO: Pass in a keyring instead of making a second one.
     def __init__(self, gpg_home, max_operation_time):
         self.logger = logging.getLogger('GpgMailBuilder')
         self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
         self.gpg = gnupg.GPG(gnupghome=gpg_home)
         self.max_operation_time = max_operation_time
 
+
+    # TODO: Method comment.
     def build_encrypted_message(self, message_dict, encryption_keys):
+        # TODO: Use loop time instead of a new time.
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
@@ -52,10 +59,12 @@ class GpgMailBuilder:
             build_start_time=build_start_time, encryption_keys=encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
 
-
         return str(encrypted_message)
 
+
+    # TODO: Method comment.
     def build_signed_message(self, message_dict, signing_key, singing_key_passphrase):
+        # TODO: Use loop time instead of a new time.
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
@@ -65,7 +74,10 @@ class GpgMailBuilder:
 
         return str(signed_message)
 
+
+    # TODO: Method comment.
     def build_signed_encrypted_message(self, message_dict, signing_key, signing_key_passphrase, encryption_keys):
+        # TODO: Use loop time instead of a new time.
         build_start_time = time.time()
 
         plain_message = self._build_plaintext_message(message_dict)
@@ -78,7 +90,8 @@ class GpgMailBuilder:
 
         return str(encrypted_message)
 
-    # Build and add a signature part to a message object.
+
+    # Builds and returns a signed email based on the given message part.
     def _sign_message(self, message, build_start_time, signing_key_fingerprint, signing_key_passphrase):
         self._validate_key(signing_key_fingerprint, build_start_time)
 
@@ -100,11 +113,13 @@ class GpgMailBuilder:
         signature_part.set_charset('us-ascii')
 
         # Make a box to put the message and signature in
+        # TODO: Sha1 is kind of broken, find an alternative.
         signed_message = MIMEMultipart(_subtype="signed", micalg="pgp-sha1", protocol="application/pgp-signature")
         signed_message.attach(message)
         signed_message.attach(signature_part)
 
         return signed_message
+
 
     # Encrypt a message object.
     def _encrypt_message(self, message, build_start_time, encryption_keys):
@@ -117,15 +132,16 @@ class GpgMailBuilder:
         pgp_version.set_payload("Version: 1\n")
 
         # Encrypt the message
-        encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
         encrypted_payload = self.gpg.encrypt(data=str(message), recipients=encryption_keys)
         encrypted_payload_string = str(encrypted_payload)
 
         # This ok variable is not as granular as we would like it to be.
         #   The gnupg library does not provide more information.
         if(encrypted_payload.ok == False):
-            raise EncryptionError('Error while encrypting message: %s.' % encrypted_payload.status)
+            # TODO: If the status variable is not a string, decode it.
+            raise EncryptionError('Error from python-gnupg while encrypting message: %s.' % encrypted_payload.status)
 
+        encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
         encrypted_part.set_payload(encrypted_payload_string)
 
         # Pack it all into one big message
@@ -135,7 +151,9 @@ class GpgMailBuilder:
 
         return encrypted_message
 
+
     # Builds the initial mulipart message to be signed and/or encrypted
+    # TODO: Change name to _build_plaintext_message_with_attachments.
     def _build_plaintext_message(self, message_dict):
         multipart_message = MIMEMultipart(_subtype="mixed")
 
@@ -153,13 +171,13 @@ class GpgMailBuilder:
 
         return multipart_message
 
+
     # Checks if the given fingerprint is expired or untrusted and throws an
     #   appropriate exception in either case. Never returns anything.
     def _validate_key(self, fingerprint, build_start_time):
-        expiration_date = build_start_time + self.max_operation_time
 
         if not(self.gpgkeyring.is_trusted(fingerprint)):
             raise GPGKeyUntrustedException('Key %s is not trusted.' % fingerprint)
 
-        if not(self.gpgkeyring.is_current(fingerprint, expiration_date)):
+        if not(self.gpgkeyring.is_current(fingerprint, build_start_time + self.max_operation_time)):
             raise GPGKeyExpiredException('Key %s is expired.' % fingerprint)
