@@ -32,13 +32,12 @@ class SignatureError(Exception):
 class EncryptionError(Exception):
     pass
 
-# TODO: Replace GPG with Gpg.
 # Raised when attempting to use an expired key.
-class GPGKeyExpiredException(Exception):
+class GpgKeyExpiredException(Exception):
     pass
 
 # Raised when attempting to use an untrusted key.
-class GPGKeyUntrustedException(Exception):
+class GpgKeyUntrustedException(Exception):
     pass
 
 # Builds, signs, and encrypts PGP/MIME emails with attachments.
@@ -180,7 +179,7 @@ class GpgMailBuilder:
     def _validate_key(self, fingerprint, build_start_time):
 
         if not(self.gpgkeyring.is_trusted(fingerprint)):
-            raise GPGKeyUntrustedException('Key %s is not trusted.' % fingerprint)
+            raise GpgKeyUntrustedException('Key %s is not trusted.' % fingerprint)
 
         if not(self.gpgkeyring.is_current(fingerprint, build_start_time + self.max_operation_time)):
-            raise GPGKeyExpiredException('Key %s is expired.' % fingerprint)
+            raise GpgKeyExpiredException('Key %s is expired.' % fingerprint)
