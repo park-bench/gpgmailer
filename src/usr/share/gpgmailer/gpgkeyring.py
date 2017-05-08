@@ -18,14 +18,14 @@ import logging
 import re
 import time
 
-# TODO: Move docstrings to be above class declaration, put pass in class definition.
+# This exception is raised when a PGP fingerprint is not a 40-character hexadecimal
+#   string.
 class FingerprintSyntaxException(Exception):
-    ''' This exception is thrown when a PGP fingerprint is not a 40-character
-        hexadecimal string. '''
+    pass
 
+# This exception is thrown when a PGP fingerprint is not in the given key store.
 class KeyNotFoundException(Exception):
-    ''' This exception is thrown when a PGP fingerprint is not in the given
-        key store. '''
+    pass
 
 key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
 # These trust levels come from gnupg, u means ultimate, f means full, and m

@@ -24,19 +24,22 @@ import gpgkeyring
 import logging
 import time
 
-# TODO: Change 'Thrown' to 'Raised'
+# Raised when something goes wrong with a GnuPG signature.
 class SignatureError(Exception):
-    ''' Thrown when something goes wrong with a GnuPG signature. '''
+    pass
 
+# Raised when something goes wrong with GnuPG encryption.
 class EncryptionError(Exception):
-    ''' Thrown when something goes wrong with GnuPG encryption. '''
+    pass
 
 # TODO: Replace GPG with Gpg.
+# Raised when attempting to use an expired key.
 class GPGKeyExpiredException(Exception):
-    ''' Thrown when attempting to use an expired key. '''
+    pass
 
+# Raised when attempting to use an untrusted key.
 class GPGKeyUntrustedException(Exception):
-    ''' Thrown when attempting to use an untrusted key. '''
+    pass
 
 # Builds, signs, and encrypts PGP/MIME emails with attachments.
 class GpgMailBuilder:
