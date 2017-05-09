@@ -52,50 +52,44 @@ class GpgMailBuilder:
 
 
     # TODO: Method comment.
-    def build_encrypted_message(self, message_dict, encryption_keys):
-        # TODO: Use loop time instead of a new time.
-        build_start_time = time.time()
+    def build_encrypted_message(self, expiration_check_time, message_dict, encryption_keys):
 
         plain_message = self._build_plaintext_message(message_dict)
         encrypted_message = self._encrypt_message(message=plain_message, 
-            build_start_time=build_start_time, encryption_keys=encryption_keys)
+            expiration_check_time=expiration_check_time, encryption_keys=encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
 
         return str(encrypted_message)
 
 
     # TODO: Method comment.
-    def build_signed_message(self, message_dict, signing_key, singing_key_passphrase):
-        # TODO: Use loop time instead of a new time.
-        build_start_time = time.time()
+    def build_signed_message(self, expiration_check_time, message_dict, signing_key, singing_key_passphrase):
 
         plain_message = self._build_plaintext_message(message_dict)
         signed_message = self._sign_message(message=plain_message, signing_key_fingerprint=signing_key, 
-            build_start_time=build_start_time, signing_key_passphrase=signing_key_passphrase)
+            expiration_check_time=expiration_check_time, signing_key_passphrase=signing_key_passphrase)
         signed_message['Subject'] = message_dict['subject']
 
         return str(signed_message)
 
 
     # TODO: Method comment.
-    def build_signed_encrypted_message(self, message_dict, signing_key, signing_key_passphrase, encryption_keys):
-        # TODO: Use loop time instead of a new time.
-        build_start_time = time.time()
+    def build_signed_encrypted_message(self, expiration_check_time, message_dict, signing_key, signing_key_passphrase, encryption_keys):
 
         plain_message = self._build_plaintext_message(message_dict)
-        signed_message = self._sign_message(message=plain_message, build_start_time=build_start_time, 
+        signed_message = self._sign_message(message=plain_message, expiration_check_time=expiration_check_time, 
             signing_key_fingerprint=signing_key, signing_key_passphrase=signing_key_passphrase)
 
         encrypted_message = self._encrypt_message(message=signed_message, 
-            build_start_time=build_start_time, encryption_keys=encryption_keys)
+            expiration_check_time=expiration_check_time, encryption_keys=encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
 
         return str(encrypted_message)
 
 
     # Builds and returns a signed email based on the given message part.
-    def _sign_message(self, message, build_start_time, signing_key_fingerprint, signing_key_passphrase):
-        self._validate_key(signing_key_fingerprint, build_start_time)
+    def _sign_message(self, message, expiration_check_time, signing_key_fingerprint, signing_key_passphrase):
+        self._validate_key(signing_key_fingerprint, expiration_check_time)
 
         # Removes the first line and replaces LF with CR/LF
         message_string = str(message).split('\n', 1)[1].replace('\n', '\r\n')
@@ -124,9 +118,9 @@ class GpgMailBuilder:
 
 
     # Encrypt a message object.
-    def _encrypt_message(self, message, build_start_time, encryption_keys):
+    def _encrypt_message(self, message, expiration_check_time, encryption_keys):
         for fingerprint in encryption_keys:
-            self._validate_key(fingerprint, build_start_time)
+            self._validate_key(fingerprint, expiration_check_time)
 
         # PGP needs a version attachment
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
@@ -176,10 +170,10 @@ class GpgMailBuilder:
 
     # Checks if the given fingerprint is expired or untrusted and throws an
     #   appropriate exception in either case. Never returns anything.
-    def _validate_key(self, fingerprint, build_start_time):
+    def _validate_key(self, fingerprint, expiration_check_time):
 
         if not(self.gpgkeyring.is_trusted(fingerprint)):
             raise GpgKeyUntrustedException('Key %s is not trusted.' % fingerprint)
 
-        if not(self.gpgkeyring.is_current(fingerprint, build_start_time + self.max_operation_time)):
+        if not(self.gpgkeyring.is_current(fingerprint, expiration_check_time + self.max_operation_time)):
             raise GpgKeyExpiredException('Key %s is expired.' % fingerprint)
