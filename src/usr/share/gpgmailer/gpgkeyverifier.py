@@ -18,6 +18,10 @@ import gpgmailmessage
 import logging
 import time
 
+# Raised when there are no current keys available for encryption.
+class NoUsableKeysException:
+    pass
+
 # Manages a list of recipients where the key has not expired and constructs warning
 #   messages for keys that have expired or are about to expire.
 class GpgKeyVerifier:
@@ -124,8 +128,8 @@ class GpgKeyVerifier:
 
         expiration_message = '\n'.join(unique_expired_messages + unique_expiring_soon_messages)
 
-        # TODO: Raise an exception for not having any valid keys. Make sure
-        #   the caller handles it and quits.
+        if(valid_keys == []):
+            raise NoUsableKeysException()
 
         recipient_info = { 'valid_recipients': valid_recipients,
             'valid_keys': valid_keys,

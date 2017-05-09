@@ -91,6 +91,9 @@ class GpgMailer:
 
                 time.sleep(self.config['main_loop_delay'])
 
+        except gpgkeyverifier.NoUsableKeysException as e:
+            self.logger.critical("No keys available for encryption. Exiting.")
+            sys.exit(1)
         except Exception as e:
             self.logger.error('Exception %s:%s.' % (type(e).__name__, e.message))
             self.logger.error(traceback.format_exc())
