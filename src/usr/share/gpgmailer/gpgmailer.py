@@ -129,21 +129,21 @@ class GpgMailer:
 
             self.last_key_check_timestamp = time.time()
 
-        if recipient_info['expiration_message']:
-            self.logger.info('Sending an expiration warning email.')
-            self._send_warning_email(loop_start_time)
+
+            if recipient_info['expiration_email_message']:
+                self.logger.info('Sending an expiration warning email.')
+                self._send_warning_email(loop_start_time)
             
 
     # TODO: Instead of "expiration message", call it "expiration warning message"
     # Send an email containing the expiration warning message.
-    def _send_warning_email(self, loop_start_time):
-        expiration_message = self.expiration_message
+    def _send_warning_email(self, loop_start_time, expiration_email_message):
 
         if self.first_run:
-            expiration_message = 'Gpgmailer just restarted.\n' + expiration_message
+            expiration_email_message = 'Gpgmailer just restarted.\n' + expiration_email_message
             self.first_run = False
             
-        message_dict = { 'body': self.expiration_message,
+        message_dict = { 'body': self.expiration_email_message,
                     'subject': self.config['default_subject']}
 
         encrypted_message = self._build_encrypted_message(loop_start_time, message_dict)

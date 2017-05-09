@@ -131,9 +131,16 @@ class GpgKeyVerifier:
         if(valid_keys == []):
             raise NoUsableKeysException()
 
+        expiration_email_message = ''
+
+        if send_email:
+            expiration_email_message = 'A new key has expired.\n\n%s' % expiration_message
+
+
         recipient_info = { 'valid_recipients': valid_recipients,
             'valid_keys': valid_keys,
-            'expiration_message': expiration_message.strip()}
+            'expiration_message': expiration_message.strip(),
+            'expiration_email_message': expiration_email_message.strip()}
 
         return recipient_info
 
