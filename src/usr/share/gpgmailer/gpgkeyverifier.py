@@ -22,6 +22,11 @@ import time
 class NoUsableKeysException:
     pass
 
+# Raised when the sender key expires during runtime and sending unsigned messages
+#   is not allowed.
+class SenderKeyExpiredException:
+    pass
+
 # Manages a list of recipients where the key has not expired and constructs warning
 #   messages for keys that have expired or are about to expire.
 class GpgKeyVerifier:
@@ -60,9 +65,7 @@ class GpgKeyVerifier:
         self.sender = sender_email
 
     # TODO: Explain what the separate expiration email is.
-    # TODO: If it builds the first run email, the comment should say that.
     # TODO: Explain what loop_start_time is.
-    # TODO: Break this method up some more.
     # This method processes all of the recipients in the config, returns a list of 
     #   recipients with valid keys, the valid key fingerprints themselves, and
     #   whether or not to send a separate expiration message email.
@@ -79,15 +82,22 @@ class GpgKeyVerifier:
         expiration_date = loop_start_time + self.config['main_loop_duration']
         expiring_soon_date = expiration_date + self.config['expiration_warning_threshold']
 
-        # TODO: Change this to sender_key_expiration_message.
-        sender_expiration = self._build_sender_expiration_message(loop_start_time)
-        send_email = sender_expiration['send_email']
-        expired_messages.append(sender_expiration['expiration_message'])
+        self.logger.trace('Checking sender key.')
+        sender_expiration_data = self._build_key_expiration_message(self.sender, loop_start_time)
 
-        # TODO: Process sender key separately.
+        if sender_expiration_data['expiration_message']:
+            if ('has expired' in expiration_data['expiration_message']) \
+                and not(config['allow_expired_signing_key']):
+                raise SenderKeyExpiredException()
+
+            expired_messages.append(sender_expiration_data['expiration_message'])
+            if sender_expiration_data['send_email']:
+                expiration_warning_email_message = 'A new key has expired.\n\n'
 
         self.logger.trace('Checking recipient keys.')
 
+        # TODO: Optimize all key checking, not just sender key. Maybe have a list
+        #   of checked fingerprints.
         for email in self.recipients:
             if self.all_addresses[email]['is_sender']:
                 self.logger.trace('Recipient %s is also a sender. Skipping.' % email)
@@ -170,38 +180,4 @@ class GpgKeyVerifier:
             self.logger.trace('Key %s (%s) is current.' % (fingerprint, email))
 
         return { 'expiration_message': expiration_message,
-            'send_email': send_email }
-
-    # TODO: Rename to _build_sender_key_expiration_message
-    # TODO: Method comment.
-    # TODO: Similar to get_recipient_info, see if it can be consolidated.
-    def _build_sender_expiration_message(self, loop_start_time):
-        self.logger.trace('Building sender expiration message.')
-        expiration_message = ''
-        send_email = False
-
-        expiration_date = loop_start_time + self.config['main_loop_duration']
-        expiring_soon_date = expiration_date + self.config['expiration_warning_threshold']
-
-        email = self.config['sender']['email']
-        fingerprint = self.config['sender']['fingerprint']
-        
-        # TODO: This happens twice. See if it can be only done once.
-        if not(self.gpgkeyring.is_current(fingerprint, expiration_date)):
-            expiration_message = 'Sender key %s (%s) has expired.' % (fingerprint, email)
-            if not(self.sender_key_expired_email_sent):
-                self.sender_key_expired_email_sent = True
-                send_email = True
-
-        elif not(self.gpgkeyring.is_current(fingerprint, expiring_soon_date)):
-            key_expiration_date = self.gpgkeyring.get_key_expiration_date(fingerprint)
-            pretty_expiration_date = datetime.datetime.fromtimestamp(key_expiration_date).strftime('%Y-%m-%d %H:%M:%S')
-            expiration_message = 'Sender key %s (%s) will expire on date %s.' % (fingerprint, email, pretty_expiration_date)
-            if not(self.sender_key_expiring_soon_email_sent):
-                self.sender_key_expiring_soon_email_sent = True
-                send_email = True
-
-        self.logger.trace(expiration_message)
-
-        return {'expiration_message': expiration_message,
             'send_email': send_email }
