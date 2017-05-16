@@ -30,18 +30,34 @@ class GpgKeyVerifier:
         self.gpgkeyring = gpgkeyring
         self.config = config
 
-        # TODO: It's a dict, not an index.
-        self.recipient_index = {}
+        self.all_addresses = {}
+        self.recipients = []
 
         for recipient in config['recipients']:
             recipient_dict = { 'fingerprint': recipient['fingerprint'],
                 'expired_email_sent': False,
-                'expiring_soon_email_sent': False }
+                'expiring_soon_email_sent': False,
+                'is_sender': False,
+                'is_recipient': True }
 
-            self.recipient_index[recipient['email']] = recipient_dict
+            self.all_addresses[recipient['email']] = recipient_dict
+            self.recipients.append(recipient['email'])
 
-        self.sender_key_expired_email_sent = False
-        self.sender_key_expiring_soon_email_sent = False
+        sender_email = config['sender']['email']
+
+        if sender_email in self.all_addresses.keys():
+            self.all_addresses[sender_email]['is_sender'] = True
+
+        else:
+            sender_dict = { 'fingerprint': config['sender']['fingerprint'],
+                'expired_email_sent': False,
+                'expiring_soon_email_sent': False,
+                'is_sender': True,
+                'is_recipient': False}
+
+            self.all_addresses[sender_email] = sender_dict
+
+        self.sender = sender_email
 
     # TODO: Explain what the separate expiration email is.
     # TODO: If it builds the first run email, the comment should say that.
@@ -144,7 +160,7 @@ class GpgKeyVerifier:
     # Build an expiration message for an individual email and fingerprint pair,
     #   checking expiration based on loop_start_time and configured expiration
     #   windows.
-    def _build_key_expiration_message(self, email, fingerprint, loop_start_time):
+    def _build_key_expiration_message(self, email, loop_start_time):
         self.logger.trace('Building expiration message for key %s.' % fingerprint)
 
         expiration_message = ''
@@ -152,16 +168,16 @@ class GpgKeyVerifier:
         can_encrypt = False
         expiration_date = loop_start_time + self.config['main_loop_duration']
         expiring_soon_date = expiration_date + self.config['expiration_warning_threshold']
-        fingerprint = self.recipient_index[email]['fingerprint']
+        fingerprint = self.all_addresses[email]['fingerprint']
 
         if not(self.gpgkeyring.is_current(fingerprint, expiration_date)):
             expiration_message = 'Recipient key %s (%s) has expired.' % (fingerprint, email)
             self.logger.trace(expiration_message)
 
-            if not(self.recipient_index[email]['expired_email_sent']):
+            if not(self.all_addresses[email]['expired_email_sent']):
                 send_email = True
                 self.logger.warn(expiration_message)
-                self.recipient_index[email]['expired_email_sent'] = True
+                self.all_addresses[email]['expired_email_sent'] = True
 
         elif not(self.gpgkeyring.is_current(fingerprint, expiring_soon_date)):
             key_expiration_date = self.gpgkeyring.get_key_expiration_date(fingerprint)
@@ -170,10 +186,10 @@ class GpgKeyVerifier:
             can_encrypt = True
             self.logger.trace(expiration_message)
 
-            if not(self.recipient_index[email]['expiring_soon_email_sent']):
+            if not(self.all_addresses[email]['expiring_soon_email_sent']):
                 send_email = True
                 self.logger.warn(expiration_message)
-                self.recipient_index[email]['expiring_soon_email_sent'] = True
+                self.all_addresses[email]['expiring_soon_email_sent'] = True
 
         else:
             can_encrypt = True
