@@ -64,11 +64,11 @@ class GpgKeyVerifier:
 
         self.sender = sender_email
 
-    # TODO: Explain what the separate expiration email is.
-    # TODO: Explain what loop_start_time is.
     # This method processes all of the recipients in the config, returns a list of 
     #   recipients with valid keys, the valid key fingerprints themselves, and
-    #   whether or not to send a separate expiration message email.
+    #   a warning email text if any keys are newly expired or about to expire.
+    #   The loop_start_time parameter is the time that expiration checks will be
+    #   based on, adding the configured main loop duration.
     def get_recipient_info(self, loop_start_time):
         self.logger.trace('Recalculating the list of keys that are about to expire.')
         all_expiration_messages = []
