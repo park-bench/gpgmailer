@@ -92,7 +92,10 @@ class GpgMailer:
                 time.sleep(self.config['main_loop_delay'])
 
         except gpgkeyverifier.NoUsableKeysException as e:
-            self.logger.critical("No keys available for encryption. Exiting.")
+            self.logger.critical('No keys available for encryption. Exiting.')
+            sys.exit(1)
+        except gpgkeyverifier.SenderKeyExpiredException as e:
+            self.logger.critical('Sender key has expired and sending unsigned emails is not allowed. Exiting.')
             sys.exit(1)
         except Exception as e:
             self.logger.error('Exception %s:%s.' % (type(e).__name__, e.message))
