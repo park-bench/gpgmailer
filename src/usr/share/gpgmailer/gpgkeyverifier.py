@@ -86,13 +86,22 @@ class GpgKeyVerifier:
         sender_expiration_data = self._build_key_expiration_message(self.sender, loop_start_time)
 
         if sender_expiration_data['expiration_message']:
-            if ('has expired' in expiration_data['expiration_message']) \
-                and not(config['allow_expired_signing_key']):
-                raise SenderKeyExpiredException()
+            if ('has expired' in expiration_data['expiration_message']):
+                if not(config['allow_expired_signing_key']):
+                    raise SenderKeyExpiredException()
+
+            else:
+                valid_keys.append(self.all_addresses[self.sender]['fingerprint'])
+                valid_recipients.append(self.sender)
 
             expired_messages.append(sender_expiration_data['expiration_message'])
             if sender_expiration_data['send_email']:
                 expiration_warning_email_message = 'A new key has expired.\n\n'
+
+        else:
+            valid_keys.append(self.all_addresses[self.sender]['fingerprint'])
+            valid_recipients.append(self.sender)
+
 
         self.logger.trace('Checking recipient keys.')
 
@@ -100,7 +109,8 @@ class GpgKeyVerifier:
         #   of checked fingerprints.
         for email in self.recipients:
             if self.all_addresses[email]['is_sender']:
-                self.logger.trace('Recipient %s is also a sender. Skipping.' % email)
+                self.logger.trace('Recipient %s is also a sender.' % email)
+                expiration_data = sender_expiration_data
 
             else:
                 expiration_data = self._build_key_expiration_message(email, loop_start_time)
@@ -112,7 +122,7 @@ class GpgKeyVerifier:
                     if 'will expire on' in expiration_data['expiration_message']:
                         expiring_soon_messages.append(expiration_data['expiration_message'])
 
-                    valid_keys.append(self.all_addresses[email['fingerprint'])
+                    valid_keys.append(self.all_addresses[email['fingerprint']])
                     valid_recipients.append(email)
 
                 if expiration_data['send_email']:
@@ -133,8 +143,8 @@ class GpgKeyVerifier:
 
         recipient_info = { 'valid_recipients': valid_recipients,
             'valid_keys': valid_keys,
-            'expiration_message': expiration_message.strip(),
-            'expiration_email_message': expiration_email_message.strip()}
+            'expiration_message': all_expiration_messages.strip(),
+            'expiration_email_message': expiration_warning_email_message.strip()}
 
         return recipient_info
 
