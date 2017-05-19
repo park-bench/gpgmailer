@@ -42,7 +42,7 @@ class GpgMailer:
 
         self.config = config
         self.gpgkeyring = gpgkeyring
-        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.config['gpg_dir'], self.config['main_loop_duration'])
+        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring, self.config['main_loop_duration'])
 
         self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config)
 

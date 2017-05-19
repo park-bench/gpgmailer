@@ -36,7 +36,8 @@ valid_owner_trust_levels = ('u', 'f', 'm')
 class GpgKeyRing:
     def __init__(self, gnupg_home):
         self.logger = logging.getLogger('GpgKeyRing')
-        self.gpg = gnupg.GPG(gnupghome=gnupg_home)
+        self.gnupg_home = gnupg_home
+        self.gpg = gnupg.GPG(gnupghome=self.gnupg_home)
         self.keys = {}
 
         for key in self.gpg.list_keys():

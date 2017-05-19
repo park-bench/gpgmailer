@@ -20,7 +20,6 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import gnupg
-import gpgkeyring
 import logging
 import time
 
@@ -44,10 +43,10 @@ class GpgKeyUntrustedException(Exception):
 class GpgMailBuilder:
     # TODO: Explain init's parameters.
     # TODO: Pass in a keyring instead of making a second one.
-    def __init__(self, gpg_home, max_operation_time):
+    def __init__(self, gpg_keyring, max_operation_time):
         self.logger = logging.getLogger('GpgMailBuilder')
-        self.gpgkeyring = gpgkeyring.GpgKeyRing(gpg_home)
-        self.gpg = gnupg.GPG(gnupghome=gpg_home)
+        self.gpgkeyring = gpg_keyring
+        self.gpg = gnupg.GPG(gnupghome=self.gpgkeyring.gnupg_home)
         self.max_operation_time = max_operation_time
 
 
