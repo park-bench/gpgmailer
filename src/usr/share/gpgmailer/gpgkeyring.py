@@ -38,7 +38,7 @@ class GpgKeyRing:
         self.logger = logging.getLogger('GpgKeyRing')
         self.gnupg_home = gnupg_home
         self.gpg = gnupg.GPG(gnupghome=self.gnupg_home)
-        self.keys = {}
+        self.fingerprint_to_key_dict = {}
 
         for key in self.gpg.list_keys():
             
@@ -49,8 +49,7 @@ class GpgKeyRing:
             else:
                 key['expires'] = int(key['expires'])
 
-            # TODO: Change keys to fingerprint_to_key_dict
-            self.keys[key['fingerprint']] = {
+            self.fingerprint_to_key_dict[key['fingerprint']] = {
                 'expires': key['expires'],
                 'ownertrust': key['ownertrust'],
                 'fingerprint': key['fingerprint']
@@ -65,8 +64,8 @@ class GpgKeyRing:
         self.logger.trace('Checking expiration for key %s at date %s.' % (fingerprint,
             expiration_date))
 
-        if ((self.keys[fingerprint]['expires'] == None) or 
-             (self.keys[fingerprint]['expires'] > expiration_date)):
+        if ((self.fingerprint_to_key_dict[fingerprint]['expires'] == None) or 
+             (self.fingerprint_to_key_dict[fingerprint]['expires'] > expiration_date)):
 
             current = True
             self.logger.trace('Key %s is current.' % fingerprint)
@@ -82,7 +81,7 @@ class GpgKeyRing:
         trusted = False
         self._fingerprint_is_valid(fingerprint)
 
-        if self.keys[fingerprint]['ownertrust'] in valid_owner_trust_levels:
+        if self.fingerprint_to_key_dict[fingerprint]['ownertrust'] in valid_owner_trust_levels:
             trusted = True
 
         else:
@@ -97,7 +96,7 @@ class GpgKeyRing:
         result = None
         self._fingerprint_is_valid(fingerprint)
 
-        if not(fingerprint in self.keys.keys()):
+        if not(fingerprint in self.fingerprint_to_key_dict.keys()):
             self.logger.warn('Key with fingerprint %s not found in key store.' % fingerprint)
 
         elif not(key_fingerprint_regex.match(fingerprint)):
@@ -105,7 +104,7 @@ class GpgKeyRing:
             raise FingerprintSyntaxException('String %s is not a valid PGP fingerprint.' % fingerprint)
 
         else:
-            result = self.keys[fingerprint]['expires']
+            result = self.fingerprint_to_key_dict[fingerprint]['expires']
 
         return result
 
@@ -137,7 +136,7 @@ class GpgKeyRing:
             self.logger.error(message)
             raise FingerprintSyntaxException(message)
 
-        elif not(fingerprint in self.keys.keys()):
+        elif not(fingerprint in self.fingerprint_to_key_dict.keys()):
             message = 'Key fingerprint %s not found in GPG key store.' % fingerprint
             self.logger.error(message)
             raise KeyNotFoundException(message)
