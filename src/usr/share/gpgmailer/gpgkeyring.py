@@ -132,11 +132,12 @@ class GpgKeyRing:
     # Check if a fingerprint is valid and is in the key store and throw an
     #   appropriate exception if necessary.
     def _fingerprint_is_valid(self, fingerprint):
-        # TODO: Define messages once and use twice.
         if not(key_fingerprint_regex.match(fingerprint)):
-            self.logger.error('String %s is not a valid PGP fingerprint.' % fingerprint)
-            raise FingerprintSyntaxException('String %s is not a valid PGP fingerprint.' % fingerprint)
+            message = 'String %s is not a valid PGP fingerprint.' % fingerprint
+            self.logger.error(message)
+            raise FingerprintSyntaxException(message)
 
         elif not(fingerprint in self.keys.keys()):
-            self.logger.error('Key fingerprint %s not found in GPG key store.' % fingerprint)
-            raise KeyNotFoundException('Key fingerprint %s not found in GPG key store.' % fingerprint)
+            message = 'Key fingerprint %s not found in GPG key store.' % fingerprint
+            self.logger.error(message)
+            raise KeyNotFoundException(message)
