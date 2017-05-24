@@ -41,8 +41,8 @@ class GpgKeyUntrustedException(Exception):
 
 # Builds, signs, and encrypts PGP/MIME emails with attachments.
 class GpgMailBuilder:
-    # TODO: Explain init's parameters.
-    # TODO: Pass in a keyring instead of making a second one.
+    # This constructor requires a GpgKeyRing object as gpg_keyring and the maximum
+    #   time in seconds that the full signing and encryption operation should take.
     def __init__(self, gpg_keyring, max_operation_time):
         self.logger = logging.getLogger('GpgMailBuilder')
         self.gpgkeyring = gpg_keyring
@@ -50,7 +50,7 @@ class GpgMailBuilder:
         self.max_operation_time = max_operation_time
 
 
-    # TODO: Method comment.
+    # Builds and returns an unsigned encrypted message.
     def build_encrypted_message(self, expiration_check_time, message_dict, encryption_keys):
 
         plain_message = self._build_plaintext_message(message_dict)
@@ -61,7 +61,7 @@ class GpgMailBuilder:
         return str(encrypted_message)
 
 
-    # TODO: Method comment.
+    # Builds and returns a signed unencrypted message.
     def build_signed_message(self, expiration_check_time, message_dict, signing_key, singing_key_passphrase):
 
         plain_message = self._build_plaintext_message(message_dict)
@@ -72,7 +72,7 @@ class GpgMailBuilder:
         return str(signed_message)
 
 
-    # TODO: Method comment.
+    # Builds and returns a signed and encrypted message.
     def build_signed_encrypted_message(self, expiration_check_time, message_dict, signing_key, signing_key_passphrase, encryption_keys):
 
         plain_message = self._build_plaintext_message(message_dict)
