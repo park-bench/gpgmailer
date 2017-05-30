@@ -30,10 +30,7 @@ import sys
 import time
 import traceback
 
-# TODO: Separate methods with two lines to improve readability.
-
-# TODO: PID_FILE should be lowercase.
-PID_FILE = '/run/gpgmailer.pid'
+pid_file = '/run/gpgmailer.pid'
 config_pathname = '/etc/gpgmailer/gpgmailer.conf'
 
 logger = None
@@ -221,7 +218,7 @@ logger.info('Verification complete.')
 # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
 daemon_context = daemon.DaemonContext(
     working_directory = '/',
-    pidfile = pidlockfile.PIDLockFile(PID_FILE),
+    pidfile = pidlockfile.PIDLockFile(pid_file),
     umask = 0
     )
 
