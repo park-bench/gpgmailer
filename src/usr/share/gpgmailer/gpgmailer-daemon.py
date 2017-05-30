@@ -56,7 +56,6 @@ def build_config_dict():
     # TODO: Some config numbers must be positive, add a verify_positive_number method
     #   to confighelper for this, or verify_number_greater_than.
 
-    # TODO: Specify units in inline comments for all delays.
     print('Reading %s...' % config_pathname)
     config_file = ConfigParser.RawConfigParser()
     config_file.read(config_pathname)
@@ -84,7 +83,7 @@ def build_config_dict():
     # TODO: Change smtp_pass to smtp_password.
     config_dict['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
     config_dict['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
-    config_dict['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
+    config_dict['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout') # in seconds
 
     # Read key configuration
     config_dict['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
@@ -96,12 +95,12 @@ def build_config_dict():
     config_dict['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 
     # Convert the key expiration threshold into seconds because expiry dates are
-    #   stored in unix time.
+    #   stored in unix time. The config value should be days.
     config_dict['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
 
-    config_dict['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay')
-    config_dict['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration')
-    config_dict['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval')
+    config_dict['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay') # In seconds
+    config_dict['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration') # in seconds
+    config_dict['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval') # in seconds
 
     config_dict['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
@@ -179,7 +178,7 @@ def check_all_keys(config_dict, gpgkeyring):
         logger.debug('Sender key passed signature test.')
         config['sender']['can_sign'] = True
 
-    # TODO: Check keys for expiration also.
+    # TODO: Check keys for expiration and queue warning email if it exists.
     for recipient in config['recipients']:
         key_is_usable(recipient['fingerprint'], gpgkeyring)
         
@@ -231,14 +230,14 @@ logger.info('Verification complete.')
 
 
 # TODO: Eventually, either warn or crash when the config file is readable by everyone.
-# TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
+# TODO: Eventually, work out a permissions setup for gpgmailer so that it doesn't run as root.
 daemon_context = daemon.DaemonContext(
     working_directory = '/',
     pidfile = pidlockfile.PIDLockFile(pid_file),
     umask = 0
     )
 
-# TODO: Make a real cleanup method for this.
+# TODO: Eventually make a real cleanup method for this.
 daemon_context.signal_map = {
     signal.SIGTERM : sig_term_handler
     }
