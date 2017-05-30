@@ -184,25 +184,20 @@ def check_all_keys(config_dict, gpgkeyring):
 # Checks the sending key and configuration to determine if sending unsigned email
 #   is allowed. Crashes if the sending key cannot sign and sending unsigned email
 #   is disabled.
-# TODO: Rename to set_allow_send_unsigned_emails.
-# TODO: Change config references to config_dict.
 # TODO: This config value does not need to be stored.
-# TODO: This function can probably be renamed to something about verifying.
-def set_send_unsigned_email(config_dict):
-    if(not(config['allow_expired_signing_key']) and not(config['sender']['can_sign'])):
-        logger.critical('The sender key with signature %s can not sign and \
-            unsigned email is not allowed. Exiting.' % config['sender']['fingerprint'])
+def verify_signing_config(config_dict):
+    if(not(config_dict['allow_expired_signing_key']) and not(config_dict['sender']['can_sign'])):
+        logger.critical('The sender key with fingerprint %s can not sign and \
+            unsigned email is not allowed. Exiting.' % config_dict['sender']['fingerprint'])
         sys.exit(1)
 
-    # TODO; allow_expired_signing_key can't be false while can_sign is false.
-    elif(config['allow_expired_signing_key'] and not(config['sender']['can_sign'])):
-        message = 'The sending key is unable to sign. It may be expired or the password may be incorrect. Gpgmailer will send unsigned messages.'
-        logger.warn(message)
-        config['send_unsigned_email'] = True
+    elif not(config_dict['sender']['can_sign']):
+        logger.warn('The sending key is unable to sign. It may be expired or the password may be incorrect. Gpgmailer will send unsigned messages.')
+        config_dict['send_unsigned_email'] = True
 
     else:
         logger.debug('Outgoing emails will be signed.')
-        config['send_unsigned_email'] = False
+        config_dict['send_unsigned_email'] = False
 
 
 # Quit when SIGTERM is received.
@@ -217,7 +212,7 @@ parse_key_config(config)
 gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 check_all_keys(config, gpgkeyring)
 
-set_send_unsigned_email(config)
+verify_signing_config(config)
 
 # TODO: Check directory existence and permissions.
 # TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
