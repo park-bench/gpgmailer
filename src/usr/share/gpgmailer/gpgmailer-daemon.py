@@ -36,7 +36,7 @@ config_pathname = '/etc/gpgmailer/gpgmailer.conf'
 logger = None
 
 # Parses the email:fingerprint format for keys in the config file.
-def parse_key_config(key_config_string):
+def parse_key_config_string(key_config_string):
     key_dict = {}
 
     key_split = key_config_string.split(':')
@@ -86,25 +86,11 @@ def build_config_dict():
     config_dict['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
     config_dict['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout')
 
-    # Parse sender config.
-    sender_key_string = config_helper.verify_string_exists(config_file, 'sender')
-    sender_key_password = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
-
-    # TODO: Do all parsing in a different method.
-    sender_key = parse_key_config(sender_key_string)
-    sender_key['password'] = sender_key_password
-
-    config_dict['sender'] = sender_key
-
-    # parse recipient config. Comma-delimited list of recipents.
-    recipient_list = []
-    recipients_raw_string = config_helper.verify_string_exists(config_file, 'recipients')
-    recipients_raw_list = recipients_raw_string.split(',')
-
-    for recipient in recipients_raw_list:
-        recipient_list.append(parse_key_config(recipient))
-
-    config_dict['recipients'] = recipient_list
+    # Read key configuration
+    config_dict['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
+    config_dict['sender'] = {}
+    config_dict['sender']['password'] = config_helper.verify_password_exists(config_file, 'signing_key_passphrase')
+    config_dict['recipients_string'] = config_helper.verify_string_exists(config_file, 'recipients')
 
     config_dict['watch_dir'] = config_helper.verify_string_exists(config_file, 'watch_dir')
     config_dict['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
@@ -124,6 +110,19 @@ def build_config_dict():
     log_file_handle = config_helper.get_log_file_handle()
 
     return config_dict, log_file_handle
+
+def parse_key_config(config_dict):
+    sender_key_data = parse_key_config_string(config_dict['sender_string'])
+    config_dict['sender']['fingerprint'] = sender_key_data['fingerprint']
+    config_dict['sender']['email'] = sender_key_data['email']
+
+    recipients_config_list = config_dict['recipients_string'].split(',')
+    recipients = []
+
+    for recipient_config in recipients_config_list:
+        recipients.append(parse_key_config_string(recipient_config))
+
+    config_dict['recipients'] = recipients
 
 
 # Determines whether an individual key is trusted. If it is not a valid
@@ -201,6 +200,7 @@ def sig_term_handler(signal, stack_frame):
 
 
 config, log_file_handle = build_config_dict()
+parse_key_config(config)
 
 gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 check_all_keys(config, gpgkeyring)
