@@ -138,6 +138,24 @@ def key_is_usable(fingerprint, gpgkeyring):
         logger.debug('Key with fingerprint %s is trusted.' % fingerprint)
 
 
+# Attempt to sign an arbitrary string. Returns True if there are no errors, False
+#   otherwise.
+def signature_test(fingerprint, passphrase, gpg_home):
+    success = False
+    gpg = gnupg.GPG(gnupghome=gpg_home)
+
+    signature_test_result = gpg.sign('I\'ve got a lovely bunch of coconuts.',
+        detach=True, keyid=fingerprint, passphrase=passphrase)
+
+    if(str(signature_test_result).strip() == ''):
+        logger.warn('Signature test failed.')
+    else:
+        logger.trace('Signature test passed.')
+        success = True
+
+    return success
+
+
 # Checks every key in the config file and exits if any of them are missing,
 #   untrusted, or are not 40-character hex strings. Also checks and stores
 #    whether the sender key can be used to sign or is expired.
@@ -153,8 +171,7 @@ def check_all_keys(config_dict, gpgkeyring):
         # TODO: Also list sender key's expiration date.
         logger.warn('Sender key is expired.')
 
-    # TODO: Move signature test into this file.
-    if not(gpgkeyring.signature_test(config['sender']['fingerprint'], config['sender']['password'])):
+    if not(signature_test(config['sender']['fingerprint'], config['sender']['password'], config['gpg_dir'])):
         logger.warn('Sender key failed signature test.')
         config['sender']['can_sign'] = False
 
