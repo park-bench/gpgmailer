@@ -126,10 +126,9 @@ def build_config_dict():
     return config_dict, log_file_handle
 
 
-# TODO: Reword to remove "but only".
-# Checks an individual key, but only to validate it as a key fingerprint string,
-#   whether it exists in the key store or not, and whether it is trusted. 
-#   Failing any of these checks will crash the program. Does not check for expiration.
+# Determines whether an individual key is trusted. If it is not a valid
+#   fingerprint string, not in the key store, or not trusted, the program will
+#   exit.
 def key_is_usable(fingerprint, gpgkeyring):
 
     if not(gpgkeyring.is_trusted(fingerprint)):
@@ -140,9 +139,9 @@ def key_is_usable(fingerprint, gpgkeyring):
         logger.debug('Key with fingerprint %s is trusted.' % fingerprint)
 
 
-# TODO: Explain when crashes are necessary. Note that it checks sender key expiration.
-# Checks every key in the config file and crashes if necessary. Also checks and
-#   stores whether the sender key can be used to sign.
+# Checks every key in the config file and exits if any of them are missing,
+#   untrusted, or are not 40-character hex strings. Also checks and stores
+#    whether the sender key can be used to sign or is expired.
 def check_all_keys(config_dict, gpgkeyring):
     # TODO: This message should be more descriptive.
     logger.info('Starting initial key check.')
