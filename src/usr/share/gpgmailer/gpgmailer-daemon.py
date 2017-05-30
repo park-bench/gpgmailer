@@ -156,8 +156,7 @@ def signature_test(fingerprint, passphrase, gpg_home):
 #   untrusted, or are not 40-character hex strings. Also checks and stores
 #    whether the sender key can be used to sign or is expired.
 def check_all_keys(config_dict, gpgkeyring):
-    # TODO: This message should be more descriptive.
-    logger.info('Starting initial key check.')
+    logger.info('Checking all keys for trust and expiration.')
 
     expiration_date = time.time() + config['main_loop_duration'] + config['main_loop_delay']
 
