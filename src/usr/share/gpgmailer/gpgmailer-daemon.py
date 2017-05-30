@@ -75,13 +75,10 @@ def build_config_dict():
     config_dict = {}
 
     # Read SMTP configuration
-    # TODO: Change smtp_server to smtp_domain.
-    config_dict['smtp_server'] = config_helper.verify_string_exists(config_file, 'smtp_server')
+    config_dict['smtp_domain'] = config_helper.verify_string_exists(config_file, 'smtp_domain')
     config_dict['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
-    # TODO: Change smtp_user to smtp_username.
-    config_dict['smtp_user'] = config_helper.verify_string_exists(config_file, 'smtp_user')
-    # TODO: Change smtp_pass to smtp_password.
-    config_dict['smtp_pass'] = config_helper.verify_password_exists(config_file, 'smtp_pass')  # Note this is a password!
+    config_dict['smtp_username'] = config_helper.verify_string_exists(config_file, 'smtp_username')
+    config_dict['smtp_password'] = config_helper.verify_password_exists(config_file, 'smtp_password')  # Note this is a password!
     config_dict['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
     config_dict['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout') # in seconds
 

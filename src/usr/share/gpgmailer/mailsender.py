@@ -48,11 +48,11 @@ class MailSender:
         connected = False
         while not(connected):
 	    try:
-                self.smtp = smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
+                self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
                 self.smtp.starttls()
                 self.logger.debug('smtp.login.')
-                self.smtp.login(self.config['smtp_user'], self.config['smtp_pass'])
+                self.smtp.login(self.config['smtp_username'], self.config['smtp_password'])
                 self.logger.info('Connected!')
                 connected = True
             except smtplib.SMTPAuthenticationError, e:

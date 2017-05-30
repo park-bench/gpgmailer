@@ -31,9 +31,9 @@ main_loop_duration=3
 key_check_interval=60
 
 # Standard email server details
-smtp_user=
-smtp_pass=
-smtp_server=
+smtp_username=
+smtp_password=
+smtp_domain=
 smtp_port=
 
 
