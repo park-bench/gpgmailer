@@ -53,7 +53,7 @@ class GpgMailBuilder:
     # Builds and returns an unsigned encrypted message.
     def build_encrypted_message(self, expiration_check_time, message_dict, encryption_keys):
 
-        plain_message = self._build_plaintext_message(message_dict)
+        plain_message = self._build_plaintext_message_with_attachments(message_dict)
         encrypted_message = self._encrypt_message(message=plain_message, 
             expiration_check_time=expiration_check_time, encryption_keys=encryption_keys)
         encrypted_message['Subject'] = message_dict['subject']
@@ -64,7 +64,7 @@ class GpgMailBuilder:
     # Builds and returns a signed unencrypted message.
     def build_signed_message(self, expiration_check_time, message_dict, signing_key, singing_key_passphrase):
 
-        plain_message = self._build_plaintext_message(message_dict)
+        plain_message = self._build_plaintext_message_with_attachments(message_dict)
         signed_message = self._sign_message(message=plain_message, signing_key_fingerprint=signing_key, 
             expiration_check_time=expiration_check_time, signing_key_passphrase=signing_key_passphrase)
         signed_message['Subject'] = message_dict['subject']
@@ -75,7 +75,7 @@ class GpgMailBuilder:
     # Builds and returns a signed and encrypted message.
     def build_signed_encrypted_message(self, expiration_check_time, message_dict, signing_key, signing_key_passphrase, encryption_keys):
 
-        plain_message = self._build_plaintext_message(message_dict)
+        plain_message = self._build_plaintext_message_with_attachments(message_dict)
         signed_message = self._sign_message(message=plain_message, expiration_check_time=expiration_check_time, 
             signing_key_fingerprint=signing_key, signing_key_passphrase=signing_key_passphrase)
 
@@ -148,8 +148,7 @@ class GpgMailBuilder:
 
 
     # Builds the initial mulipart message to be signed and/or encrypted
-    # TODO: Change name to _build_plaintext_message_with_attachments.
-    def _build_plaintext_message(self, message_dict):
+    def _build_plaintext_message_with_attachments(self, message_dict):
         multipart_message = MIMEMultipart(_subtype="mixed")
 
         # TODO: This may need an extra newline. Test with attachments.
