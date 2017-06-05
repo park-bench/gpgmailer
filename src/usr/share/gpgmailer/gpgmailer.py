@@ -43,12 +43,10 @@ class GpgMailer:
         self.config = config
         self.gpgkeyring = gpgkeyring
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring, self.config['main_loop_duration'])
-
         self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config)
-
         self.mailsender = mailsender.MailSender(self.config)
 
-        self.last_key_check_timestamp = 0
+        self.next_key_check_time = 0
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
@@ -121,17 +119,14 @@ class GpgMailer:
     # Get recipient list, key list, expiration message, and whether to send an
     #   email from gpgkeyverifier.
     def _update_recipient_info(self, loop_start_time):
-        # TODO: Calculate and store next key check instead of calculating it every loop.
-        # TODO: Base next key check time on actual key check time, not loop time.
-        if self.last_key_check_timestamp + self.config['key_check_interval'] < loop_start_time:
+        if self.next_key_check_time < loop_start_time:
             recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
 
             self.recipients = recipient_info['valid_recipients']
             self.keys = recipient_info['valid_keys']
             self.expiration_message = recipient_info['expiration_message']
 
-            self.last_key_check_timestamp = time.time()
-
+            self.next_key_check_time = time.time() + self.config['key_check_interval']
 
             if recipient_info['expiration_email_message']:
                 self.logger.info('Sending an expiration warning email.')
