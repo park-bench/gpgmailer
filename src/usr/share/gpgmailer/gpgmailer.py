@@ -14,8 +14,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import base64
-import gpgkeyverifier
-import gpgkeyring
 import gpgmailbuilder
 import gpgmailmessage
 import json
@@ -36,21 +34,19 @@ import traceback
 # Notifies recipients of expiring keys
 class GpgMailer:
     # TODO: Document the constructor.
-    def __init__(self, config, gpgkeyring):
+    def __init__(self, config, gpgkeyring, gpgkeyverifier):
         self.logger = logging.getLogger('GpgMailer')
         self.logger.info('Initializing gpgmailer module.')
 
         self.config = config
         self.gpgkeyring = gpgkeyring
+        self.gpgkeyverifier = gpgkeyverifier
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring, self.config['main_loop_duration'])
-        self.gpgkeyverifier = gpgkeyverifier.GpgKeyVerifier(self.gpgkeyring, self.config)
         self.mailsender = mailsender.MailSender(self.config)
 
-        self.next_key_check_time = 0
+        self.next_key_check_time = time.time() + self.config['key_check_interval']
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
-
-        self.first_run = True
 
         self.logger.info('Done initializing gpgmailer module.')
 
@@ -137,10 +133,6 @@ class GpgMailer:
     # Send an email containing the expiration warning message.
     def _send_warning_email(self, loop_start_time, expiration_email_message):
 
-        if self.first_run:
-            expiration_email_message = 'Gpgmailer just restarted.\n' + expiration_email_message
-            self.first_run = False
-            
         message_dict = { 'body': self.expiration_email_message,
                     'subject': self.config['default_subject']}
 

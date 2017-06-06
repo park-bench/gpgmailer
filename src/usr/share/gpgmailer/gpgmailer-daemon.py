@@ -20,6 +20,7 @@ import ConfigParser
 import daemon
 import gnupg
 import gpgkeyring
+import gpgkeyverifier
 import gpgmailer
 import gpgmailmessage
 import logging
@@ -124,9 +125,9 @@ def parse_key_config(config_dict):
 # Determines whether an individual key is trusted. If it is not a valid
 #   fingerprint string, not in the key store, or not trusted, the program will
 #   exit.
-def key_is_usable(fingerprint, gpgkeyring):
+def key_is_usable(fingerprint, gpg_keyring):
 
-    if not(gpgkeyring.is_trusted(fingerprint)):
+    if not(gpg_keyring.is_trusted(fingerprint)):
         logger.critical('Key with fingerprint %s is not trusted. Exiting.' % fingerprint)
         sys.exit(1)
 
@@ -155,15 +156,15 @@ def signature_test(fingerprint, passphrase, gpg_home):
 # Checks every key in the config file and exits if any of them are missing,
 #   untrusted, or are not 40-character hex strings. Also checks and stores
 #    whether the sender key can be used to sign or is expired.
-def check_all_keys(config_dict, gpgkeyring):
+def check_all_keys(config_dict, gpg_keyring):
     logger.info('Checking all keys for trust and expiration.')
 
     expiration_date = time.time() + config['main_loop_duration'] + config['main_loop_delay']
 
-    key_is_usable(config['sender']['fingerprint'], gpgkeyring)
+    key_is_usable(config['sender']['fingerprint'], gpg_keyring)
 
-    if not(gpgkeyring.is_current(config['sender']['fingerprint'], expiration_date)):
-        sender_key_expiration_date = gpgkeyring.get_key_expiration_date(config['sender']['fingerprint'], date_format='%Y-%m-%d %H:%M:%S')
+    if not(gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date)):
+        sender_key_expiration_date = gpg_keyring.get_key_expiration_date(config['sender']['fingerprint'], date_format='%Y-%m-%d %H:%M:%S')
         logger.warn('Sender key expired on %s.' % sender_key_expiration_date)
 
     if not(signature_test(config['sender']['fingerprint'], config['sender']['password'], config['gpg_dir'])):
@@ -174,9 +175,20 @@ def check_all_keys(config_dict, gpgkeyring):
         logger.debug('Sender key passed signature test.')
         config['sender']['can_sign'] = True
 
-    # TODO: Check keys for expiration and queue warning email if it exists.
     for recipient in config['recipients']:
-        key_is_usable(recipient['fingerprint'], gpgkeyring)
+        key_is_usable(recipient['fingerprint'], gpg_keyring)
+
+    global gpg_key_verifier
+    gpg_key_verifier = gpgkeyverifier.GpgKeyVerifier(gpg_keyring, config)
+
+    recipient_info = gpg_key_verifier.get_recipient_info(time.time())
+
+    if recipient_info['expiration_email_message']:
+        message = 'Gpgmailer has just restarted. \n\n%s' % recipient_info['expiration_email_message']
+        mail_message = gpgmailmessage.GpgMailMessage()
+        mail_message.set_subject(config['default_subject'])
+        mail_message.set_body(message)
+        mail_message.queue_for_sending()
         
     logger.debug('Finished initial key check.')
 
@@ -206,8 +218,8 @@ def sig_term_handler(signal, stack_frame):
 config, log_file_handle = build_config_dict()
 parse_key_config(config)
 
-gpgkeyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
-check_all_keys(config, gpgkeyring)
+gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
+check_all_keys(config, gpg_keyring)
 
 verify_signing_config(config)
 
@@ -238,7 +250,7 @@ logger.info('Daemonizing...')
 with daemon_context:
     try:
         logger.debug('Initializing GpgMailer.')
-        the_watcher = gpgmailer.GpgMailer(config, gpgkeyring)
+        the_watcher = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier)
         the_watcher.start_monitoring()
 
     except Exception as e:
