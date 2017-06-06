@@ -223,7 +223,7 @@ check_all_keys(config, gpg_keyring)
 
 verify_signing_config(config)
 
-# TODO: Check directory existence and permissions.
+# TODO: Eventually, check directory existence and permissions.
 # TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
 
 logger.info('Verification complete.')

@@ -108,7 +108,8 @@ class GpgMailBuilder:
         signature_part.set_charset('us-ascii')
 
         # Make a box to put the message and signature in
-        # TODO: Sha1 is kind of broken, find an alternative.
+        # TODO: Use a gpg configuration to prioritize stronger hash algorithms,
+        #   the gnupg library can check a signature's hash algorithm.
         signed_message = MIMEMultipart(_subtype="signed", micalg="pgp-sha1", protocol="application/pgp-signature")
         signed_message.attach(message)
         signed_message.attach(signature_part)
