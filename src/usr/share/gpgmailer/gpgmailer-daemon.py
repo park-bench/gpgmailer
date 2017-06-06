@@ -163,8 +163,8 @@ def check_all_keys(config_dict, gpgkeyring):
     key_is_usable(config['sender']['fingerprint'], gpgkeyring)
 
     if not(gpgkeyring.is_current(config['sender']['fingerprint'], expiration_date)):
-        # TODO: Also list sender key's expiration date.
-        logger.warn('Sender key is expired.')
+        sender_key_expiration_date = gpgkeyring.get_key_expiration_date(config['sender']['fingerprint'], date_format='%Y-%m-%d %H:%M:%S')
+        logger.warn('Sender key expired on %s.' % sender_key_expiration_date)
 
     if not(signature_test(config['sender']['fingerprint'], config['sender']['password'], config['gpg_dir'])):
         logger.warn('Sender key failed signature test.')
