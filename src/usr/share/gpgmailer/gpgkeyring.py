@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import gnupg
 import logging
 import re
@@ -91,20 +92,19 @@ class GpgKeyRing:
 
 
     # Looks up a key fingerprint and returns the expiration date if it exists,
-    #   returns None if key is not found.
-    def get_key_expiration_date(self, fingerprint):
+    #   throws an exception if it is invalid or not in the keyring. If a format
+    #   is specified, the date will be expressed in that format.
+    #
+    #   fingerprint: A PGP key fingerprint
+    #   date_format: A format string compatible with Python's strftime.
+    def get_key_expiration_date(self, fingerprint, date_format=None):
         result = None
         self._fingerprint_is_valid(fingerprint)
 
-        if not(fingerprint in self.fingerprint_to_key_dict.keys()):
-            self.logger.warn('Key with fingerprint %s not found in key store.' % fingerprint)
+        result = self.fingerprint_to_key_dict[fingerprint]['expires']
 
-        elif not(key_fingerprint_regex.match(fingerprint)):
-            self.logger.error('String %s is not a valid PGP fingerprint.' % fingerprint)
-            raise FingerprintSyntaxException('String %s is not a valid PGP fingerprint.' % fingerprint)
-
-        else:
-            result = self.fingerprint_to_key_dict[fingerprint]['expires']
+        if date_format:
+            result = datetime.datetime.fromtimestamp(result).strftime(date_format)
 
         return result
 

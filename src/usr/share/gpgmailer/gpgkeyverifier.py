@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
 import gpgmailmessage
 import logging
 import time
@@ -176,9 +175,8 @@ class GpgKeyVerifier:
                 self.all_addresses[email]['expired_email_sent'] = True
 
         elif not(self.gpgkeyring.is_current(fingerprint, expiring_soon_date)):
-            key_expiration_date = self.gpgkeyring.get_key_expiration_date(fingerprint)
-            pretty_expiration_date = datetime.datetime.fromtimestamp(key_expiration_date).strftime('%Y-%m-%d %H:%M:%S')
-            expiration_message = ('%s key %s (%s) will expire on date %s.' % (address_type, fingerprint, email, pretty_expiration_date))
+            key_expiration_date = self.gpgkeyring.get_key_expiration_date(fingerprint, date_format='%Y-%m-%d %H:%M:%S')
+            expiration_message = ('%s key %s (%s) will expire on date %s.' % (address_type, fingerprint, email, key_expiration_date))
             self.logger.trace(expiration_message)
 
             if not(self.all_addresses[email]['expiring_soon_email_sent']):
