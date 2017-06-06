@@ -184,7 +184,6 @@ def check_all_keys(config_dict, gpgkeyring):
 # Checks the sending key and configuration to determine if sending unsigned email
 #   is allowed. Crashes if the sending key cannot sign and sending unsigned email
 #   is disabled.
-# TODO: This config value does not need to be stored.
 def verify_signing_config(config_dict):
     if(not(config_dict['allow_expired_signing_key']) and not(config_dict['sender']['can_sign'])):
         logger.critical('The sender key with fingerprint %s can not sign and \
@@ -193,11 +192,9 @@ def verify_signing_config(config_dict):
 
     elif not(config_dict['sender']['can_sign']):
         logger.warn('The sending key is unable to sign. It may be expired or the password may be incorrect. Gpgmailer will send unsigned messages.')
-        config_dict['send_unsigned_email'] = True
 
     else:
         logger.debug('Outgoing emails will be signed.')
-        config_dict['send_unsigned_email'] = False
 
 
 # Quit when SIGTERM is received.

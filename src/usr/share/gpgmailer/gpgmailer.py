@@ -150,9 +150,11 @@ class GpgMailer:
 
     # Build an encrypted email string with a signature if possible.
     def _build_encrypted_message(self, loop_start_time, message_dict):
-        # TODO: Sender key could expire during operation. Consider just calculating expiration here
-        #   instead of storing the config value.
-        if(self.config['send_unsigned_email']):
+        # gpgkeyverifier already throws an exception when the sender key expires
+        #   and sending unsigned email is not allowed, no need to do it again.
+        sender_key_is_current = self.config['sender']['fingerprint'] in self.keys
+
+        if not(sender_key_is_current or self.config['sender']['can_sign']):
             message = self.gpgmailbuilder.build_encrypted_message(loop_start_time=loop_start_time, message_dict=message_dict, 
                 encryption_keys=self.keys)
 
