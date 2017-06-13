@@ -43,6 +43,10 @@ class GpgKeyUntrustedException(Exception):
 class GpgMailBuilder:
     # This constructor requires a GpgKeyRing object as gpg_keyring and the maximum
     #   time in seconds that the full signing and encryption operation should take.
+    #
+    # gpg_keyring: a gpgkeyring object
+    # max_operation_time: the maximum time that building the message is expected
+    #   to take.
     def __init__(self, gpg_keyring, max_operation_time):
         self.logger = logging.getLogger('GpgMailBuilder')
         self.gpgkeyring = gpg_keyring
@@ -64,6 +68,12 @@ class GpgMailBuilder:
 
 
     # Builds and returns an unsigned encrypted message.
+    #
+    # expiration_check_time: the date (in Unix time) to which to perform key
+    #   expiration checks against
+    # message_dict: a dictionary containing the body, subject, and any attachments
+    #   of the message
+    # encryption_keys: a list of key fingerprints to use for encryption
     def build_encrypted_message(self, expiration_check_time, message_dict, encryption_keys):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
@@ -75,6 +85,13 @@ class GpgMailBuilder:
 
 
     # Builds and returns a signed unencrypted message.
+    #
+    # expiration_check_time: the date (in Unix time) to which to perform key
+    #   expiration checks against
+    # message_dict: a dictionary containing the body, subject, and any attachments
+    #   of the message
+    # signing_key_fingerprint: the fingerprint of the key to sign with
+    # signing_key_passphrase: the passphrase for the previously mentioned key
     def build_signed_message(self, expiration_check_time, message_dict, signing_key, singing_key_passphrase):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
@@ -86,6 +103,14 @@ class GpgMailBuilder:
 
 
     # Builds and returns a signed and encrypted message.
+    #
+    # expiration_check_time: the date (in Unix time) to which to perform key
+    #   expiration checks against
+    # message_dict: a dictionary containing the body, subject, and any attachments
+    #   of the message
+    # signing_key_fingerprint: the fingerprint of the key to sign with
+    # signing_key_passphrase: the passphrase for the previously mentioned key
+    # encryption_keys: a list of key fingerprints to use for encryption
     def build_signed_encrypted_message(self, expiration_check_time, message_dict, signing_key, signing_key_passphrase, encryption_keys):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
@@ -100,6 +125,12 @@ class GpgMailBuilder:
 
 
     # Builds and returns a signed email based on the given message part.
+    #
+    # message: a MIME message object to sign
+    # expiration_check_time: the date (in Unix time) to which to perform key
+    #   expiration checks against
+    # signing_key_fingerprint: the fingerprint of the key to sign with
+    # signing_key_passphrase: the passphrase for the previously mentioned key
     def _sign_message(self, message, expiration_check_time, signing_key_fingerprint, signing_key_passphrase):
         self._validate_key(signing_key_fingerprint, expiration_check_time)
 
@@ -133,6 +164,11 @@ class GpgMailBuilder:
 
 
     # Encrypt a message object.
+    #
+    # message: a MIME message object to sign
+    # expiration_check_time: the date (in Unix time) to which to perform key
+    #   expiration checks against
+    # encryption_keys: a list of key fingerprints to use for encryption
     def _encrypt_message(self, message, expiration_check_time, encryption_keys):
         for fingerprint in encryption_keys:
             self._validate_key(fingerprint, expiration_check_time)
@@ -164,6 +200,9 @@ class GpgMailBuilder:
 
 
     # Builds the initial mulipart message to be signed and/or encrypted
+    #
+    # message_dict: a dictionary containing the body, subject, and any attachments
+    #   of the message
     def _build_plaintext_message_with_attachments(self, message_dict):
         multipart_message = MIMEMultipart(_subtype="mixed")
 
@@ -184,6 +223,10 @@ class GpgMailBuilder:
 
     # Checks if the given fingerprint is expired or untrusted and throws an
     #   appropriate exception in either case. Never returns anything.
+    #
+    # fingerprint: the fingerprint of the key to be checked
+    # expiration_check_time: the date (in Unix time) to which to perform key
+    #   expiration checks against
     def _validate_key(self, fingerprint, expiration_check_time):
 
         if not(self.gpgkeyring.is_trusted(fingerprint)):

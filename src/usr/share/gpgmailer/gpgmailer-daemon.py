@@ -37,6 +37,8 @@ config_pathname = '/etc/gpgmailer/gpgmailer.conf'
 logger = None
 
 # Parses the email:fingerprint format for keys in the config file.
+#
+# key_config_string: the string to parse
 def parse_key_config_string(key_config_string):
     key_dict = {}
 
@@ -108,6 +110,9 @@ def build_config_dict():
 
     return config_dict, log_file_handle
 
+# Parses all of the key configurations in the given config dictionary
+#
+# config_dict: the config dictionary to read from
 def parse_key_config(config_dict):
     sender_key_data = parse_key_config_string(config_dict['sender_string'])
     config_dict['sender']['fingerprint'] = sender_key_data['fingerprint']
@@ -125,6 +130,9 @@ def parse_key_config(config_dict):
 # Determines whether an individual key is trusted. If it is not a valid
 #   fingerprint string, not in the key store, or not trusted, the program will
 #   exit.
+#
+# fingerprint: the fingerprint of the key to check
+# gpg_keyring: the GpgKeyring object containing the key
 def key_is_usable(fingerprint, gpg_keyring):
 
     if not(gpg_keyring.is_trusted(fingerprint)):
@@ -137,6 +145,10 @@ def key_is_usable(fingerprint, gpg_keyring):
 
 # Attempt to sign an arbitrary string. Returns True if there are no errors, False
 #   otherwise.
+#
+# fingerprint: the fingerprint of the key to attempt signing with
+# passphrase: the passphrase for this key
+# gpg_home: the gnupg directory to read keys from
 def signature_test(fingerprint, passphrase, gpg_home):
     success = False
     gpg = gnupg.GPG(gnupghome=gpg_home)
@@ -156,6 +168,9 @@ def signature_test(fingerprint, passphrase, gpg_home):
 # Checks every key in the config file and exits if any of them are missing,
 #   untrusted, or are not 40-character hex strings. Also checks and stores
 #    whether the sender key can be used to sign or is expired.
+#
+# config_dict: the dict to read key configuration from
+# gpg_keyring: the GpgKeyring object in which to look for keys
 def check_all_keys(config_dict, gpg_keyring):
     logger.info('Checking all keys for trust and expiration.')
 
@@ -196,6 +211,8 @@ def check_all_keys(config_dict, gpg_keyring):
 # Checks the sending key and configuration to determine if sending unsigned email
 #   is allowed. Crashes if the sending key cannot sign and sending unsigned email
 #   is disabled.
+#
+# config_dict: the dict to read key configuration from
 def verify_signing_config(config_dict):
     if(not(config_dict['allow_expired_signing_key']) and not(config_dict['sender']['can_sign'])):
         logger.critical('The sender key with fingerprint %s can not sign and \

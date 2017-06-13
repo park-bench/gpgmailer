@@ -29,6 +29,11 @@ class SenderKeyExpiredException:
 # Manages a list of recipients where the key has not expired and constructs warning
 #   messages for keys that have expired or are about to expire.
 class GpgKeyVerifier:
+    # Reads recipients from the config dict and adds them to its' own and builds a
+    #   map from fingerprints to addresses.
+    #
+    # gpgkeyring: a gpgkeyring object
+    # config: a config dictionary from gpgmailer-daemon
     def __init__(self, gpgkeyring, config):
         self.logger = logging.getLogger('GpgKeyVerifier')
         self.gpgkeyring = gpgkeyring
@@ -74,6 +79,8 @@ class GpgKeyVerifier:
     #   If the last check was performed beyond the configured key check interval
     #   or has not been calculated, calculate that information and set the next
     #   check time.
+    #
+    # loop_start_time: the time to base all expiration checks on
     def get_recipient_info(self, loop_start_time):
         info_is_stale = time.time() + self.config['key_check_interval'] < loop_start_time
 
@@ -94,6 +101,8 @@ class GpgKeyVerifier:
     # Calculates which recipients and keys are valid and assembles an expiration
     #   warning message, with expiration checks based on the loop_start_time
     #   parameter.
+    #
+    # loop_start_time: the time to base all expiration checks on
     def _calculate_recipient_info(self, loop_start_time):
         self.logger.trace('Recalculating the list of keys that are about to expire.')
         all_expiration_messages = []
@@ -175,6 +184,9 @@ class GpgKeyVerifier:
     # Build an expiration message for an individual email and fingerprint pair,
     #   checking expiration based on loop_start_time and configured expiration
     #   windows.
+    #
+    # email: the email associated with the expired key
+    # loop_start_time: the time to base all expiration checks on
     def _build_key_expiration_message(self, email, loop_start_time):
         self.logger.trace('Building expiration message for address %s.' % email)
 

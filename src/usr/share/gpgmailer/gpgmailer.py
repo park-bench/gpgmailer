@@ -26,15 +26,15 @@ import time
 import traceback
 
 # TODO: Write more effective logging.
-# TODO: Class comment is unclear.
-# Manages all of the other classes to send emails based on the files in the
-#   outbox directory.
 
-# Monitors the outbox directory (main loop)
-# Manages keys
-# Notifies recipients of expiring keys
+# Monitors the outbox directory, manages keys, and coordinates sending email.
 class GpgMailer:
     # TODO: Document the constructor.
+    # Initialize the mailsender and gpgmailbuilder objects
+    #
+    # config: the config dict read from the config file
+    # gpgkeyring: the GpgKeyring object containing all configured keys
+    # gpgkeyverifier: the GpgKeyVerifier object managing all configured keys
     def __init__(self, config, gpgkeyring, gpgkeyverifier):
         self.logger = logging.getLogger('GpgMailer')
         self.logger.info('Initializing gpgmailer module.')
@@ -97,6 +97,8 @@ class GpgMailer:
 
     # Read a message file and build a dictionary of message information 
     #   appropriate for gpgmailbuilder.
+    #
+    # fullpath: the entire path of the message file, including /
     def _read_message_file(self, fullpath):
 
         message_dict = {}
@@ -113,6 +115,8 @@ class GpgMailer:
     # TODO: Change this method's name
     # Get recipient list, key list, expiration message, and whether to send an
     #   email from gpgkeyverifier.
+    #
+    # loop_start_time: the time from which all expiration checks are based
     def _update_recipient_info(self, loop_start_time):
         recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
 
@@ -127,6 +131,9 @@ class GpgMailer:
 
     # TODO: Instead of "expiration message", call it "expiration warning message"
     # Send an email containing the expiration warning message.
+    #
+    # loop_start_time: the time from which all expiration checks are based
+    # expiration_mail_message: the body of the warning email
     def _send_warning_email(self, loop_start_time, expiration_email_message):
 
         message_dict = { 'body': self.expiration_email_message,
@@ -136,7 +143,11 @@ class GpgMailer:
 
         self.mailsender.sendmail(encrypted_message, self.recipients)
 
+
     # Build an encrypted email string with a signature if possible.
+    #
+    # loop_start_time: the time from which all expiration checks are based
+    # message_dict: a dictionary containing the body, subject, and attachments of a message
     def _build_encrypted_message(self, loop_start_time, message_dict):
         # gpgkeyverifier already throws an exception when the sender key expires
         #   and sending unsigned email is not allowed, no need to do it again.

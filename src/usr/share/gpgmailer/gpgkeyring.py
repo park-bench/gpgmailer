@@ -35,6 +35,9 @@ valid_owner_trust_levels = ('u', 'f', 'm')
 
 # GpgKeyRing caches and checks validity, expiration, and trust for pgp keys.
 class GpgKeyRing:
+    # Loads the keyring and stores it in a dict.
+    #
+    # gnupg_home: the keyring directory for gnupg.
     def __init__(self, gnupg_home):
         self.logger = logging.getLogger('GpgKeyRing')
         self.gnupg_home = gnupg_home
@@ -58,6 +61,10 @@ class GpgKeyRing:
 
 
     # Check if a key with the given fingerprint is still valid after the given date.
+    #
+    # fingerprint: the fingerprint of the key to check
+    # expiration_date: the date (in Unix time) to which to compare the key's
+    #   expiration date.
     def is_current(self, fingerprint, expiration_date):
         current = False
         self._fingerprint_is_valid(fingerprint)
@@ -78,6 +85,8 @@ class GpgKeyRing:
 
 
     # Check if a key with the given fingerprint is trusted.
+    #
+    # fingerprint: the fingerprint of the key to check
     def is_trusted(self, fingerprint):
         trusted = False
         self._fingerprint_is_valid(fingerprint)
@@ -95,8 +104,8 @@ class GpgKeyRing:
     #   throws an exception if it is invalid or not in the keyring. If a format
     #   is specified, the date will be expressed in that format.
     #
-    #   fingerprint: A PGP key fingerprint
-    #   date_format: A format string compatible with Python's strftime.
+    # fingerprint: A PGP key fingerprint
+    # date_format: A format string compatible with Python's strftime.
     def get_key_expiration_date(self, fingerprint, date_format=None):
         result = None
         self._fingerprint_is_valid(fingerprint)
@@ -111,6 +120,8 @@ class GpgKeyRing:
 
     # Check if a fingerprint is valid and is in the key store and throw an
     #   appropriate exception if necessary.
+    #
+    # fingerprint: the fingerprint of the key to check
     def _fingerprint_is_valid(self, fingerprint):
         if not(key_fingerprint_regex.match(fingerprint)):
             message = 'String %s is not a valid PGP fingerprint.' % fingerprint

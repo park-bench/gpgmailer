@@ -42,16 +42,23 @@ class GpgMailMessage:
         self.message['subject'] = None
 
     # Adds the subject of the message.
+    #
+    # subject: the subject to set
     def set_subject(self, subject):
         self._check_if_saved()
         self.message['subject'] = subject
 
     # Adds the text body of the message.
+    #
+    # body: the body to set
     def set_body(self, body):
         self._check_if_saved()
         self.message['body'] = body
 
     # Adds an attachment to the message.
+    #
+    # filename: the filename for the attachment
+    # data: the content of the attachment
     def add_attachment(self, filename, data):
         self._check_if_saved()
         self.message['attachments'].append({ 'filename': filename, 'data': data })
