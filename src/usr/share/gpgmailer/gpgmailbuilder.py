@@ -53,14 +53,14 @@ class GpgMailBuilder:
         #   algorithms, which are part of the SIG_CREATED line in the output
         #   of the gnupg library we use.
         self.hash_algorithm_table = {
-            1: 'md5',
-            2: 'sha1',
-            3: 'rmd160',
+            '1': 'md5',
+            '2': 'sha1',
+            '3': 'rmd160',
             # 4-7 are reserved
-            8: 'sha256',
-            9: 'sha384',
-            10: 'sha512',
-            11: 'sha224' }
+            '8': 'sha256',
+            '9': 'sha384',
+            '10': 'sha512',
+            '11': 'sha224' }
 
 
     # Builds and returns an unsigned encrypted message.
@@ -109,7 +109,7 @@ class GpgMailBuilder:
         # Make the signature component
         signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint, passphrase=signing_key_passphrase)
         signature_text = str(signature_result)
-        signature_hash_algorithm = hash_algorithm_table[signature_result.hash_algo]
+        signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
 
         self.logger.trace('Used hash algorithm %s.' % signature_hash_algorithm)
 
@@ -127,7 +127,7 @@ class GpgMailBuilder:
         # Make a box to put the message and signature in
         # TODO: Use a gpg configuration to prioritize stronger hash algorithms,
         #   the gnupg library can check a signature's hash algorithm.
-        signed_message = MIMEMultipart(_subtype="signed", micalg="pgp-sha1", protocol="application/pgp-signature")
+        signed_message = MIMEMultipart(_subtype="signed", micalg="pgp-%s" % signature_hash_algorithm, protocol="application/pgp-signature")
         signed_message.attach(message)
         signed_message.attach(signature_part)
 
