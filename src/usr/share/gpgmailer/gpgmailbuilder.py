@@ -49,6 +49,19 @@ class GpgMailBuilder:
         self.gpg = gnupg.GPG(gnupghome=self.gpgkeyring.gnupg_home)
         self.max_operation_time = max_operation_time
 
+        # These are constants that gnupg uses to represent different hash
+        #   algorithms, which are part of the SIG_CREATED line in the output
+        #   of the gnupg library we use.
+        self.hash_algorithm_table = {
+            1: 'md5',
+            2: 'sha1',
+            3: 'rmd160',
+            # 4-7 are reserved
+            8: 'sha256',
+            9: 'sha384',
+            10: 'sha512',
+            11: 'sha224' }
+
 
     # Builds and returns an unsigned encrypted message.
     def build_encrypted_message(self, expiration_check_time, message_dict, encryption_keys):
@@ -96,11 +109,15 @@ class GpgMailBuilder:
         # Make the signature component
         signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint, passphrase=signing_key_passphrase)
         signature_text = str(signature_result)
+        signature_hash_algorithm = hash_algorithm_table[signature_result.hash_algo]
+
+        self.logger.trace('Used hash algorithm %s.' % signature_hash_algorithm)
 
         # The GnuPG library we use does not provide any granular error information
         #   or throw any exceptions for signature operations, so checking for an
         #   empty string is all we have.
         if(signature_text.strip() == ''):
+            # TODO: Use signature_text.stderr for more granular error handling.
             raise SignatureError('Error while signing message.')
 
         signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)
