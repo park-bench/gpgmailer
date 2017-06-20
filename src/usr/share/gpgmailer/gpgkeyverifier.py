@@ -73,30 +73,25 @@ class GpgKeyVerifier:
 
         self.sender = sender_email
 
-    # Returns a list of recipients with valid keys, a list of valid key fingerprints,
-    #   a warning message for any expired or expiring soon keys, and the text of a
-    #   warning message email if any keys are newly expired or about to expire.
-    #   If the last check was performed beyond the configured key check interval
-    #   or has not been calculated, calculate that information and set the next
-    #   check time.
-    #
-    # loop_start_time: the time to base all expiration checks on
-    def get_recipient_info(self, loop_start_time):
-        info_is_stale = time.time() + self.config['key_check_interval'] < loop_start_time
 
-        if info_is_stale or not self.valid_keys:
-            self._calculate_recipient_info(loop_start_time)
-            self.next_key_check_time = time.time() + self.config['key_check_interval']
+    # Return a list of valid keys.
+    def get_valid_keys(self, loop_start_time):
+        self._update_if_info_is_stale(loop_start_time)
+        return self.valid_keys
 
-        recipient_info = { 'valid_recipients': self.valid_recipients,
-            'valid_keys': self.valid_keys,
-            'expiration_message': self.expiration_message,
-            'expiration_email_message': self.expiration_email_message}
 
-        # Reset this so that it only triggers one email.
-        self.expiration_warning_email_message = ''
+    # Return a list of recipients that have valid keys associated with them.
+    def get_valid_recipients(self, loop_start_time):
+        self._update_if_info_is_stale(loop_start_time)
+        return self.valid_recipients
 
-        return recipient_info
+
+    # Return a string describing keys that have expired or will expire "soon"
+    #   as defined in the config file.
+    def get_expiration_message(self, loop_start_time):
+        self._update_if_info_is_stale(loop_start_time)
+        return self.expiration_message
+
 
     # Calculates which recipients and keys are valid and assembles an expiration
     #   warning message, with expiration checks based on the loop_start_time
@@ -226,3 +221,15 @@ class GpgKeyVerifier:
 
         return { 'expiration_message': expiration_message,
             'send_email': send_email }
+
+
+    # Determine whether the current recipient information is valid for the next
+    #   full loop. If it isn't, recalculate.
+    #
+    # loop_start_time: the time to base all expiration checks on
+    def _update_if_info_is_stale(self, loop_start_time):
+        info_is_stale = time.time() + self.config['key_check_interval'] < loop_start_time
+
+        if info_is_stale or not self.valid_keys:
+            self._calculate_recipient_info(loop_start_time)
+            self.next_key_check_time = time.time() + self.config['key_check_interval']

@@ -38,6 +38,7 @@ class GpgMailer:
     def __init__(self, config, gpgkeyring, gpgkeyverifier):
         self.logger = logging.getLogger('GpgMailer')
         self.logger.info('Initializing gpgmailer module.')
+        self.expiration_message = None
 
         self.config = config
         self.gpgkeyring = gpgkeyring
@@ -118,16 +119,33 @@ class GpgMailer:
     #
     # loop_start_time: the time from which all expiration checks are based
     def _update_recipient_info(self, loop_start_time):
-        recipient_info = self.gpgkeyverifier.get_recipient_info(loop_start_time)
+        self.recipients = self.gpgkeyverifier.get_valid_recipients(loop_start_time)
+        self.keys = self.gpgkeyverifier.get_valid_keys(loop_start_time)
 
-        self.recipients = recipient_info['valid_recipients']
-        self.keys = recipient_info['valid_keys']
-        self.expiration_message = recipient_info['expiration_message']
+        new_expiration_message = self.gpgkeyverifier.get_expiration_message(loop_start_time)
 
-        if recipient_info['expiration_email_message']:
+        if self._update_expiration_message(new_expiration_message):
             self.logger.info('Sending an expiration warning email.')
-            self._send_warning_email(loop_start_time)
-            
+            self._send_warning_email(self, loop_start_time)
+
+    # Determine whether the expiration message has changed and sets it to
+    #   new_expiration_message if it has. Returns False if it has not changed,
+    #   and returns True if it has.
+    def _update_expiration_message(self, new_expiration_message):
+        has_changed = False
+        if self.expiration_message == None:
+            # gpgmailer has just started. The init script queues an email if any
+            #   keys are not current, so no email is needed.
+            self.logger.trace('This is the very first loop, not sending an email.')
+            self.expiration_message = new_expiration_message
+
+        elif self.expiration_message != new_expiration_message:
+            self.logger.info('A new key is no longer current. Sending an email.')
+            has_changed = True
+            self.expiration_message = new_expiration_message
+
+        return has_changed
+
 
     # TODO: Instead of "expiration message", call it "expiration warning message"
     # Send an email containing the expiration warning message.
