@@ -29,7 +29,6 @@ import traceback
 
 # Monitors the outbox directory, manages keys, and coordinates sending email.
 class GpgMailer:
-    # TODO: Document the constructor.
     # Initialize the mailsender and gpgmailbuilder objects
     #
     # config: the config dict read from the config file
