@@ -75,8 +75,7 @@ class GpgMailer:
                 for file_name in file_list:
                     self.logger.info("Found queued email in file %s." % file_name)
 
-                    fullpath = os.path.join(self.outbox_path, file_name)
-                    message_dict = self._read_message_file(fullpath)
+                    message_dict = self._read_message_file(file_name)
 
                     self.logger.trace('Message file %s read.' % file_name)
 
@@ -108,7 +107,8 @@ class GpgMailer:
     #   appropriate for gpgmailbuilder.
     #
     # fullpath: the entire path of the message file, including /
-    def _read_message_file(self, fullpath):
+    def _read_message_file(self, file_name):
+        fullpath = os.path.join(self.outbox_path, file_name)
 
         message_dict = {}
 
