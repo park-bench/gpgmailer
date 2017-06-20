@@ -185,7 +185,6 @@ class GpgMailBuilder:
         # This ok variable is not as granular as we would like it to be.
         #   The gnupg library does not provide more information.
         if(encrypted_payload.ok == False):
-            # TODO: If the status variable is not a string, decode it.
             raise EncryptionError('Error from python-gnupg while encrypting message: %s.' % encrypted_payload.status)
 
         encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
