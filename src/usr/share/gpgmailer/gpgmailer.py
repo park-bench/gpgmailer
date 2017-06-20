@@ -37,7 +37,7 @@ class GpgMailer:
     def __init__(self, config, gpgkeyring, gpgkeyverifier):
         self.logger = logging.getLogger('GpgMailer')
         self.logger.info('Initializing gpgmailer module.')
-        self.expiration_message = None
+        self.new_expiration_messages = False
 
         self.config = config
         self.gpgkeyring = gpgkeyring
@@ -47,6 +47,10 @@ class GpgMailer:
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
+        # Set expiration_message so that it is not detected as changed immediately
+        #   after gpgmailer-daemon sends an email.
+        self.expiration_message = gpgkeyverifier.get_expiration_message(time.time())
+
         self.logger.info('Done initializing gpgmailer module.')
 
     # Gpgmailer's main loop. Reads the watch directory and then calls other modules
@@ -54,14 +58,19 @@ class GpgMailer:
     def start_monitoring(self):
         try:
             while True:
+                loop_start_time = time.time()
+
+                self.recipients = self.gpgkeyverifier.get_valid_recipients(loop_start_time)
+                self.keys = self.gpgkeyverifier.get_valid_keys(loop_start_time)
+
+                new_expiration_message = self.gpgkeyverifier.get_expiration_message(loop_start_time)
+                self._update_expiration_message(new_expiration_message)
+                self._send_email_if_new_expiration_messages()
+
                 # The first element of os.walk is the full path, the second is a
                 #   list of directories, and the third is a list of non-directory
                 #   files.
                 file_list = next(os.walk(self.outbox_path))[2]
-
-                loop_start_time = time.time()
-
-                self._update_recipient_info(loop_start_time)
 
                 for file_name in file_list:
                     self.logger.info("Found queued email in file %s." % file_name)
@@ -112,38 +121,22 @@ class GpgMailer:
 
         return message_dict
 
-    # TODO: Change this method's name
-    # Get recipient list, key list, expiration message, and whether to send an
-    #   email from gpgkeyverifier.
-    #
-    # loop_start_time: the time from which all expiration checks are based
-    def _update_recipient_info(self, loop_start_time):
-        self.recipients = self.gpgkeyverifier.get_valid_recipients(loop_start_time)
-        self.keys = self.gpgkeyverifier.get_valid_keys(loop_start_time)
 
-        new_expiration_message = self.gpgkeyverifier.get_expiration_message(loop_start_time)
-
-        if self._update_expiration_message(new_expiration_message):
+    # Send an email if there are new expiration warnings.
+    def _send_email_if_new_expiration_messages(self):
+        if self.new_expiration_messages:
             self.logger.info('Sending an expiration warning email.')
             self._send_warning_email(self, loop_start_time)
+            self.new_expiration_messages = False
 
-    # Determine whether the expiration message has changed and sets it to
-    #   new_expiration_message if it has. Returns False if it has not changed,
-    #   and returns True if it has.
+
+    # Determine whether the new expiration message differs from the old one, and
+    #   if it does, update it and set the new expiration warnings flag.
     def _update_expiration_message(self, new_expiration_message):
-        has_changed = False
-        if self.expiration_message == None:
-            # gpgmailer has just started. The init script queues an email if any
-            #   keys are not current, so no email is needed.
-            self.logger.trace('This is the very first loop, not sending an email.')
-            self.expiration_message = new_expiration_message
-
-        elif self.expiration_message != new_expiration_message:
+        if self.expiration_message != new_expiration_message:
             self.logger.info('A new key is no longer current. Sending an email.')
-            has_changed = True
             self.expiration_message = new_expiration_message
-
-        return has_changed
+            self.new_expiration_messages = True
 
 
     # TODO: Instead of "expiration message", call it "expiration warning message"
