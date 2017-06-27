@@ -148,7 +148,7 @@ class GpgMailBuilder:
         #   or throw any exceptions for signature operations, so checking for an
         #   empty string is all we have.
         if(signature_text.strip() == ''):
-            # TODO: Use signature_text.stderr for more granular error handling.
+            # TODO: Eventually, use signature_text.stderr for more granular error handling.
             raise SignatureError('Error while signing message.')
 
         signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)

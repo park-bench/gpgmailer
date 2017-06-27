@@ -134,7 +134,7 @@ class GpgKeyVerifier:
 
         self.logger.trace('Checking recipient keys.')
 
-        # TODO: Optimize all key checking, not just sender key. Maybe have a list
+        # TODO: Eventually, optimize all key checking, not just sender key. Maybe have a list
         #   of checked fingerprints.
         for email in self.recipients:
             if self.all_addresses[email]['is_sender']:
