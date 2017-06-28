@@ -25,8 +25,6 @@ import sys
 import time
 import traceback
 
-# TODO: Write more effective logging.
-
 # Monitors the outbox directory, manages keys, and coordinates sending email.
 class GpgMailer:
     # Initialize the mailsender and gpgmailbuilder objects
@@ -69,10 +67,8 @@ class GpgMailer:
 
                 for file_name in self._get_file_list():
                     self.logger.info("Found queued email in file %s." % file_name)
-
                     message_dict = self._read_message_file(file_name)
 
-                    self.logger.trace('Message file %s read.' % file_name)
 
                     # Set default subject if the queued message does not have one.
                     if message_dict['subject'] == None:
@@ -110,6 +106,7 @@ class GpgMailer:
     #
     # file_name: the name of the file in the outbox, not a full path.
     def _read_message_file(self, file_name):
+        self.logger.trace('Reading message file %s.' % file_name)
         fullpath = os.path.join(self.outbox_path, file_name)
 
         message_dict = {}
@@ -121,10 +118,12 @@ class GpgMailer:
             # Attachment data is assumed to be encoded in base64.
             attachment['data'] = base64.b64decode(attachment['data'])
 
+        self.logger.trace('Message file %s read.' % file_name)
+
         return message_dict
 
 
-    # Send an email if there are new expiration warnings.
+    # Send an email if there are new expiration warning messages.
     def _send_email_if_new_expiration_warning_messages(self):
         if self.new_expiration_warning_messages:
             self.logger.info('Sending an expiration warning email.')
@@ -133,10 +132,10 @@ class GpgMailer:
 
 
     # Determine whether the new expiration message differs from the old one, and
-    #   if it does, update it and set the new expiration warnings flag.
+    #   if it does, update it and set the new expiration warning messages flag.
     def _update_expiration_warning_message(self, new_expiration_warning_message):
         if self.expiration_warning_message != new_expiration_warning_message:
-            self.logger.info('A new key is no longer current. Sending an email.')
+            self.logger.info('A new key is no longer current.')
             self.expiration_warning_message = new_expiration_warning_message
             self.new_expiration_warning_messages = True
 
