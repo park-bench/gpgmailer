@@ -37,7 +37,7 @@ class GpgMailer:
     def __init__(self, config, gpgkeyring, gpgkeyverifier):
         self.logger = logging.getLogger('GpgMailer')
         self.logger.info('Initializing gpgmailer module.')
-        self.new_expiration_messages = False
+        self.new_expiration_warning_messages = False
 
         self.config = config
         self.gpgkeyring = gpgkeyring
@@ -47,9 +47,9 @@ class GpgMailer:
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
-        # Set expiration_message so that it is not detected as changed immediately
+        # Set expiration_warning_message so that it is not detected as changed immediately
         #   after gpgmailer-daemon sends an email.
-        self.expiration_message = gpgkeyverifier.get_expiration_message(time.time())
+        self.expiration_warning_message = gpgkeyverifier.get_expiration_warning_message(time.time())
 
         self.logger.info('Done initializing gpgmailer module.')
 
@@ -63,9 +63,9 @@ class GpgMailer:
                 self.recipients = self.gpgkeyverifier.get_valid_recipients(loop_start_time)
                 self.keys = self.gpgkeyverifier.get_valid_keys(loop_start_time)
 
-                new_expiration_message = self.gpgkeyverifier.get_expiration_message(loop_start_time)
-                self._update_expiration_message(new_expiration_message)
-                self._send_email_if_new_expiration_messages()
+                new_expiration_warning_message = self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
+                self._update_expiration_warning_message(new_expiration_warning_message)
+                self._send_email_if_new_expiration_warning_messages()
 
                 for file_name in self._get_file_list():
                     self.logger.info("Found queued email in file %s." % file_name)
@@ -125,30 +125,29 @@ class GpgMailer:
 
 
     # Send an email if there are new expiration warnings.
-    def _send_email_if_new_expiration_messages(self):
-        if self.new_expiration_messages:
+    def _send_email_if_new_expiration_warning_messages(self):
+        if self.new_expiration_warning_messages:
             self.logger.info('Sending an expiration warning email.')
-            self._send_warning_email(self, loop_start_time)
-            self.new_expiration_messages = False
+            self._send_warning_email(self, loop_start_time, self.expiration_warning_message)
+            self.new_expiration_warning_messages = False
 
 
     # Determine whether the new expiration message differs from the old one, and
     #   if it does, update it and set the new expiration warnings flag.
-    def _update_expiration_message(self, new_expiration_message):
-        if self.expiration_message != new_expiration_message:
+    def _update_expiration_warning_message(self, new_expiration_warning_message):
+        if self.expiration_warning_message != new_expiration_warning_message:
             self.logger.info('A new key is no longer current. Sending an email.')
-            self.expiration_message = new_expiration_message
-            self.new_expiration_messages = True
+            self.expiration_warning_message = new_expiration_warning_message
+            self.new_expiration_warning_messages = True
 
 
-    # TODO: Instead of "expiration message", call it "expiration warning message"
     # Send an email containing the expiration warning message.
     #
     # loop_start_time: the time from which all expiration checks are based
-    # expiration_mail_message: the body of the warning email
-    def _send_warning_email(self, loop_start_time, expiration_email_message):
+    # expiration_warning_email_text: the body of the warning email
+    def _send_warning_email(self, loop_start_time, expiration_warning_email_text):
 
-        message_dict = { 'body': self.expiration_email_message,
+        message_dict = { 'body': expiration_warning_email_text,
                     'subject': self.config['default_subject']}
 
         encrypted_message = self._build_encrypted_message(loop_start_time, message_dict)

@@ -196,10 +196,10 @@ def check_all_keys(config_dict, gpg_keyring):
     global gpg_key_verifier
     gpg_key_verifier = gpgkeyverifier.GpgKeyVerifier(gpg_keyring, config)
 
-    expiration_message = gpg_key_verifier.get_expiration_message(time.time())
+    expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(time.time())
 
-    if expiration_message:
-        message = 'Gpgmailer has just restarted. \n\n%s' % expiration_message
+    if expiration_warning_message:
+        message = 'Gpgmailer has just restarted. \n\n%s' % expiration_warning_message
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
         mail_message.set_body(message)
