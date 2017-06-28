@@ -204,8 +204,6 @@ class GpgMailBuilder:
     #   of the message
     def _build_plaintext_message_with_attachments(self, message_dict):
         multipart_message = MIMEMultipart(_subtype="mixed")
-
-        # TODO: This may need an extra newline. Test with attachments.
         multipart_message.attach(MIMEText(message_dict['body']))
 
         # Loop over the attachments
