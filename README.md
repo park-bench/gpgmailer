@@ -4,12 +4,11 @@ gpgmailer is a daemon that sends mail signed and encrypted using GnuPG.  It
 reads mail from files containing JSON objects and handles arbitrary
 attachments.
 
-Depends on our ConfigHelper library which can be found at
-https://github.com/park-bench/confighelper
-
 gpgmailer is licensed under the GNU GPLv3.
 
-Bug fixes are welcome.
+Bug fixes are welcome!
+
+## Warnings
 
 This software is currently only supported on Ubuntu 14.04 and may not be ready
 for use in a production environment.
@@ -20,22 +19,27 @@ installing your own package. We make the following assumptions:
 * You already know how to use GnuPG.
 * You are already somewhat familiar with using debuild.
 
-Clone the latest *release tag*, not the `master` branch, as `master` may not be
-stable.  Build the package with `debuild` from the project directory and
-install with `dpkg -i`. Resolve any missing dependencies with `apt-get -f
-install`. The daemon will attempt to start and fail.
+## Dependencies
+* [_confighelper_](https://github.com/park-bench/confighelper)
 
+## Steps to Build and Install
+1.   Clone the latest release tag. (Do not clone the master branch. `master` may not be stable.)
+2.   Use `debuild` in the project root directory to build the package.
+3.   Use `dpkg -i` to install the package.
+4.   Use `apt-get -f install` to resolve any missing dependencies. 
+The daemon will attempt to start and fail. (This is expected.)
+5.   Locate the example configuration file at `/etc/gpgmailer/gpgmailer.conf.example`.
+Copy or rename this file to `gpgmailer.conf` in the same directory. Edit this 
+file to change any configuration details.
+6.   Create a keyring at the location specified in gpgmailer.conf. 
+It will be read from and written to by root, so DO NOT use your home directory's keyring.
+7.   Use `gnupg` with the shell variable `GNUPGHOME` set to the location of 
+your new keyring. Import a sender and all recipient keys and set them all to 
+at least marginal trust.
+8.   Restart the daemon with `service gpgmailer restart`. If the configuration 
+file is valid and named correctly, the service will now start successfully.
+
+## Updates
 Updates may change configuration file options, so if you have a configuration
 file already, check that it has all of the required options in the current 
 example file.
-
-## Post-install 
-Copy the example configuration file in /etc/gpgmailer to 
-/etc/gpgmailer/gpgmailer.conf and make any necessary changes to it.
-
-Create a keyring at the location specified in gpgmailer.conf. It will be
-read from and written to by root, so don't use your home directory's keyring.
-
-Use `gnupg` with the shell variable `GNUPGHOME` set to the location of your new
-keyring and import a sender and all recipient keys and set them all to at least
-marginal trust.
