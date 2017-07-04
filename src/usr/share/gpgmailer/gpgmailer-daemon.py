@@ -56,9 +56,6 @@ def parse_key_config_string(key_config_string):
 #   and return it.
 def build_config_dict():
 
-    # TODO: Some config numbers must be positive, add a verify_positive_number method
-    #   to confighelper for this, or verify_number_greater_than.
-
     print('Reading %s...' % config_pathname)
     config_file = ConfigParser.RawConfigParser()
     config_file.read(config_pathname)
