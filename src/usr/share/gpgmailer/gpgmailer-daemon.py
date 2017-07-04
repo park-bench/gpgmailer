@@ -79,11 +79,11 @@ def build_config_dict():
 
     # Read SMTP configuration
     config_dict['smtp_domain'] = config_helper.verify_string_exists(config_file, 'smtp_domain')
-    config_dict['smtp_port'] = config_helper.verify_string_exists(config_file, 'smtp_port')
+    config_dict['smtp_port'] = config_helper.verify_integer_within_range(config_file, 'smtp_port', lower_bound=0, upper_bound=65536)
     config_dict['smtp_username'] = config_helper.verify_string_exists(config_file, 'smtp_username')
     config_dict['smtp_password'] = config_helper.verify_password_exists(config_file, 'smtp_password')  # Note this is a password!
-    config_dict['smtp_max_idle'] = config_helper.verify_string_exists(config_file, 'smtp_max_idle')
-    config_dict['smtp_sending_timeout'] = config_helper.verify_string_exists(config_file, 'smtp_sending_timeout') # in seconds
+    config_dict['smtp_max_idle'] = config_helper.verify_integer_within_range(config_file, 'smtp_max_idle', lower_bound=0)
+    config_dict['smtp_sending_timeout'] = config_helper.verify_integer_within_range(config_file, 'smtp_sending_timeout', lower_bound=0) # in seconds
 
     # Read key configuration
     config_dict['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
@@ -96,11 +96,12 @@ def build_config_dict():
 
     # Convert the key expiration threshold into seconds because expiry dates are
     #   stored in unix time. The config value should be days.
-    config_dict['expiration_warning_threshold'] = config_helper.verify_number_exists(config_file, 'expiration_warning_threshold') * 86400
+    expiration_warning_threshold_days = config_helper.verify_integer_within_range(config_file, 'expiration_warning_threshold', lower_bound=0)
+    config_dict['expiration_warning_threshold'] = expiration_warning_threshold_days * 86400
 
-    config_dict['main_loop_delay'] = config_helper.verify_number_exists(config_file, 'main_loop_delay') # In seconds
-    config_dict['main_loop_duration'] = config_helper.verify_number_exists(config_file, 'main_loop_duration') # in seconds
-    config_dict['key_check_interval'] = config_helper.verify_number_exists(config_file, 'key_check_interval') # in seconds
+    config_dict['main_loop_delay'] = config_helper.verify_number_within_range(config_file, 'main_loop_delay', lower_bound=0) # In seconds
+    config_dict['main_loop_duration'] = config_helper.verify_number_within_range(config_file, 'main_loop_duration', lower_bound=0) # in seconds
+    config_dict['key_check_interval'] = config_helper.verify_number_within_range(config_file, 'key_check_interval', lower_bound=0) # in seconds
 
     config_dict['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
