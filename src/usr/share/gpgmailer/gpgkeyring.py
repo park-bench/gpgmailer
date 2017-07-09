@@ -1,4 +1,4 @@
-# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2017 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,25 +19,25 @@ import logging
 import re
 import time
 
-# This exception is raised when a PGP fingerprint is not a 40-character hexadecimal
+# This exception is raised when a GPG fingerprint is not a 40-character hexadecimal
 #   string.
 class FingerprintSyntaxException(Exception):
     pass
 
-# This exception is thrown when a PGP fingerprint is not in the given key store.
+# This exception is thrown when a GPG fingerprint is not in the given key ring.
 class KeyNotFoundException(Exception):
     pass
 
 key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
-# These trust levels come from gnupg, u means ultimate, f means full, and m
-#   means marginal.
+# These trust levels come from GnuPG, 'u' means ultimate, 'f' means full, and 'm' means marginal.
 valid_owner_trust_levels = ('u', 'f', 'm')
 
-# GpgKeyRing caches and checks validity, expiration, and trust for pgp keys.
+# GpgKeyRing caches and checks validity, expiration, and trust for GPG keys.
 class GpgKeyRing:
-    # Loads the keyring and stores it in a dict.
+
+    # Loads select portions of the GnuPG keyring and stores the information in an internal dict.
     #
-    # gnupg_home: the keyring directory for gnupg.
+    # gnupg_home: The GnuPG keyring directory.
     def __init__(self, gnupg_home):
         self.logger = logging.getLogger('GpgKeyRing')
         self.gnupg_home = gnupg_home
@@ -60,33 +60,32 @@ class GpgKeyRing:
             }
 
 
-    # Check if a key with the given fingerprint is still valid after the given date.
+    # Checks if the GPG key with the given fingerprint expires after the given date.
     #
-    # fingerprint: the fingerprint of the key to check
-    # expiration_date: the date (in Unix time) to which to compare the key's
-    #   expiration date.
+    # fingerprint: The fingerprint of the GPG key to check for expiration.
+    # expiration_date: The date (in Unix time) to compare against the GPG key's expiration date.
     def is_current(self, fingerprint, expiration_date):
         current = False
         self._fingerprint_is_valid(fingerprint)
 
-        self.logger.trace('Checking expiration for key %s at date %s.' % (fingerprint,
+        self.logger.trace('Checking expiration for GPG key %s at date %s.' % (fingerprint,
             expiration_date))
 
-        if ((self.fingerprint_to_key_dict[fingerprint]['expires'] == None) or 
-             (self.fingerprint_to_key_dict[fingerprint]['expires'] > expiration_date)):
+        if self.fingerprint_to_key_dict[fingerprint]['expires'] is None or 
+            self.fingerprint_to_key_dict[fingerprint]['expires'] > expiration_date:
 
             current = True
             self.logger.trace('Key %s is current.' % fingerprint)
 
         else:
-            self.logger.trace('Key %s expires before date %s.' % (fingerprint, expiration_date))
+            self.logger.trace('Key %s expired after date %s.' % (fingerprint, expiration_date))
 
         return current
 
 
-    # Check if a key with the given fingerprint is trusted.
+    # Checks if a GPG key with the given fingerprint is trusted.
     #
-    # fingerprint: the fingerprint of the key to check
+    # fingerprint: The fingerprint of the GPG key to check.
     def is_trusted(self, fingerprint):
         trusted = False
         self._fingerprint_is_valid(fingerprint)
@@ -95,40 +94,34 @@ class GpgKeyRing:
             trusted = True
 
         else:
-            self.logger.warn('Key %s is not trusted' % fingerprint)
+            self.logger.warn('Key %s is not trusted.' % fingerprint)
 
         return trusted
 
 
-    # Looks up a key fingerprint and returns the expiration date if it exists,
-    #   throws an exception if it is invalid or not in the keyring. If a format
-    #   is specified, the date will be expressed in that format.
+    # Returns a GPG key expiration date based on a key fingerprint. If the key fingerprint is
+    #   invalid or does not exist in the keyring, an exception is thrown.
     #
-    # fingerprint: A PGP key fingerprint
-    # date_format: A format string compatible with Python's strftime.
-    def get_key_expiration_date(self, fingerprint, date_format=None):
-        result = None
+    # fingerprint: A GPG key fingerprint.
+    # Returns the key's expiration date or None if no expiration date exist.
+    def get_key_expiration_date(self, fingerprint):
         self._fingerprint_is_valid(fingerprint)
 
-        result = self.fingerprint_to_key_dict[fingerprint]['expires']
-
-        if date_format:
-            result = datetime.datetime.fromtimestamp(result).strftime(date_format)
-
-        return result
+        return self.fingerprint_to_key_dict[fingerprint]['expires']
 
 
-    # Check if a fingerprint is valid and is in the key store and throw an
-    #   appropriate exception if necessary.
+    # Checks if a GPG key fingerprint is valid and is in the keyring. If the key is not valid or
+    #   does not exist in the keyring, an exception is thrown.
     #
-    # fingerprint: the fingerprint of the key to check
+    # fingerprint: The fingerprint of the GPG key to check.
     def _fingerprint_is_valid(self, fingerprint):
-        if not(key_fingerprint_regex.match(fingerprint)):
+
+        if not key_fingerprint_regex.match(fingerprint):
             message = 'String %s is not a valid PGP fingerprint.' % fingerprint
             self.logger.error(message)
             raise FingerprintSyntaxException(message)
 
-        elif not(fingerprint in self.fingerprint_to_key_dict.keys()):
+        elif not fingerprint in self.fingerprint_to_key_dict.keys():
             message = 'Key fingerprint %s not found in GPG key store.' % fingerprint
             self.logger.error(message)
             raise KeyNotFoundException(message)

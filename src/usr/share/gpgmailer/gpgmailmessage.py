@@ -1,4 +1,4 @@
-# Copyright 2015-2016 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2017 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,10 +25,9 @@ import shutil
 mail_dir = '/tmp/gpgmailer'
 
 # Constructs an e-mail message and serializes it to the mail queue directory.
-#   Messages are queued in json format.
+#   Messages are queued in JSON format.
 #
 # This class is not thread safe.
-#
 
 # Note: Each method should check if this object has already been saved and
 #   throw an exception if it has.
@@ -41,56 +40,56 @@ class GpgMailMessage:
         self.message['attachments'] = []
         self.message['subject'] = None
 
-    # Adds the subject of the message.
+    # Adds the plain-text subject of the message.
     #
-    # subject: the subject to set
+    # subject: The plain-text subject to set.
     def set_subject(self, subject):
         self._check_if_saved()
         self.message['subject'] = subject
 
-    # Adds the text body of the message.
+    # Adds the plain-text body of the message.
     #
-    # body: the body to set
+    # body: The plain-text body to set.
     def set_body(self, body):
         self._check_if_saved()
         self.message['body'] = body
 
     # Adds an attachment to the message.
     #
-    # filename: the filename for the attachment
-    # data: the content of the attachment
+    # filename: The filename for the attachment.
+    # data: The binary content of the attachment.
     def add_attachment(self, filename, data):
         self._check_if_saved()
         self.message['attachments'].append({ 'filename': filename, 'data': data })
 
-    # Saves the message to the outbox directory and marks this message class as saved
+    # Saves the message to the 'outbox' directory and marks this message class instance as 'saved'
     #   meaning no addtional method calls can be made on the current message object.
     def queue_for_sending(self):
         self._check_if_saved()
 
-        # Check for message and throw an exception if it isn't there
-        if(self.message['body'] == None):
+        # Check for message and throw an exception if it isn't there.
+        if self.message['body'] is None:
             raise Exception('Tried to save message without a body.')
 
-        # Encode any attachments as base64
+        # Encode any attachments as base64.
         for attachment in self.message['attachments']:
             attachment['data'] = base64.b64encode(attachment['data'])
 
-        # Serialize into JSON
+        # Serialize into JSON.
         message_json = json.dumps(self.message)
 
         # Write message to filesystem.
         message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
 
-        # Write to a draft directory to so the message doesn't get picked up before it is
+        # Write to a 'draft' directory so the message doesn't get picked up before the file is
         #   fully created.
         draft_pathname = '%s/draft/%s-%s' % (mail_dir, time_string, message_sha256)
         message_file = open(draft_pathname, 'w')
         message_file.write(message_json)
         message_file.close()
 
-        # Move the file to the outbox which should be an atomic operation
+        # Move the file to the 'outbox' directory which should be an atomic operation.
         outbox_pathname = '%s/outbox/%s-%s' % (mail_dir, time_string, message_sha256)
         shutil.move(draft_pathname, outbox_pathname)
 
@@ -101,5 +100,5 @@ class GpgMailMessage:
 
     # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
-        if(self.saved):
+        if self.saved:
             raise Exception('Tried to save an already saved message.')
