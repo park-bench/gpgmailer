@@ -171,17 +171,19 @@ def signature_test(gpg_home, fingerprint, passphrase):
 #
 # gpg_keyring: The GpgKeyring object in which to look for GPG keys.
 # config: The config dict to read sender and recipient GPG key information from.
+# Returns a GpgKeyVerifier object initalized with gpg_keyring and config.
 def check_all_keys(gpg_keyring, config):
     logger.info('Checking all keys for trust and expiration.')
 
-    expiration_date = time.time() + config['main_loop_duration'] + config['main_loop_delay']
+    # Make sure the sender key isn't going to expire during the first loop iteration.
+    expiration_date = time.time() + config['main_loop_duration']
 
     key_is_usable(gpg_keyring, config['sender']['fingerprint'])
 
-    if not(gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date)):
-        sender_key_expiration_date = datetime.datetime.fromtimestamp(
-            gpg_keyring.get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S')
-        logger.warn('Sender key expired on %s.' % sender_key_expiration_date)
+    if not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
+        formatted_expiration_date = datetime.datetime.fromtimestamp(gpg_keyring.
+            get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S')
+        logger.warn('Sender key expired on %s.' % formatted_expiration_date)
 
     if not(signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password'])):
         logger.warn('Sender key failed signature test.')
@@ -194,10 +196,9 @@ def check_all_keys(gpg_keyring, config):
     for recipient in config['recipients']:
         key_is_usable(gpg_keyring, recipient['fingerprint'])
 
-    global gpg_key_verifier
     gpg_key_verifier = gpgkeyverifier.GpgKeyVerifier(gpg_keyring, config)
 
-    expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(time.time())
+    expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(expiration_date)
 
     if expiration_warning_message:
         message = 'Gpgmailer has just restarted.\n\n%s' % expiration_warning_message
@@ -207,6 +208,8 @@ def check_all_keys(gpg_keyring, config):
         mail_message.queue_for_sending()
         
     logger.debug('Finished initial key check.')
+
+    return gpg_key_verifier
 
 
 # Checks the sending GPG key and the program configuration to determine if sending unsigned e-mail
@@ -241,7 +244,7 @@ config, log_file_handle = build_config_dict()
 parse_key_config(config)
 
 gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
-check_all_keys(gpg_keyring, config)
+gpg_key_verifier = check_all_keys(gpg_keyring, config)
 
 verify_signing_config(config)
 
