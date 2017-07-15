@@ -50,7 +50,6 @@ class GpgMailer:
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
-        self.new_expiration_warning_messages = False
         # Set this here so that the string equality check in _update_expiration_warning_message
         #   evaluates to equal.
         self.expiration_warning_message = gpgkeyverifier.get_expiration_warning_message(time.time())
@@ -70,10 +69,7 @@ class GpgMailer:
                 self.valid_key_fingerprints =
                     self.gpgkeyverifier.get_valid_key_fingerprints(loop_start_time)
 
-                new_expiration_warning_message =
-                    self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
-                self._update_expiration_warning_message(new_expiration_warning_message)
-                self._send_email_if_new_expiration_warning_messages()
+                self._update_expiration_warnings(loop_start_time)
 
                 for file_name in self._get_file_list():
                     self.logger.info("Found queued e-mail in file %s." % file_name)
@@ -81,7 +77,7 @@ class GpgMailer:
 
 
                     # Set default subject if the queued message does not have one.
-                    if message_dict['subject'] is not None:
+                    if message_dict['subject'] is None:
                         message_dict['subject'] = self.config['default_subject']
 
                     encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
@@ -140,39 +136,28 @@ class GpgMailer:
         return message_dict
 
 
-    # Sends an e-mail if there are new expiration warning messages.
-    def _send_email_if_new_expiration_warning_messages(self):
-        if self.new_expiration_warning_messages is True:
-            self.logger.info('Sending an expiration warning e-mail.')
-            self._send_warning_email(self, self.expiration_warning_message, loop_start_time)
-            self.new_expiration_warning_messages = False
-
-
-    # Determines whether the new expiration warning message differs from the old one and, if it does,
-    #   sets the new warning message as the current one and specifies a new expiration warning e-mail
-    #   should be sent.
+    # Periodically checks whether the expiration warning message has changed and if it has, start
+    #   including the new expiration warning message at the top of every e-mail and send an e-mail
+    #   immediately with the updated warning.
     #
-    # new_expiration_warning_message: The newly constructed expiration warning message text.
-    def _update_expiration_warning_message(self, new_expiration_warning_message):
-        if self.expiration_warning_message != new_expiration_warning_message:
-            self.logger.info('A new key is no longer current.')
-            self.expiration_warning_message = new_expiration_warning_message
-            self.new_expiration_warning_messages = True
-
-
-    # Sends an e-mail containing the expiration warning message.
-    #
-    # expiration_warning_email_text: The text body of the warning e-mail.
     # loop_start_time: The time associated with the current program loop from which all PGP key
     #   expiration checks are based.
-    def _send_warning_email(self, expiration_warning_email_text, loop_start_time):
+    def _update_expiration_warnings(self, loop_start_time):
 
-        message_dict = {'subject': self.config['default_subject'],
-            'body': expiration_warning_email_text}
+        new_expiration_warning_message =
+            self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
 
-        encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
+        # TODO: Eventually, change this so it isn't a string comparison.
+        if self.expiration_warning_message != new_expiration_warning_message:
+            self.logger.info('The expiration status of one or more keys have changed. ' +
+                'Sending an expiration warning e-mail and updating expiration warning message.')
+            self.expiration_warning_message = new_expiration_warning_message
 
-        self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
+            # Actually send the warning e-mail.
+            message_dict = {'subject': self.config['default_subject'],
+                'body': self.gpgkeyverifier.get_expiration_warning_email_message()}
+            encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
+            self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
 
 
     # Builds an encrypted e-mail string with a signature if possible.
@@ -190,13 +175,17 @@ class GpgMailer:
         if not sender_key_is_current or self.config['sender']['can_sign']:
             message = self.gpgmailbuilder.build_encrypted_message(
                 message_dict=message_dict,
-                encryption_keys=self.valid_key_fingerprints,  # TODO: This is wrong.
+                # Intentionally includes sender key so we can read sent e-mails.
+                # TODO: We should eventually make it an option to not include the sender key.
+                encryption_keys=self.valid_key_fingerprints,
                 loop_start_time=loop_start_time)
 
         else:
             message = self.gpgmailbuilder.build_signed_encrypted_message(
                 message_dict=message_dict,
-                encryption_keys=self.valid_key_fingerprints,  # TODO: This is wrong.
+                # Intentionally includes sender key so we can read sent e-mails.
+                # TODO: We should eventually make it an option to not include the sender key.
+                encryption_keys=self.valid_key_fingerprints,
                 signing_key=self.config['sender']['fingerprint'],
                 signing_key_passphrase=self.config['sender']['password'],
                 loop_start_time=loop_start_time)

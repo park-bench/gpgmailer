@@ -157,7 +157,7 @@ def signature_test(gpg_home, fingerprint, passphrase):
         detach=True, keyid=fingerprint, passphrase=passphrase)
 
     if str(signature_test_result).strip() == '':
-        logger.warn('Signature test for %s failed.' % fingerprint)
+        logger.info('Signature test for %s failed.' % fingerprint)
     else:
         logger.info('Signature test for %s passed.' % fingerprint)
         success = True
@@ -185,7 +185,7 @@ def check_all_keys(gpg_keyring, config):
             get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S')
         logger.warn('Sender key expired on %s.' % formatted_expiration_date)
 
-    if not(signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password'])):
+    if not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
         logger.warn('Sender key failed signature test.')
         config['sender']['can_sign'] = False
 
@@ -196,11 +196,16 @@ def check_all_keys(gpg_keyring, config):
     for recipient in config['recipients']:
         key_is_usable(gpg_keyring, recipient['fingerprint'])
 
+    # We do this here because we don't want to queue an e-mail if a configuraiton setting can
+    #   cause the program to crash later. (verify_signing_config was originally called after this
+    #   method.) This is to avoid a lot of identical queued warning e-mails.
+    verify_signing_config(config)
+
     gpg_key_verifier = gpgkeyverifier.GpgKeyVerifier(gpg_keyring, config)
 
     expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(expiration_date)
 
-    if expiration_warning_message:
+    if expiration_warning_message is not None:
         message = 'Gpgmailer has just restarted.\n\n%s' % expiration_warning_message
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
@@ -246,8 +251,6 @@ parse_key_config(config)
 gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 gpg_key_verifier = check_all_keys(gpg_keyring, config)
 
-verify_signing_config(config)
-
 # TODO: Eventually, check directory existence and permissions.
 # TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
 
@@ -262,7 +265,6 @@ daemon_context = daemon.DaemonContext(
     umask = 0
     )
 
-# TODO: Eventually make a real cleanup method for this.
 daemon_context.signal_map = {
     signal.SIGTERM : sig_term_handler
     }
