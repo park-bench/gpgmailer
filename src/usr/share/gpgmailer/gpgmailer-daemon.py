@@ -76,11 +76,11 @@ def build_config_dict():
 
     # Reads the SMTP configuration.
     config['smtp_domain'] = config_helper.verify_string_exists(config_file, 'smtp_domain')
-    config['smtp_port'] = config_helper.verify_integer_within_range(config_file, 'smtp_port', lower_bound=0, upper_bound=65536)
+    config['smtp_port'] = config_helper.verify_integer_within_range(config_file, 'smtp_port', lower_bound=1, upper_bound=65536)
     config['smtp_username'] = config_helper.verify_string_exists(config_file, 'smtp_username')
     config['smtp_password'] = config_helper.verify_password_exists(config_file, 'smtp_password')  # Note this is a password!
-    config['smtp_max_idle'] = config_helper.verify_integer_within_range(config_file, 'smtp_max_idle', lower_bound=0)
-    config['smtp_sending_timeout'] = config_helper.verify_integer_within_range(config_file, 'smtp_sending_timeout', lower_bound=0)  # In seconds.
+    config['smtp_max_idle'] = config_helper.verify_integer_within_range(config_file, 'smtp_max_idle', lower_bound=1)
+    config['smtp_sending_timeout'] = config_helper.verify_integer_within_range(config_file, 'smtp_sending_timeout', lower_bound=1)  # In seconds.
 
     # Reads the key configuration.
     config['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
@@ -93,7 +93,7 @@ def build_config_dict():
 
     # Convert the key expiration threshold into seconds because expiry dates are
     #   stored in unix time. The config value should be days.
-    expiration_warning_threshold_days = config_helper.verify_integer_within_range(config_file, 'expiration_warning_threshold', lower_bound=0)
+    expiration_warning_threshold_days = config_helper.verify_integer_within_range(config_file, 'expiration_warning_threshold', lower_bound=1)
     config['expiration_warning_threshold'] = expiration_warning_threshold_days * 86400
 
     config['main_loop_delay'] = config_helper.verify_number_within_range(config_file, 'main_loop_delay', lower_bound=0)  # In seconds.
