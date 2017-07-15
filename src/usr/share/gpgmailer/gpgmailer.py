@@ -71,7 +71,11 @@ class GpgMailer:
 
                 self._update_expiration_warnings(loop_start_time)
 
-                for file_name in self._get_file_list():
+                # Return a list of non-directory files in the outbox directory.
+                #   The first element of os.walk is the full path, the second is a
+                #   list of directories, and the third is a list of non-directory
+                #   files.
+                for file_name in next(os.walk(self.outbox_path))[2]:
                     self.logger.info("Found queued e-mail in file %s." % file_name)
                     message_dict = self._read_message_file(file_name)
 
@@ -103,14 +107,6 @@ class GpgMailer:
         except Exception as exception:
             self.logger.error('Exception %s: %s.' % (type(exception).__name__, exception.message))
             self.logger.error(traceback.format_exc())
-
-
-    # Return a list of non-directory files in the outbox directory.
-    def _get_file_list(self):
-        # The first element of os.walk is the full path, the second is a
-        #   list of directories, and the third is a list of non-directory
-        #   files.
-        return next(os.walk(self.outbox_path))[2]
 
 
     # Reads a message file from the outbox directory and builds a dictionary representing the message
