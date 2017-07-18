@@ -99,7 +99,7 @@ class GpgKeyVerifier:
     #   with a receiver.
     #
     # config: The config dictionary read from the program configuration file.
-    def _initialize_email_dicts(self, config)
+    def _initialize_email_dicts(self, config):
 
         # Record e-mail information for all the recipients.
         for recipient in config['recipients']:
@@ -151,8 +151,8 @@ class GpgKeyVerifier:
         sender_expiration_data = self._build_key_expiration_warning_message(self.sender_email,
             loop_current_time)
 
-        if sender_expiration_data['expiring_soon'] or sender_expiration_data['has_expired']:
-            if sender_expiration_data['has_expired']:
+        if sender_expiration_data['expiring_soon'] or sender_expiration_data['is_expired']:
+            if sender_expiration_data['is_expired']:
                 if not config['allow_expired_signing_key']:
                     raise SenderKeyExpiredException('Sender key has expired and the program is not ' +
                         'configued to send e-mail with an expired sender GPG key.')
@@ -178,7 +178,7 @@ class GpgKeyVerifier:
                 valid_recipient_emails.append(self.sender_email)
 
         self.logger.trace('Checking recipient keys.')
-        for recpient_email in self.all_recipient_emails:
+        for recipient_email in self.all_recipient_emails:
             # Reuse the sender expiration data if the sender is also a recipient.
             # TODO: Eventually, optimize all key checking, not just sender key. Maybe have a list
             #   of checked fingerprints.
@@ -238,7 +238,7 @@ class GpgKeyVerifier:
         expiration_warning_message = None
         new_message = False
         is_expired = False
-        expring_soon = False
+        expiring_soon = False
         expiration_date = loop_current_time + self.config['main_loop_duration']
         expiring_soon_date = expiration_date + self.config['expiration_warning_threshold']
         fingerprint = self.email_dicts[email]['fingerprint']

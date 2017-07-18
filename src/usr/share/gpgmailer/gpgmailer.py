@@ -67,9 +67,9 @@ class GpgMailer:
             while True:
                 loop_start_time = time.time()
 
-                self.valid_recipient_emails =
+                self.valid_recipient_emails = \
                     self.gpgkeyverifier.get_valid_recipient_emails(loop_start_time)
-                self.valid_key_fingerprints =
+                self.valid_key_fingerprints = \
                     self.gpgkeyverifier.get_valid_key_fingerprints(loop_start_time)
 
                 self._update_expiration_warnings(loop_start_time)
@@ -143,7 +143,7 @@ class GpgMailer:
     #   expiration checks are based.
     def _update_expiration_warnings(self, loop_start_time):
 
-        new_expiration_warning_message =
+        new_expiration_warning_message = \
             self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
 
         # TODO: Eventually, change this so it isn't a string comparison.
@@ -177,7 +177,7 @@ class GpgMailer:
                 # Intentionally includes sender key so we can read sent e-mails.
                 # TODO: We should eventually make it an option to not include the sender key.
                 encryption_keys=self.valid_key_fingerprints,
-                loop_start_time=loop_start_time)
+                loop_current_time=loop_start_time)
 
         else:
             message = self.gpgmailbuilder.build_signed_encrypted_message(
@@ -187,6 +187,6 @@ class GpgMailer:
                 encryption_keys=self.valid_key_fingerprints,
                 signing_key=self.config['sender']['fingerprint'],
                 signing_key_passphrase=self.config['sender']['password'],
-                loop_start_time=loop_start_time)
+                loop_current_time=loop_start_time)
 
         return message

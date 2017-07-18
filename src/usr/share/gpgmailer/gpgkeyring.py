@@ -71,7 +71,7 @@ class GpgKeyRing:
         self.logger.trace('Checking expiration for GPG key %s at date %s.' % (fingerprint,
             expiration_date))
 
-        if self.fingerprint_to_key_dict[fingerprint]['expires'] is None or 
+        if self.fingerprint_to_key_dict[fingerprint]['expires'] is None or \
             self.fingerprint_to_key_dict[fingerprint]['expires'] > expiration_date:
 
             current = True

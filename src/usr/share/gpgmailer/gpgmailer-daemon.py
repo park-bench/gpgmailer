@@ -102,7 +102,7 @@ def parse_key_config_string(key_config_string):
     key_split = key_config_string.split(':')
 
     # TODO: Eventually verify e-mail format.
-    key_dict = {'e-mail': key_split[0].strip(),
+    key_dict = {'email': key_split[0].strip(),
         'fingerprint': key_split[1].strip()}
 
     return key_dict
@@ -237,8 +237,8 @@ def check_all_keys(gpg_keyring, config):
     key_is_usable(gpg_keyring, config['sender']['fingerprint'])
 
     if not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
-        formatted_expiration_date = datetime.datetime.fromtimestamp(gpg_keyring.
-            get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S')
+        formatted_expiration_date = datetime.datetime.fromtimestamp(
+            gpg_keyring.get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S'))
         logger.warn('Sender key expired on %s.' % formatted_expiration_date)
 
     if not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
@@ -263,6 +263,7 @@ def check_all_keys(gpg_keyring, config):
 
     if expiration_warning_message is not None:
         message = 'Gpgmailer has just restarted.\n\n%s' % expiration_warning_message
+        gpgmailmessage.GpgMailMessage.configure()
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
         mail_message.set_body(message)
