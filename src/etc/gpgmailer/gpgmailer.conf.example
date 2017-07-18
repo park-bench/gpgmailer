@@ -9,12 +9,13 @@ log_file=/var/log/gpgmailer.log
 #   'debug', and 'trace'. This value is case insensitive.
 log_level=info
 
-# The location of the GnuPG keyring containing all of the keys used for sending and receiving.
-#   It is the administrator's responsibility to create and manage this keyring.
-gpg_dir=/etc/gpgmailer/gnupg/
+# gpg_dir should be the gnupg keyring directory containing all of the
+# keys you intend to use.  This is not included yet, you should set
+# this up yourself first.
+gpg_dir=/etc/gpgmailer/gnupg
 
-# The directory that gpgmailer checks for new, specially formatted JSON mail objects to send.
-watch_dir=/tmp/gpgmailer/outbox/
+# The root directory that gpgmailer checks for new JSON mail objects to send.
+watch_dir=/tmp/gpgmailer
 
 # The number of seconds between each main program loop iteration. It is 
 #   essentially how often the watch directory is checked for new e-mails. This value does not

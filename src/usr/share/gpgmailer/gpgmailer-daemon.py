@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 
-# Copyright 2015-2017 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2017 Joel Allen Luellwitz, Andrew Klapp and Brittney
+# Scaccia.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,6 +29,7 @@ import logging
 import os
 from daemon import pidlockfile
 import signal
+import subprocess
 import sys
 import time
 import traceback
@@ -36,6 +38,60 @@ pid_file = '/run/gpgmailer.pid'
 config_pathname = '/etc/gpgmailer/gpgmailer.conf'
 
 logger = None
+
+# Checks if a directory is mounted as tmpfs.
+def check_if_mounted_as_tmpfs(pathname):
+    return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
+
+# Mounts the parent watch directory as a ramdisk and creates the draft and outbox subfolders.
+#   Exit if any part of this method fails.
+def create_watch_directories(config):
+
+    logger.info('Creating watch directories.')
+
+    # Method normpath reduces the path to its simplist form.
+    watch_dir = os.path.normpath(config['watch_dir'])
+
+    try:
+        if os.path.isdir(watch_dir) == False:
+            os.makedirs(watch_dir)
+    except Exception as e:
+        logger.critical('Could not create root watch directory. %s: %s\n' %
+            (type(e).__name__, e.message))
+        logger.error(traceback.format_exc())
+        sys.exit(1)
+
+    mounted_as_tmpfs = check_if_mounted_as_tmpfs(watch_dir)
+
+    # If directory is not mounted as tmpfs and there is something in the directory, fail to
+    #   start.
+    if os.listdir(watch_dir) != [] and mounted_as_tmpfs == False:
+        logger.critical('Root watch directory is not empty and not mounted as a ramdisk. ' + \
+            'Startup failed.')
+        sys.exit(1)
+
+    # If the root watch directory is empty and not already mounted as tmpfs, mount it as tmpfs.
+    if mounted_as_tmpfs == False:
+        logger.info('Attempting to mount the root watch directory as a ramdisk.')
+        subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', watch_dir])
+
+    if check_if_mounted_as_tmpfs(watch_dir) == False:
+        logger.critical('Root watch directory was not mounted as a ramdisk. Startup failed.')
+        sys.exit(1)
+
+    outbox_dir = os.path.join(watch_dir, 'outbox')
+    draft_dir = os.path.join(watch_dir, 'draft')
+
+    try:
+        if not os.path.isdir(outbox_dir):
+            os.makedirs(outbox_dir)
+        if not os.path.isdir(draft_dir):
+            os.makedirs(draft_dir)
+    except Exception as e:
+        logger.critical('Could not create required watch sub-directories. %s: %s\n' %
+            (type(e).__name__, e.message))
+        logger.error(traceback.format_exc())
+        sys.exit(1)
 
 # Parses the e-mail:fingerprint format used in the application config file to specify e-mail/GPG
 #   key pairs.
@@ -248,6 +304,8 @@ def sig_term_handler(signal, stack_frame):
 config, log_file_handle = build_config_dict()
 parse_key_config(config)
 
+create_watch_directories(config)
+
 gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
 gpg_key_verifier = check_all_keys(gpg_keyring, config)
 
@@ -269,8 +327,6 @@ daemon_context.signal_map = {
     signal.SIGTERM : sig_term_handler
     }
 
-# TODO: Might cause an undetected merge conflict. Look for a copy of this line when merging
-#   with master.
 daemon_context.files_preserve = [log_file_handle]
 
 logger.info('Daemonizing...')
