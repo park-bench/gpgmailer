@@ -31,3 +31,30 @@ gpgmailmessage:
     - crash
 * otherwise
     - Mail is saved successfully and sent.
+
+Key management init:
+
+* All keys valid, sender is a recipient
+    - Init successfuly
+
+* All keys valid, sender is not a recipient
+    - Init successfuly
+
+* Sender key untrusted
+    - Crash
+
+* Sender key missing
+    - Crash
+
+* Sender key invalid
+    - Crash
+
+* Sender key expired, allow_expired_signing_key is false
+    - Crash
+
+* Sender key expired, allow_expired_signing_key is true
+    - Init successfuly
+
+
+
+Key management runtime:
