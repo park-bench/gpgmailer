@@ -58,3 +58,28 @@ Key management init:
 
 
 Key management runtime:
+
+* Any key disappears
+    - Crash
+
+* Any key becomes untrusted
+    - Crash
+
+* Sender key expires, allow_expired_signing_key is false
+    - Crash
+
+* Sender key expires, allow_expired_signing_key is true
+    - Send unsigned e-mail
+
+* Any recipient key enters the configured "expiring soon" period
+    - That key is still used for encryption
+    - The expiration warning is appended to all outgoing messages
+    - An expiration warning email is queued
+
+* Any recipient key expires
+    - That key is not used for encryption
+    - The expiration warning is appended to all outgoing messages
+    - An expiration warning email is queued
+
+* All recipient keys have expired
+    - Crash
