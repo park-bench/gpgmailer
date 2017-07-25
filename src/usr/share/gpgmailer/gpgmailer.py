@@ -16,156 +16,176 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import gnupg
+import base64
+import gpgkeyverifier
+import gpgmailbuilder
+import json
 import logging
-import random
-import smtplib
-import subprocess
+import mailsender
+import os
+import sys
 import time
 import traceback
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email.mime.application import MIMEApplication
-from email.mime.multipart import MIMEMultipart
-from email.Encoders import encode_7or8bit
-import base64
 
-# TODO: Write more effective logging.
-# TODO: I kinda want to review method separation and naming for the entire file.
+# Contains high level program business logic. Monitors the outbox directory, manages keys, and
+#   coordinates sending e-mail.
+class GpgMailer:
 
-class mailer ():
-    
-    def __init__(self, config):
-        self.logger = logging.getLogger()
+    # Constructs an instance of the class including creating local instances of mailsender and
+    #   gpgmailbuilder.
+    #
+    # config: The config dictionary read from the program configuration file.
+    # gpgkeyring: The GpgKeyring object containing information on all the GPG keys in the program's
+    #   keyring.
+    # gpgkeyverifier: The GpgKeyVerifier object managing key expiration for all sender and recipient
+    #   GPG keys keys.
+    def __init__(self, config, gpgkeyring, gpgkeyverifier):
+        self.logger = logging.getLogger('GpgMailer')
+        self.logger.info('Initializing gpgmailer module.')
+
         self.config = config
-        self.gpg = config['gpg']
+        self.gpgkeyring = gpgkeyring
+        self.gpgkeyverifier = gpgkeyverifier
+        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring,
+            self.config['main_loop_duration'])
+        self.mailsender = mailsender.MailSender(self.config)
 
-        self.smtp = None
+        self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
-        self._connect()
-        self.lastSentTime = time.time()
+        # Set this here so that the string equality check in _update_expiration_warning_message
+        #   evaluates to equal on the initial loop.
+        self.expiration_warning_message = gpgkeyverifier.get_expiration_warning_message(time.time())
 
-    def _connect(self):
-        # TODO: Failed DNS lookups of the mail server might be eating messages. Investigate immediately.
-        self.logger.info('Connecting.')
-        if (self.smtp != None):
-            # I originally tried to quit the existing SMTP session here, but that just slowed things down
-            #   too much and usually threw an exception.
-            self.smtp = None
-        
-        # Create a random number as our host id
-        self.logger.debug('Generating random ehlo.')
-        self.ehlo_id = str(random.SystemRandom().random()).split( '.', 1)[1]
-        self.logger.debug('Random ehlo generated.')
-        connected = False
-        while not(connected):
-	    try:
-                self.smtp = smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
-                self.logger.debug('starttls.')
-                self.smtp.starttls()
-                self.logger.debug('smtp.login.')
-                self.smtp.login(self.config['smtp_user'], self.config['smtp_pass'])
-                self.logger.info('Connected!')
-                connected = True
-            except smtplib.SMTPAuthenticationError, e:
-                # TODO: Decide how to handle authentication errors
-                self.logger.error('Failed to connect. Authentication error. Exception %s:%s' % (type(e).__name__, e.message))
-                # TODO: Make this configurable?
-                time.sleep(.1)
-            except smtplib.SMTPDataError, e:
-                # TODO: Backoff strategy
-                self.logger.error('Failed to connect. Invalid response from server. Exception %s:%s' % (type(e).__name__, e.message))
-                # TODO: Make this configurable?
-                time.sleep(.1)
-            except Exception, e:
-                self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
-                # TODO: Make this configurable?
-                time.sleep(.1)
+        self.logger.info('Done initializing gpgmailer module.')
 
-    def _build_signed_message(self, message_dict):
-        # this will sign the message text and attachments and puts them all together
-        # Make a multipart message to contain the attachments and main message text.
-        multipart_message = MIMEMultipart(_subtype="mixed")
-        multipart_message.attach(MIMEText("%s\n" % message_dict['body']))
 
-        # Loop over the attachments
-        if('attachments' in message_dict.keys()):
-            for attachment in message_dict['attachments']:
-                mime_base = MIMEBase('application', 'octet-stream')
-                mime_base.set_payload(base64.b64encode(attachment['data']))
-                mime_base.add_header('Content-Transfer-Encoding', 'base64')
-                mime_base.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
-                multipart_message.attach(mime_base)
-
-        # Removes the first line and replaces LF with CR/LF
-        message_string = str(multipart_message).split('\n', 1)[1].replace('\n', '\r\n')
-
-        # Make the signature component
-        signature_text = str(self.gpg.sign(message_string, detach=True, keyid=self.config['sender']['fingerprint'], passphrase=self.config['sender']['key_password']))
-
-        signature_part = MIMEApplication(_data=signature_text, _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)
-        signature_part['Content-Description'] = 'OpenPGP Digital Signature'
-        signature_part.set_charset('us-ascii')
-
-        # Make a box to put the message and signature in
-        signed_message = MIMEMultipart(_subtype="signed", micalg="pgp-sha1", protocol="application/pgp-signature")
-        signed_message.attach(multipart_message)
-        signed_message.attach(signature_part)
-
-        return signed_message
-
-    # TODO: We should probably name this appropriately.
-    def _eldtritch_crypto_magic(self, message_dict):
-
-        # PGP needs a version attachment
-        pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
-        pgp_version["Content-Description"] = "PGP/MIME version identification"
-        pgp_version.set_payload("Version: 1\n")
-
-        # Sign the message
-        signed_message = self._build_signed_message(message_dict)
-
-        # We need all encryption keys in a list
-        fingerprint_list = []
-        for recipient in self.config['recipients']:
-            fingerprint_list.append(recipient['fingerprint'])
-        # Encrypt the message
-        encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
-        # TODO: encrypt() can return empty if a recipient's key is not signed. We should handle this
-        #   with a proper exception.
-        encrypted_part.set_payload(str(self.gpg.encrypt(signed_message.as_string(), fingerprint_list)))
-
-        # Pack it all into one big message
-        encrypted_message = MIMEMultipart(_subtype="encrypted", protocol="application/pgp-encrypted")
-        encrypted_message['Subject'] = message_dict['subject']
-        encrypted_message.attach(pgp_version)
-        encrypted_message.attach(encrypted_part)
-
-        return encrypted_message
-
-    def sendmail(self, message_dict):
-        # Use our magic
-        encrypted_message_string = str(self._eldtritch_crypto_magic(message_dict))
-
-        # Get a list of recipients from config
-        recipients = []
-        for recipient in self.config['recipients']:
-            recipients.append(recipient['email'])
-            self.logger.trace(recipient['email'])
-
-        # Mail servers will probably deauth you after a fixed period of inactivity.
-        # TODO: There is probably also a hard session limit too.
-        if (time.time() - self.lastSentTime) > self.config['smtp_max_idle']:
-            self.logger.info("Assuming the connection is dead.")
-            self._connect()
-
+    # GpgMailer's main program loop. Reads the watch directory and then calls other modules
+    #   to build and send e-mail. Also sends warnings about GPG key expirations.
+    def start_monitoring(self):
         try:
-            self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
-        except Exception as e:
-            self.logger.error("Failed to send: %s: %s\n" % (type(e).__name__, e.message))
-            self.logger.debug(traceback.format_exc())
+            while True:
+                loop_start_time = time.time()
 
-            # Try reconnecting and resending
-            self._connect()
-            self.smtp.sendmail(self.config['sender']['email'], recipients, encrypted_message_string)
-        self.lastSentTime = time.time()
+                self.valid_recipient_emails = \
+                    self.gpgkeyverifier.get_valid_recipient_emails(loop_start_time)
+                self.valid_key_fingerprints = \
+                    self.gpgkeyverifier.get_valid_key_fingerprints(loop_start_time)
+
+                self._update_expiration_warnings(loop_start_time)
+
+                # Return a list of non-directory files in the outbox directory.
+                #   The first element of os.walk is the full path, the second is a
+                #   list of directories, and the third is a list of non-directory
+                #   files.
+                for file_name in next(os.walk(self.outbox_path))[2]:
+                    self.logger.info("Found queued e-mail in file %s." % file_name)
+                    message_dict = self._read_message_file(file_name)
+
+
+                    # Set default subject if the queued message does not have one.
+                    if message_dict['subject'] is None:
+                        message_dict['subject'] = self.config['default_subject']
+
+                    encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
+
+                    self.mailsender.sendmail(message_string=encrypted_message,
+                        recipients=self.valid_recipient_emails)
+                    self.logger.info('Message %s sent successfully.' % file_name)
+
+                    os.remove(os.path.join(self.outbox_path, file_name))
+
+                time.sleep(self.config['main_loop_delay'])
+
+        except gpgkeyverifier.NoUsableKeysException as exception:
+            self.logger.critical('No keys available for encryption. Exiting. %s: %s' % 
+                (type(exception).__name__, exception.message))
+            self.logger.critical(traceback.format_exc())
+            sys.exit(1)
+        except gpgkeyverifier.SenderKeyExpiredException as exception:
+            self.logger.critical('Sender key has expired and sending unsigned e-mails is not ' +
+                'allowed. Exiting. %s: %s' % (type(exception).__name__, exception.message))
+            self.logger.critical(traceback.format_exc())
+            sys.exit(1)
+        except Exception as exception:
+            self.logger.error('Exception %s: %s.' % (type(exception).__name__, exception.message))
+            self.logger.error(traceback.format_exc())
+
+
+    # Reads a message file from the outbox directory and builds a dictionary representing the message
+    #   appropriate for gpgmailbuilder.
+    #
+    # file_name: The name of the message file in the outbox directory. Not a full path.
+    # Returns a dictionary that represents an e-mail message.
+    def _read_message_file(self, file_name):
+        self.logger.trace('Reading message file %s.' % file_name)
+        fullpath = os.path.join(self.outbox_path, file_name)
+
+        message_dict = {}
+
+        with open(fullpath, 'r') as file_handle:
+            message_dict = json.loads(file_handle.read())
+
+        for attachment in message_dict['attachments']:
+            # Attachment data is assumed to be encoded in base64.
+            attachment['data'] = base64.b64decode(attachment['data'])
+
+        self.logger.trace('Message file %s read.' % file_name)
+
+        return message_dict
+
+
+    # Periodically checks whether the expiration warning message has changed and if it has, start
+    #   including the new expiration warning message at the top of every e-mail and send an e-mail
+    #   immediately with the updated warning.
+    #
+    # loop_start_time: The time associated with the current program loop from which all PGP key
+    #   expiration checks are based.
+    def _update_expiration_warnings(self, loop_start_time):
+
+        new_expiration_warning_message = \
+            self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
+
+        # TODO: Eventually, change this so it isn't a string comparison.
+        if self.expiration_warning_message != new_expiration_warning_message:
+            self.logger.info('The expiration status of one or more keys have changed. ' +
+                'Sending an expiration warning e-mail and updating expiration warning message.')
+            self.expiration_warning_message = new_expiration_warning_message
+
+            # Actually send the warning e-mail.
+            message_dict = {'subject': self.config['default_subject'],
+                'body': self.gpgkeyverifier.get_expiration_warning_email_message()}
+            encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
+            self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
+
+
+    # Builds an encrypted e-mail string with a signature if possible.
+    #
+    # message_dict: A dictionary containing the body, subject, and attachments of a message.
+    # loop_start_time: The time associated with the current program loop from which all PGP key
+    #   expiration checks are based.
+    # Returns a PGP/MIME encrypted e-mail message.
+    def _build_encrypted_message(self, message_dict, loop_start_time):
+
+        # See if the sender key has expired. (We exit the program elsewhere if the sender key expired
+        #   and we don't allow sending unsigned e-mails.)
+        sender_key_is_current = self.config['sender']['fingerprint'] in self.valid_key_fingerprints
+
+        if not sender_key_is_current or self.config['sender']['can_sign']:
+            message = self.gpgmailbuilder.build_encrypted_message(
+                message_dict=message_dict,
+                # Intentionally includes sender key so we can read sent e-mails.
+                # TODO: We should eventually make it an option to not include the sender key.
+                encryption_keys=self.valid_key_fingerprints,
+                loop_current_time=loop_start_time)
+
+        else:
+            message = self.gpgmailbuilder.build_signed_encrypted_message(
+                message_dict=message_dict,
+                # Intentionally includes sender key so we can read sent e-mails.
+                # TODO: We should eventually make it an option to not include the sender key.
+                encryption_keys=self.valid_key_fingerprints,
+                signing_key=self.config['sender']['fingerprint'],
+                signing_key_passphrase=self.config['sender']['password'],
+                loop_current_time=loop_start_time)
+
+        return message

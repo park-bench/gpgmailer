@@ -66,45 +66,51 @@ class GpgMailMessage:
 
         # Verify the 'configure' class method was called.
         if (self._outbox_dir == None) or (self._draft_dir == None):
+            #TODO: We should thrown our own exception here, not a builtin generic one.
             raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
                 'can be created.')
 
         self.saved = False
         self.message = {}
         self.message['attachments'] = []
+        self.message['subject'] = None
 
-    # Adds the subject of the message.
+    # Adds the plain-text subject of the message.
+    #
+    # subject: The plain-text subject to set.
     def set_subject(self, subject):
         self._check_if_saved()
         self.message['subject'] = subject
 
-    # Adds the text body of the message.
+    # Adds the plain-text body of the message.
+    #
+    # body: The plain-text body to set.
     def set_body(self, body):
         self._check_if_saved()
         self.message['body'] = body
 
     # Adds an attachment to the message.
+    #
+    # filename: The filename for the attachment.
+    # data: The binary content of the attachment.
     def add_attachment(self, filename, data):
         self._check_if_saved()
         self.message['attachments'].append({ 'filename': filename, 'data': data })
 
-    # Saves the message to the outbox directory and marks this message class as saved
+    # Saves the message to the 'outbox' directory and marks this message class instance as 'saved'
     #   meaning no addtional method calls can be made on the current message object.
     def queue_for_sending(self):
         self._check_if_saved()
 
-        # Check for subject and message, throw an exception if they aren't there
-        if self.message['subject'] == None:
-            raise Exception('Tried to save message without a subject.')
-
         if self.message['body'] == None:
+            #TODO: We should thrown our own exception here, not a builtin generic one.
             raise Exception('Tried to save message without a body.')
 
-        # Encode any attachments as base64
+        # Encode any attachments as base64.
         for attachment in self.message['attachments']:
             attachment['data'] = base64.b64encode(attachment['data'])
 
-        # Serialize into JSON
+        # Serialize into JSON.
         message_json = json.dumps(self.message)
 
         # Write message to filesystem.
@@ -125,7 +131,10 @@ class GpgMailMessage:
         # Causes all future methods calls to fail.
         self.saved = True
 
+        return self.saved
+
     # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
         if self.saved:
+            #TODO: We should thrown our own exception here, not a builtin generic one.
             raise Exception('Tried to save an already saved message.')
