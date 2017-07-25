@@ -102,11 +102,6 @@ class GpgMailMessage:
     def queue_for_sending(self):
         self._check_if_saved()
 
-        # Check for subject and message, throw an exception if they aren't there
-        if self.message['subject'] == None:
-            #TODO: We should thrown our own exception here, not a builtin generic one.
-            raise Exception('Tried to save message without a subject.')
-
         if self.message['body'] == None:
             #TODO: We should thrown our own exception here, not a builtin generic one.
             raise Exception('Tried to save message without a body.')

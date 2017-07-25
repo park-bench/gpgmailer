@@ -54,7 +54,7 @@ class GpgMailer:
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
         # Set this here so that the string equality check in _update_expiration_warning_message
-        #   evaluates to equal.
+        #   evaluates to equal on the initial loop.
         self.expiration_warning_message = gpgkeyverifier.get_expiration_warning_message(time.time())
 
         self.logger.info('Done initializing gpgmailer module.')
