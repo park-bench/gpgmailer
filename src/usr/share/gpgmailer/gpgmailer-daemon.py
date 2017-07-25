@@ -101,6 +101,18 @@ def parse_key_config_string(key_config_string):
 
     key_split = key_config_string.split(':')
 
+    if len(key_split) is not 2:
+        logger.critical('Key config %s is does not contain a colon.' % key_config_string)
+        sys.exit(1)
+
+    if not key_split[0]:
+        logger.critical("Key config %s is missing an e-mail address." % key_config_string)
+        sys.exit(1)
+
+    if not key_split[1]:
+        logger.critical("Key config %s is missing a key fingerprint." % key_config_string)
+        sys.exit(1)
+
     # TODO: Eventually verify e-mail format.
     key_dict = {'email': key_split[0].strip(),
         'fingerprint': key_split[1].strip()}
@@ -206,6 +218,8 @@ def key_is_usable(gpg_keyring, fingerprint):
 # Returns True if there are no signing errors. False otherwise.
 def signature_test(gpg_home, fingerprint, passphrase):
 
+    # TODO: Eventually, parse gpg output to notify that the password was wrong.
+    # TODO: Only perform signature test if sender key is not expired.
     success = False
     gpg = gnupg.GPG(gnupghome=gpg_home)
 
@@ -213,7 +227,7 @@ def signature_test(gpg_home, fingerprint, passphrase):
         detach=True, keyid=fingerprint, passphrase=passphrase)
 
     if str(signature_test_result).strip() == '':
-        logger.info('Signature test for %s failed.' % fingerprint)
+        logger.info('Signature test for %s failed. Check the sender key\'s passphrase.' % fingerprint)
     else:
         logger.info('Signature test for %s passed.' % fingerprint)
         success = True
@@ -240,8 +254,9 @@ def check_all_keys(gpg_keyring, config):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
             gpg_keyring.get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S'))
         logger.warn('Sender key expired on %s.' % formatted_expiration_date)
+        config['sender']['can_sign'] = False
 
-    if not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
+    elif not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
         logger.warn('Sender key failed signature test.')
         config['sender']['can_sign'] = False
 

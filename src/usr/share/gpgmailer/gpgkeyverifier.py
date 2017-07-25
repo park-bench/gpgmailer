@@ -27,6 +27,10 @@ class NoUsableKeysException(Exception):
 class SenderKeyExpiredException(Exception):
     pass
 
+# Raised when two recipient keys have the same e-mail address.
+class RecipientEmailCollision(Exception):
+    pass
+
 # Manages expiration information for the sender, recipients, and key expiration warning messages
 #   for keys that have expired or are about to expire.
 class GpgKeyVerifier:
@@ -103,6 +107,10 @@ class GpgKeyVerifier:
 
         # Record e-mail information for all the recipients.
         for recipient in config['recipients']:
+            # TODO: Eventually, handle multiple keys for one address.
+            if recipient['email'] in self.all_recipient_emails:
+                raise RecipientEmailCollision('Email %s is already configured.' % recipient['email'])
+
             email_dict = { 'fingerprint': recipient['fingerprint'],
                 'expired_email_sent': False,
                 'expiring_soon_email_sent': False,
