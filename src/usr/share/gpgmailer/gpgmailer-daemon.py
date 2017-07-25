@@ -254,8 +254,9 @@ def check_all_keys(gpg_keyring, config):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
             gpg_keyring.get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S'))
         logger.warn('Sender key expired on %s.' % formatted_expiration_date)
+        config['sender']['can_sign'] = False
 
-    if not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
+    elif not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
         logger.warn('Sender key failed signature test.')
         config['sender']['can_sign'] = False
 
