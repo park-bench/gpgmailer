@@ -19,7 +19,6 @@
 import base64
 import gpgkeyverifier
 import gpgmailbuilder
-import gpgmailmessage
 import json
 import logging
 import mailsender
