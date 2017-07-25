@@ -204,11 +204,11 @@ class GpgKeyVerifier:
                 elif expiration_data['expiring_soon']:
                     expiring_soon_messages.append(expiration_data['warning_message'])
 
-                    valid_key_fingerprints.append(self.email_dicts[recipient_email['fingerprint']])
+                    valid_key_fingerprints.append(self.email_dicts[recipient_email]['fingerprint'])
                     valid_recipient_emails.append(recipient_email)
 
                 else:
-                    valid_key_fingerprints.append(self.email_dicts[recipient_email['fingerprint']])
+                    valid_key_fingerprints.append(self.email_dicts[recipient_email]['fingerprint'])
                     valid_recipient_emails.append(recipient_email)
 
                 if expiration_data['new_message']:
