@@ -125,6 +125,11 @@ def parse_key_config_string(key_config_string):
 def build_config_dict():
 
     print('Reading %s...' % config_pathname)
+
+    if not os.path.isfile(config_pathname):
+        print('Configuration file %s is not a file. Quitting.' % config_pathname)
+        sys.exit(1)
+
     config_file = ConfigParser.RawConfigParser()
     config_file.read(config_pathname)
 
