@@ -6,3 +6,10 @@ debian/files
 src/etc/opt/gpgmailer/gnupg
 src/etc/opt/gpgmailer/gpgmailer.conf
 src/var/opt/log/gpgmailer.log
+
+debian/gpgmailer.debhelper.log
+debian/gpgmailer.postinst.debhelper
+debian/gpgmailer.postrm.debhelper
+debian/gpgmailer.prerm.debhelper
+debian/gpgmailer.substvars
+debian/gpgmailer/

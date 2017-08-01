@@ -169,9 +169,9 @@ def build_config_dict():
     expiration_warning_threshold_days = config_helper.verify_integer_within_range(config_file, 'expiration_warning_threshold', lower_bound=1)
     config['expiration_warning_threshold'] = expiration_warning_threshold_days * 86400
 
-    config['main_loop_delay'] = config_helper.verify_number_within_range(config_file, 'main_loop_delay', lower_bound=0)  # In seconds.
-    config['main_loop_duration'] = config_helper.verify_number_within_range(config_file, 'main_loop_duration', lower_bound=0)  # In seconds.
-    config['key_check_interval'] = config_helper.verify_number_within_range(config_file, 'key_check_interval', lower_bound=0)  # In seconds.
+    config['main_loop_delay'] = config_helper.verify_number_within_range(config_file, 'main_loop_delay', lower_bound=0.000001)  # In seconds.
+    config['main_loop_duration'] = config_helper.verify_number_within_range(config_file, 'main_loop_duration', lower_bound=0.000001)  # In seconds.
+    config['key_check_interval'] = config_helper.verify_number_within_range(config_file, 'key_check_interval', lower_bound=0.000001)  # In seconds.
 
     config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
