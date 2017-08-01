@@ -27,6 +27,11 @@ import os
 import shutil
 import sys
 
+# This exception is raised when mail is gpgmailer is configured but the watch
+#   directories do not exist.
+class WatchDirectoryMissingException(Exception):
+    pass
+
 # Constructs an e-mail message and serializes it to the mail queue directory.
 #   Messages are queued in JSON format.
 #
@@ -62,7 +67,7 @@ class GpgMailMessage:
 
         if not(os.path.isdir(cls._outbox_dir)) or not(os.path.isdir(cls._draft_dir)):
             logger.critical('A watch subdirectory does not exist. Quitting.')
-            sys.exit(1)
+            raise WatchDirectoryMissingException('A watch subdirectory does not exist.')
 
     # Initializes the class.
     def __init__(self):
