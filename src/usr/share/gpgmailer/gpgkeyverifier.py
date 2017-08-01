@@ -81,6 +81,7 @@ class GpgKeyVerifier:
     #
     # loop_current_time: The Unix time associated with the main program loop from which all
     #   GPG key expiration checks are based.
+    # TODO: Return None if it's an empty string.
     def get_expiration_warning_message(self, loop_current_time):
         self._update_if_expiration_info_is_stale(loop_current_time)
         return self.expiration_warning_message
@@ -91,6 +92,7 @@ class GpgKeyVerifier:
     #
     # loop_current_time: The Unix time associated with the main program loop from which all
     #   GPG key expiration checks are based.
+    # TODO: Return None if it's an empty string.
     def get_expiration_warning_email_message(self, loop_current_time):
         self._update_if_expiration_info_is_stale(loop_current_time)
         return self.expiration_warning_email_message

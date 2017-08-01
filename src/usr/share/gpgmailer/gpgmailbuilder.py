@@ -161,7 +161,7 @@ class GpgMailBuilder:
         signature_text = str(signature_result)
         signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
 
-        self.logger.trace('Used hash algorithm %s.' % signature_hash_algorithm)
+        self.logger.debug('Used hash algorithm %s.' % signature_hash_algorithm)
 
         # The GnuPG library we use does not provide any granular error information
         #   or throw any exceptions for signature operations, so checking for an
