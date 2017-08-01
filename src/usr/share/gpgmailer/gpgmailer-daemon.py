@@ -127,7 +127,7 @@ def build_config_dict():
     print('Reading %s...' % config_pathname)
 
     if not os.path.isfile(config_pathname):
-        print('Configuration file %s is not a file. Quitting.' % config_pathname)
+        print('Configuration file %s does not exist. Quitting.' % config_pathname)
         sys.exit(1)
 
     config_file = ConfigParser.RawConfigParser()
