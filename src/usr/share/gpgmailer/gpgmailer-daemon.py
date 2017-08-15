@@ -319,7 +319,7 @@ def verify_signing_config(config):
 # signal: Object representing the signal thrown.
 # stack_frame: Represents the stack frame.
 def sig_term_handler(signal, stack_frame):
-    logger.info("Quitting.")
+    logger.info("SIGTERM receive. Quitting.")
     sys.exit(0)
 
 
