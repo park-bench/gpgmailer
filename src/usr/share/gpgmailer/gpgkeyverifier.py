@@ -53,7 +53,7 @@ class GpgKeyVerifier:
         self.expiration_warning_message = ''
         self.expiration_warning_email_message = ''
         # Forces an expiration check the first time a public method is called.
-        self.next_key_check_time = 0
+        self.next_key_check_time = time.time()
 
         self._initialize_email_dicts(config)
 
@@ -303,4 +303,4 @@ class GpgKeyVerifier:
 
         if self.next_key_check_time <= loop_current_time:
             self._calculate_recipient_info(loop_current_time)
-            self.next_key_check_time = loop_current_time + self.config['key_check_interval']
+            self.next_key_check_time += self.config['key_check_interval']
