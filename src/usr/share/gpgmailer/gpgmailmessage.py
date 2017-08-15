@@ -71,6 +71,10 @@ class GpgMailMessage:
 
         self.saved = False
         self.message = {}
+        self.message['recipients'] = []
+        self.message['recipient_keys'] = []
+        # need to validate recipient keys here - at least check that it's a 40 character string,
+        # probably also need to check in this class if the key is on the keyring.
         self.message['attachments'] = []
 
     # Adds the subject of the message.
@@ -83,22 +87,40 @@ class GpgMailMessage:
         self._check_if_saved()
         self.message['body'] = body
 
+    # Adds a list of recipients.
+    #
+    # recipients: a list of one or more recipients for the message.
+    def set_recipients(self, recipients):
+        self._check_if_saved()
+        self.message['recipients'] = recipients
+
+    # Adds a list of gpg key fingerprints for recipients of the message.
+    def set_recipient_keys(self, recipient_keys):
+        self._check_if_saved()
+        self.message['recipient_keys'] = recipient_keys
+
     # Adds an attachment to the message.
     def add_attachment(self, filename, data):
         self._check_if_saved()
         self.message['attachments'].append({ 'filename': filename, 'data': data })
 
     # Saves the message to the outbox directory and marks this message class as saved
-    #   meaning no addtional method calls can be made on the current message object.
+    #   meaning no additional method calls can be made on the current message object.
     def queue_for_sending(self):
         self._check_if_saved()
 
-        # Check for subject and message, throw an exception if they aren't there
+        # Check for subject, message, and recipients. Throw an exception if they aren't there.
         if self.message['subject'] == None:
             raise Exception('Tried to save message without a subject.')
 
         if self.message['body'] == None:
             raise Exception('Tried to save message without a body.')
+
+        if self.message['recipients'] == None:
+            raise Exception('Tried to send message with no recipients.')
+
+        if self.message['recipient_keys'] == None:
+            raise Exception('Tried to send message without gpg keys for recipients.')
 
         # Encode any attachments as base64
         for attachment in self.message['attachments']:

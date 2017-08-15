@@ -27,7 +27,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
-from email.Encoders import encode_7or8bit
+from email.encoders import encode_7or8bit
 import base64
 
 # TODO: Write more effective logging.
@@ -126,9 +126,8 @@ class mailer ():
         signed_message = self._build_signed_message(message_dict)
 
         # We need all encryption keys in a list
-        fingerprint_list = []
-        for recipient in self.config['recipients']:
-            fingerprint_list.append(recipient['fingerprint'])
+        fingerprint_list = message_dict['recipient_keys']
+
         # Encrypt the message
         encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
         # TODO: encrypt() can return empty if a recipient's key is not signed. We should handle this
@@ -147,11 +146,9 @@ class mailer ():
         # Use our magic
         encrypted_message_string = str(self._eldtritch_crypto_magic(message_dict))
 
-        # Get a list of recipients from config
-        recipients = []
-        for recipient in self.config['recipients']:
-            recipients.append(recipient['email'])
-            self.logger.trace(recipient['email'])
+        recipients = message_dict['recipients']
+        for r in recipients:
+            self.logger.trace(r)
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: There is probably also a hard session limit too.

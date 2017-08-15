@@ -156,9 +156,8 @@ else:
 # <email>:<key fingerprint>,<email>:<key fingerprint>
 config['recipients'] = []
 
-recipients_raw = config_helper.verify_string_exists(config_file, 'recipients')
-recipients_split = recipients_raw.split(',')
-for r in recipients_split:
+recipients = config_helper.verify_string_list_exists(config_file, 'recipients')
+for r in recipients:
     r_split = r.split(':')
     if( len(r_split[1].strip()) != 40 ):
         logger.critical('Recipient key fingerprint for %s is invalid.' % r_split[0])
