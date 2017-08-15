@@ -282,6 +282,7 @@ def check_all_keys(gpg_keyring, config):
     expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(expiration_date)
 
     if expiration_warning_message is not None:
+        logger.warn('Sending expiration warning message email.');
         message = 'Gpgmailer has just restarted.\n\n%s' % expiration_warning_message
         gpgmailmessage.GpgMailMessage.configure()
         mail_message = gpgmailmessage.GpgMailMessage()
