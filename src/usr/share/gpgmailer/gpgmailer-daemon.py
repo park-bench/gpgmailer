@@ -302,7 +302,7 @@ def check_all_keys(gpg_keyring, config):
 def verify_signing_config(config):
 
     if not config['allow_expired_signing_key'] and not config['sender']['can_sign']:
-        logger.critical('The sender key with fingerprint %s can not sign and ' +
+        logger.critical('The sender key with fingerprint %s can not sign and '
             'unsigned e-mail is not allowed. Exiting.' % config['sender']['fingerprint'])
         sys.exit(1)
 
