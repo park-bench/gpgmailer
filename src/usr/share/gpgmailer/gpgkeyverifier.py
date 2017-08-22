@@ -107,6 +107,8 @@ class GpgKeyVerifier:
     # config: The config dictionary read from the program configuration file.
     def _initialize_email_dicts(self, config):
 
+        recipient_fingerprints = []
+
         # Record e-mail information for all the recipients.
         for recipient in config['recipients']:
             # TODO: Eventually, handle multiple keys for one address.
@@ -119,6 +121,7 @@ class GpgKeyVerifier:
                 'is_sender': False,
                 'is_recipient': True }
 
+            recipient_fingerprints.append(recipient['fingerprint'])
             self.email_dicts[recipient['email']] = email_dict
             self.all_recipient_emails.append(recipient['email'])
 
@@ -127,6 +130,9 @@ class GpgKeyVerifier:
         if self.sender_email in self.email_dicts.keys():
             # The sender is also a recipient.
             self.email_dicts[self.sender_email]['is_sender'] = True
+
+            if config['sender']['fingerprint'] not in recipient_fingerprints:
+                raise RecipientEmailCollision('Email %s is already configured with a different key.' % recipient['email'])
 
         else:
             # The sender is NOT a recipient.
