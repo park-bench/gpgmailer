@@ -52,7 +52,8 @@ class MailSender:
         self.logger.debug('Random ehlo generated.')
         connected = False
         while not(connected):
-	    try:
+            # TODO: Handle SMTP timeouts properly.
+            try:
                 self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
                 self.smtp.starttls()
