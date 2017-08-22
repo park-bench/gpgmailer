@@ -169,9 +169,9 @@ class GpgKeyVerifier:
 
         if sender_expiration_data['expiring_soon'] or sender_expiration_data['is_expired']:
             if sender_expiration_data['is_expired']:
-                if not config['allow_expired_signing_key']:
+                if not self.config['allow_expired_signing_key']:
                     raise SenderKeyExpiredException('Sender key has expired and the program is not ' +
-                        'configued to send e-mail with an expired sender GPG key.')
+                        'configured to send e-mail with an expired sender GPG key.')
 
             else:
                 # Always encrypt with the sender key. TODO: Eventually make this an option.
