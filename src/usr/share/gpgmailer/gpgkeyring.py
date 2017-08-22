@@ -46,6 +46,7 @@ class GpgKeyRing:
 
         for key in self.gpg.list_keys():
             
+            # TODO: Eventually, change key expiration date to a date object instead of an int.
             # Key expiration dates are in Unix time. An expiration date of None
             #   means that the key does not expire.
             if key['expires'] == '':

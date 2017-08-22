@@ -257,7 +257,7 @@ def check_all_keys(gpg_keyring, config):
 
     if not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
-            gpg_keyring.get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S'))
+            gpg_keyring.get_key_expiration_date(config['sender']['fingerprint'])).strftime('%Y-%m-%d %H:%M:%S')
         logger.warn('Sender key expired on %s.' % formatted_expiration_date)
         config['sender']['can_sign'] = False
 
