@@ -102,7 +102,7 @@ class GpgMailBuilder:
     # signing_key_passphrase: The passphrase for the previously mentioned GPG key.
     # loop_current_time: The Unix time associated with the main program loop from which all
     #   PGP key expiration checks are based.
-    def build_signed_message(self, message_dict, signing_key_fingerprint, singing_key_passphrase,
+    def build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_passphrase,
         loop_current_time):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
