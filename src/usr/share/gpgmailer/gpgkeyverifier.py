@@ -53,7 +53,7 @@ class GpgKeyVerifier:
         self.expiration_warning_message = ''
         self.expiration_warning_email_message = ''
         # Forces an expiration check the first time a public method is called.
-        self.next_key_check_time = 0
+        self.next_key_check_time = time.time()
 
         self._initialize_email_dicts(config)
 
@@ -107,6 +107,8 @@ class GpgKeyVerifier:
     # config: The config dictionary read from the program configuration file.
     def _initialize_email_dicts(self, config):
 
+        recipient_fingerprints = []
+
         # Record e-mail information for all the recipients.
         for recipient in config['recipients']:
             # TODO: Eventually, handle multiple keys for one address.
@@ -119,6 +121,7 @@ class GpgKeyVerifier:
                 'is_sender': False,
                 'is_recipient': True }
 
+            recipient_fingerprints.append(recipient['fingerprint'])
             self.email_dicts[recipient['email']] = email_dict
             self.all_recipient_emails.append(recipient['email'])
 
@@ -127,6 +130,9 @@ class GpgKeyVerifier:
         if self.sender_email in self.email_dicts.keys():
             # The sender is also a recipient.
             self.email_dicts[self.sender_email]['is_sender'] = True
+
+            if config['sender']['fingerprint'] not in recipient_fingerprints:
+                raise RecipientEmailCollision('Email %s is already configured with a different key.' % recipient['email'])
 
         else:
             # The sender is NOT a recipient.
@@ -163,9 +169,9 @@ class GpgKeyVerifier:
 
         if sender_expiration_data['expiring_soon'] or sender_expiration_data['is_expired']:
             if sender_expiration_data['is_expired']:
-                if not config['allow_expired_signing_key']:
+                if not self.config['allow_expired_signing_key']:
                     raise SenderKeyExpiredException('Sender key has expired and the program is not ' +
-                        'configued to send e-mail with an expired sender GPG key.')
+                        'configured to send e-mail with an expired sender GPG key.')
 
             else:
                 # Always encrypt with the sender key. TODO: Eventually make this an option.
@@ -303,4 +309,4 @@ class GpgKeyVerifier:
 
         if self.next_key_check_time <= loop_current_time:
             self._calculate_recipient_info(loop_current_time)
-            self.next_key_check_time = loop_current_time + self.config['key_check_interval']
+            self.next_key_check_time += self.config['key_check_interval']

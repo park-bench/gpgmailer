@@ -153,7 +153,7 @@ class GpgMailer:
 
             # Actually send the warning e-mail.
             message_dict = {'subject': self.config['default_subject'],
-                'body': self.gpgkeyverifier.get_expiration_warning_email_message()}
+                'body': self.gpgkeyverifier.get_expiration_warning_email_message(loop_start_time)}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
             self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
 

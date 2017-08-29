@@ -257,7 +257,7 @@ def check_all_keys(gpg_keyring, config):
 
     if not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
-            gpg_keyring.get_key_expiration_date(config['sender']['fingerprint']).strftime('%Y-%m-%d %H:%M:%S'))
+            gpg_keyring.get_key_expiration_date(config['sender']['fingerprint'])).strftime('%Y-%m-%d %H:%M:%S')
         logger.warn('Sender key expired on %s.' % formatted_expiration_date)
         config['sender']['can_sign'] = False
 
@@ -302,7 +302,7 @@ def check_all_keys(gpg_keyring, config):
 def verify_signing_config(config):
 
     if not config['allow_expired_signing_key'] and not config['sender']['can_sign']:
-        logger.critical('The sender key with fingerprint %s can not sign and ' +
+        logger.critical('The sender key with fingerprint %s can not sign and '
             'unsigned e-mail is not allowed. Exiting.' % config['sender']['fingerprint'])
         sys.exit(1)
 
@@ -319,7 +319,7 @@ def verify_signing_config(config):
 # signal: Object representing the signal thrown.
 # stack_frame: Represents the stack frame.
 def sig_term_handler(signal, stack_frame):
-    logger.info("Quitting.")
+    logger.info("SIGTERM receive. Quitting.")
     sys.exit(0)
 
 
