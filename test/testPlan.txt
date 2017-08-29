@@ -31,3 +31,124 @@ gpgmailmessage:
     - crash
 * otherwise
     - Mail is saved successfully and sent.
+
+Program init:
+* Configuration file is missing.
+    - Crash.
+* Remove each required option.
+    - Crash with decent message.
+* Test each option that will not accept blanks.
+    - Crash with decent message.
+* Perform out of range checks.
+    - Crash with decent message.
+* Check that colon exists in e-mail/key string.
+    - Crash with decent message.
+* Check that a non blank string exists on both sides of the colon in e-mail/key string.
+    - Crash with decent message.
+
+Key management init:
+* All keys valid, sender is a recipient
+    - Init successfuly
+* All keys valid, sender is not a recipient
+    - Init successfuly
+* Sender key untrusted
+    - Crash with decent message.
+* Sender key missing
+    - Crash with decent message.
+* Sender key invalid (not a 40 character hex string)
+    - Crash with decent message.
+* Sender key expired, allow_expired_signing_key is false
+    - Crash with decent message.
+* Sender key expired, allow_expired_signing_key is true
+    - Log warning message.
+    - Receive e-mail with this warning.
+    - Init successfuly
+* Recipient key untrusted
+    - Crash with decent message.
+* Recipient key missing
+    - Crash with decent message.
+* Recipient key invalid (not a 40 character hex string)
+    - Crash with decent message.
+* Recipient key is expired.
+    - Log warning.
+    - Receive e-mail with this warning.
+* No valid recipients.
+    - Crash with decent message.
+* Termination Signal.
+    - Logs info message and quits.
+* Sender key has bad passphrase.
+    - Crash if signing is required.
+    - Continue if signing is not required.
+    - Regardless, something should tell the user to check his/her passphrase.
+* A recipient e-mail address is in the configuraiton file twice.
+* Test when the sender is also a recipient.
+
+Regular operation:
+* The regular warning message is not sent on the first loop given the program starts with a problematic key.
+* The program actually sends mail without attachments when a message is put in the queue.
+* The program actually sends mail with attachments when a message is put in the queue.
+* An e-mail is sent with the specified subject.
+* An e-mail is sent with the default subject.
+* An e-mail is sent when the sender can sign.
+* An e-mail is sent when the sender cannot sign.
+* Test the sender expiring while the program is running.
+* Test a recipient expiring while the program is running.
+* Test all recipients expiring while the program is running (but not the sender).
+* Test everyone expires while the program is running.
+* Messages are also encrypted with the sender key.
+* The appropriate recipient keys are used.
+* The appropriate e-mail addresses are used (not the sender e-mail address).
+* Test wrong e-mail username
+  * Error is logged.
+* Test wrong e-mail password
+  * Error is logged.
+* Test wrong server address.
+  * Error is logged.
+* Test wrong server port.
+  * Error is logged.
+* Test when Google times out out after 10 minutes.
+  * We reconnect and send the e-mail.
+* Test when timeout time is set to high.
+  * We reconnect and send the e-mail.
+* Verify SHA512 is used.
+* Create a unit test to test signing only.
+* Test when signing fails only in sign_message.
+  * An exception is thrown.
+* Test when encryption fails only the encrypt_message.
+  * An exception is thrown.
+* Test when trust fails in sign_message only.
+  * An exception is thrown.
+* Test when key is not current in sign_message only.
+  * An exception is thrown.
+
+Key management runtime:
+* Sender key expires, allow_expired_signing_key is false
+    - Crash
+* Sender key expires soon.
+    - One warning in the log.
+    - Send e-mail with that warning.
+* Sender key expires, allow_expired_signing_key is true
+    - Warning in log message.
+    - Send warning e-mail stating the key expires.
+    - Externally triggered e-mails still get sent.
+* The same as above but when the sender is also a recipient.
+    - E-mail message is different for the sender.
+* Sender key has expired and signing is required.
+    - Program crashes with appropriate log message.
+* Any recipient key enters the configured "expiring soon" period
+    - That key is still used for encryption
+    - The expiration warning is appended to all outgoing messages
+    - A warning appears once in the log.
+    - An expiration warning email is queued
+* Any recipient key expires
+    - That key is not used for encryption
+    - The expiration warning is appended to all outgoing messages
+    - A warning message is logged once.
+    - An expiration warning email is queued.
+    - Messages are still sent to all recipients but the expired recipient won't be able to decrypt.
+* All recipient keys have expired
+    - Crash
+* Test sender expiration message when sender is also a recipient.
+    - Message should indicate sender is also a recipient.
+* Test expiration recalculation. (Make sure enough time has passed for a recalculation to occur.)
+* Test keys that don't expire.

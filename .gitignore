@@ -2,7 +2,15 @@ debian/tmp
 debian/debhelper.log
 debian/files
 *.pyc
+*.swp
 src/etc/opt/gpgmailer/gnupg
 src/etc/opt/gpgmailer/gpgmailer.conf
 src/var/opt/log/gpgmailer.log
 .idea/
+
+debian/gpgmailer.debhelper.log
+debian/gpgmailer.postinst.debhelper
+debian/gpgmailer.postrm.debhelper
+debian/gpgmailer.prerm.debhelper
+debian/gpgmailer.substvars
+debian/gpgmailer/

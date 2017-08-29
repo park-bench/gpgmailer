@@ -27,6 +27,11 @@ import os
 import shutil
 import sys
 
+# This exception is raised when mail is gpgmailer is configured but the watch
+#   directories do not exist.
+class WatchDirectoryMissingException(Exception):
+    pass
+
 # Constructs an e-mail message and serializes it to the mail queue directory.
 #   Messages are queued in JSON format.
 #
@@ -57,15 +62,19 @@ class GpgMailMessage:
         cls._outbox_dir = os.path.join(mail_dir, 'outbox')
         cls._draft_dir = os.path.join(mail_dir, 'draft')
 
+        # TODO: If the watch directory is not on a ramdisk, (i.e. if the daemon has
+        #   not started) and mail is saved, then the daemon will fail to start.
+
         if not(os.path.isdir(cls._outbox_dir)) or not(os.path.isdir(cls._draft_dir)):
             logger.critical('A watch subdirectory does not exist. Quitting.')
-            sys.exit(1)
+            raise WatchDirectoryMissingException('A watch subdirectory does not exist.')
 
     # Initializes the class.
     def __init__(self):
 
         # Verify the 'configure' class method was called.
         if (self._outbox_dir == None) or (self._draft_dir == None):
+            #TODO: We should thrown our own exception here, not a builtin generic one.
             raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
                 'can be created.')
 
@@ -76,13 +85,18 @@ class GpgMailMessage:
         # need to validate recipient keys here - at least check that it's a 40 character string,
         # probably also need to check in this class if the key is on the keyring.
         self.message['attachments'] = []
+        self.message['subject'] = None
 
-    # Adds the subject of the message.
+    # Adds the plain-text subject of the message.
+    #
+    # subject: The plain-text subject to set.
     def set_subject(self, subject):
         self._check_if_saved()
         self.message['subject'] = subject
 
-    # Adds the text body of the message.
+    # Adds the plain-text body of the message.
+    #
+    # body: The plain-text body to set.
     def set_body(self, body):
         self._check_if_saved()
         self.message['body'] = body
@@ -100,11 +114,14 @@ class GpgMailMessage:
         self.message['recipient_keys'] = recipient_keys
 
     # Adds an attachment to the message.
+    #
+    # filename: The filename for the attachment.
+    # data: The binary content of the attachment.
     def add_attachment(self, filename, data):
         self._check_if_saved()
         self.message['attachments'].append({ 'filename': filename, 'data': data })
 
-    # Saves the message to the outbox directory and marks this message class as saved
+    # Saves the message to the 'outbox' directory and marks this message class instance as 'saved'
     #   meaning no additional method calls can be made on the current message object.
     def queue_for_sending(self):
         self._check_if_saved()
@@ -114,8 +131,10 @@ class GpgMailMessage:
             raise Exception('Tried to save message without a subject.')
 
         if self.message['body'] == None:
+            #TODO: We should thrown our own exception here, not a builtin generic one.
             raise Exception('Tried to save message without a body.')
 
+        # Encode any attachments as base64.
         if self.message['recipients'] == None:
             raise Exception('Tried to send message with no recipients.')
 
@@ -126,7 +145,7 @@ class GpgMailMessage:
         for attachment in self.message['attachments']:
             attachment['data'] = base64.b64encode(attachment['data'])
 
-        # Serialize into JSON
+        # Serialize into JSON.
         message_json = json.dumps(self.message)
 
         # Write message to filesystem.
@@ -147,7 +166,10 @@ class GpgMailMessage:
         # Causes all future methods calls to fail.
         self.saved = True
 
+        return self.saved
+
     # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
         if self.saved:
+            #TODO: We should thrown our own exception here, not a builtin generic one.
             raise Exception('Tried to save an already saved message.')
