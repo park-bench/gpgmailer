@@ -48,6 +48,7 @@ class GpgMailMessage:
 
     # Reads the gpgmailer config file to obtain the watch directory's path name.
     #   This method must be called before any instances are created.
+    # TODO: Make this method so it can be called twice.
     @classmethod
     def configure(cls):
         logger = logging.getLogger('GpgMailMessage')

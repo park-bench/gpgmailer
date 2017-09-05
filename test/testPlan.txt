@@ -27,7 +27,9 @@ GPG Mailer Daemon - directory management:
 gpgmailmessage: 
 * watch directory does not exist
     - crash
-* GpgMailMessage.configure has not been called
+* Call set_subject, set_body, add_attachment, and queue_for_sending after queue_for_sending. (Might best be tested with unit test.)
+    - crash
+* GpgMailMessage.configure has not been called. (Might best be tested with unit test.)
     - crash
 * otherwise
     - Mail is saved successfully and sent.
