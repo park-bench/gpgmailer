@@ -13,7 +13,7 @@ log_file = "/dev/null"
 log_level = "TRACE"
 max_operation_time = 60
 signing_key_fingerprint = '32C39D741B2D0F56A57F3BD5C98DBEA2DE6613E9'
-signing_key_passphrase = 'lk\4+v4*SL3r{vm^S(R";uP-l)nT+%)Ku;{0gS+"a5"1t;+6\'c]}TX4H)`c2'
+signing_key_passphrase = 'lk\\4+v4*SL3r{vm^S(R";uP-l)nT+%)Ku;{0gS+"a5"1t;+6\'c]}TX4H)`c2'
 test_keyring_directory = './gpgmailbuilder-test-keyring'
 
 message = {
@@ -34,14 +34,14 @@ class gpgmailbuildertest(unittest.TestCase):
         cls.gpgkeyring = gpgkeyring.GpgKeyRing(test_keyring_directory)
         cls.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(cls.gpgkeyring, max_operation_time)
 
-        print(cls.gpgkeyring.fingerprint_to_key_dict)
+    def setUp(self):
+        self.loop_current_time = time.time()
 
+    # Happy path test. We just don't want it to raise exceptions.
     def test_sign_message(self):
-        # sign message
-        # verify signature with gnupg
-        loop_current_time = time.time()
         signed_message = self.gpgmailbuilder.build_signed_message(message, signing_key_fingerprint,
-            signing_key_passphrase, loop_current_time)
+            signing_key_passphrase, self.loop_current_time)
+        # TODO: Eventually, consider verifying the signature here.
 
     def test_signing_failed(self):
         # should raise SignatureError

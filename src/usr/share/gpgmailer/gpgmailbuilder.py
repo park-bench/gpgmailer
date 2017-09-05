@@ -165,6 +165,7 @@ class GpgMailBuilder:
         #   empty string is all we have.
         if signature_text.strip() == '':
             # TODO: Eventually, use signature_text.stderr for more granular error handling.
+            self.logger.error(signature_result.stderr)
             raise SignatureError('Error while signing message.')
 
         signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
