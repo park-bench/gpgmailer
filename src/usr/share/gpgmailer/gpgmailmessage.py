@@ -27,8 +27,7 @@ import os
 import shutil
 import sys
 
-# This exception is raised when mail is gpgmailer is configured but the watch
-#   directories do not exist.
+# This exception is raised when gpgmailer is configured but the watch directories do not exist.
 class WatchDirectoryMissingException(Exception):
     pass
 
@@ -63,7 +62,7 @@ class GpgMailMessage:
         cls._draft_dir = os.path.join(mail_dir, 'draft')
 
         # TODO: If the watch directory is not on a ramdisk, (i.e. if the daemon has
-        #   not started) and mail is saved, then the daemon will fail to start.
+        #   not started) and mail is saved, then the daemon should fail to start.
 
         if not(os.path.isdir(cls._outbox_dir)) or not(os.path.isdir(cls._draft_dir)):
             logger.critical('A watch subdirectory does not exist. Quitting.')
