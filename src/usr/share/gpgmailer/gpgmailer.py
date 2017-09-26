@@ -153,7 +153,7 @@ class GpgMailer:
 
             # Actually send the warning e-mail.
             message_dict = {'subject': self.config['default_subject'],
-                'body': self.gpgkeyverifier.get_expiration_warning_email_message(loop_start_time)}
+                'body': 'The expiration status of one or more keys have changed.'}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
             self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
 
@@ -169,6 +169,7 @@ class GpgMailer:
         # See if the sender key has expired. (We exit the program elsewhere if the sender key expired
         #   and we don't allow sending unsigned e-mails.)
         sender_key_is_current = self.config['sender']['fingerprint'] in self.valid_key_fingerprints
+        message_dict['body'] = '%s\n\n%s' % (self.expiration_warning_message, message_dict['body'])
 
         if not sender_key_is_current or not self.config['sender']['can_sign']:
             message = self.gpgmailbuilder.build_encrypted_message(

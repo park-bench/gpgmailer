@@ -281,7 +281,7 @@ class GpgKeyVerifier:
             expiring_soon = True
             key_expiration_date = datetime.datetime.fromtimestamp(
                 self.gpgkeyring.get_key_expiration_date(fingerprint)).strftime('%Y-%m-%d %H:%M:%S')
-            expiration_warning_message = ('%s key %s (%s) will expire on date %s.' % \
+            expiration_warning_message = ('%s key %s (%s) will expire on %s.' % \
                 (address_type, fingerprint, email, key_expiration_date))
             self.logger.trace(expiration_warning_message)
 
