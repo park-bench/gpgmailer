@@ -18,7 +18,7 @@ The only current method of installation for our software is building and install
 
 ## Parkbench Dependencies
 
-_watchman_ depends on one other piece of the Parkbench project, which must be installed first:
+_gpgmailer_ depends on one other piece of the Parkbench project, which must be installed first:
 
 * [_confighelper_](https://github.com/park-bench/confighelper)
 

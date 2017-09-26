@@ -170,7 +170,7 @@ class GpgMailer:
         #   and we don't allow sending unsigned e-mails.)
         sender_key_is_current = self.config['sender']['fingerprint'] in self.valid_key_fingerprints
 
-        if not (sender_key_is_current or self.config['sender']['can_sign']):
+        if not sender_key_is_current or not self.config['sender']['can_sign']:
             message = self.gpgmailbuilder.build_encrypted_message(
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.

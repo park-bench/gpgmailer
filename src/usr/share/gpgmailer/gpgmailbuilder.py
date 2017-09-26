@@ -102,7 +102,7 @@ class GpgMailBuilder:
     # signing_key_passphrase: The passphrase for the previously mentioned GPG key.
     # loop_current_time: The Unix time associated with the main program loop from which all
     #   PGP key expiration checks are based.
-    def build_signed_message(self, message_dict, signing_key_fingerprint, singing_key_passphrase,
+    def build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_passphrase,
         loop_current_time):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
@@ -159,16 +159,18 @@ class GpgMailBuilder:
         signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint,
             passphrase=signing_key_passphrase)
         signature_text = str(signature_result)
-        signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
-
-        self.logger.debug('Used hash algorithm %s.' % signature_hash_algorithm)
 
         # The GnuPG library we use does not provide any granular error information
         #   or throw any exceptions for signature operations, so checking for an
         #   empty string is all we have.
         if signature_text.strip() == '':
             # TODO: Eventually, use signature_text.stderr for more granular error handling.
+            self.logger.error(signature_result.stderr)
             raise SignatureError('Error while signing message.')
+
+        signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
+
+        self.logger.debug('Used hash algorithm %s.' % signature_hash_algorithm)
 
         signature_part = MIMEApplication(_data=signature_text,
             _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)
