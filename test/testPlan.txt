@@ -156,6 +156,7 @@ Key management runtime:
     - A warning message is logged once.
     - An expiration warning email is queued.
     - Messages are still sent to all recipients but the expired recipient won't be able to decrypt.
+        (The 0.7 release will not do this, but the 0.8 release should.)
 * All recipient keys have expired
     - Crash
 * Test sender expiration message when sender is also a recipient.
