@@ -77,7 +77,7 @@ class GpgMailer:
                 #   The first element of os.walk is the full path, the second is a
                 #   list of directories, and the third is a list of non-directory
                 #   files.
-                for file_name in next(os.walk(self.outbox_path))[2]:
+                for file_name in sorted(next(os.walk(self.outbox_path))[2]):
                     self.logger.info("Found queued e-mail in file %s." % file_name)
                     message_dict = self._read_message_file(file_name)
 

@@ -1,14 +1,14 @@
 Note: These test cases are not yet complete.
 
 GPG Mailer Daemon - directory management:
-* /tmp/gpgmailer does not exist or is not a directory.
+* /tmp/gpgmailer does not exist.
     - Create it, mount tmpfs and continue
-* /tmp/gpgmailer exists and is a directory.
+* /tmp/gpgmailer is not a directory.
+    - Crash
+* /tmp/gpgmailer exists and is an empty directory.
     - Mount tmpfs and continue
 * /tmp/gpgmailer is not tmpfs and directory not empty.
     - Crash
-* /tmp/gpgmailer is not tmpfs and empty
-    - Mount tmpfs and continue
 * /tmp/gpgmailer is tmpfs and empty
     - Create subdirectories and continue
 * /tmp/gpgmailer is tmpfs and not empty
@@ -19,7 +19,9 @@ GPG Mailer Daemon - directory management:
     - Continue
 * outbox and draft do not exist
     - Create and continue
-* outbox and draft cannot be created (ex: because they are files)
+* outbox cannot be created (ex: because it is a file)
+    - Crash
+* draft cannot be created (ex: because it is a file)
     - Crash
 * mail exists in outbox.
     - It should be sent
@@ -41,12 +43,18 @@ Program init:
     - Crash with decent message.
 * Test each option that will not accept blanks.
     - Crash with decent message.
+* Verify numbers fields only accept numbers.
+    - Crash with decent message.
+* Verify integer fields don't accept floats.
+    - Crash with decent message.
 * Perform out of range checks.
     - Crash with decent message.
 * Check that colon exists in e-mail/key string.
     - Crash with decent message.
 * Check that a non blank string exists on both sides of the colon in e-mail/key string.
     - Crash with decent message.
+* Verify no passwords are displayed in console (except maybe at trace log level).
+* Verify no passwords are displayed in log file (except maybe at trace log level).
 
 Key management init:
 * All keys valid, sender is a recipient
