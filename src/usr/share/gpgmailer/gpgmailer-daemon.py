@@ -99,21 +99,25 @@ def create_watch_directories(config):
 # Parses the e-mail:fingerprint format used in the application config file to specify e-mail/GPG
 #   key pairs.
 #
+# configuration_option: The name of the configuration option being parsed.
 # key_config_string: The formatted string to parse.
-def parse_key_config_string(key_config_string):
+def parse_key_config_string(configuration_option, key_config_string):
 
     key_split = key_config_string.split(':')
 
     if len(key_split) is not 2:
-        logger.critical('Key config %s is does not contain a colon.' % key_config_string)
+        logger.critical('Key config %s for %s is does not contain a colon.' % \
+            (key_config_string, configuration_option))
         sys.exit(1)
 
     if not key_split[0]:
-        logger.critical("Key config %s is missing an e-mail address." % key_config_string)
+        logger.critical("Key config %s for %s is missing an e-mail address." % \
+            (key_config_string, configuration_option))
         sys.exit(1)
 
     if not key_split[1]:
-        logger.critical("Key config %s is missing a key fingerprint." % key_config_string)
+        logger.critical("Key config %s for %s is missing a key fingerprint." % \
+            (key_config_string, configuration_option))
         sys.exit(1)
 
     # TODO: Eventually verify e-mail format.
@@ -141,6 +145,7 @@ def build_config_dict():
     # Figure out the logging options so that can start before anything else.
     print('Configuring logger.')
     log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
+    # TODO: Eventually add a verify_string_list method.
     log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
 
     config_helper.configure_logger(log_file, log_level)
@@ -191,7 +196,7 @@ def build_config_dict():
 # config: The config dictionary to process.
 def parse_key_config(config):
 
-    sender_key_data = parse_key_config_string(config['sender_string'])
+    sender_key_data = parse_key_config_string('sender', config['sender_string'])
     config['sender']['fingerprint'] = sender_key_data['fingerprint']
     config['sender']['email'] = sender_key_data['email']
 
@@ -199,7 +204,7 @@ def parse_key_config(config):
     recipients = []
 
     for recipient_config in recipients_config_list:
-        recipients.append(parse_key_config_string(recipient_config))
+        recipients.append(parse_key_config_string('recipients', recipient_config))
 
     config['recipients'] = recipients
 
@@ -228,7 +233,6 @@ def key_is_usable(gpg_keyring, fingerprint):
 def signature_test(gpg_home, fingerprint, passphrase):
 
     # TODO: Eventually, parse gpg output to notify that the password was wrong.
-    # TODO: Only perform signature test if sender key is not expired.
     success = False
     gpg = gnupg.GPG(gnupghome=gpg_home)
 

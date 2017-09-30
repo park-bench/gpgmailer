@@ -62,8 +62,9 @@ class GpgMailer:
     # GpgMailer's main program loop. Reads the watch directory and then calls other modules
     #   to build and send e-mail. Also sends warnings about GPG key expirations.
     def start_monitoring(self):
-        try:
-            while True:
+        while True:
+            try:
+
                 loop_start_time = time.time()
 
                 self.valid_recipient_emails = \
@@ -96,19 +97,19 @@ class GpgMailer:
 
                 time.sleep(self.config['main_loop_delay'])
 
-        except gpgkeyverifier.NoUsableKeysException as exception:
-            self.logger.critical('No keys available for encryption. Exiting. %s: %s' % 
-                (type(exception).__name__, exception.message))
-            self.logger.critical(traceback.format_exc())
-            sys.exit(1)
-        except gpgkeyverifier.SenderKeyExpiredException as exception:
-            self.logger.critical('Sender key has expired and sending unsigned e-mails is not ' +
-                'allowed. Exiting. %s: %s' % (type(exception).__name__, exception.message))
-            self.logger.critical(traceback.format_exc())
-            sys.exit(1)
-        except Exception as exception:
-            self.logger.error('Exception %s: %s.' % (type(exception).__name__, exception.message))
-            self.logger.error(traceback.format_exc())
+            except gpgkeyverifier.NoUsableKeysException as exception:
+                self.logger.critical('No keys available for encryption. Exiting. %s: %s' %
+                    (type(exception).__name__, exception.message))
+                self.logger.critical(traceback.format_exc())
+                sys.exit(1)
+            except gpgkeyverifier.SenderKeyExpiredException as exception:
+                self.logger.critical('Sender key has expired and sending unsigned e-mails is not ' +
+                    'allowed. Exiting. %s: %s' % (type(exception).__name__, exception.message))
+                self.logger.critical(traceback.format_exc())
+                sys.exit(1)
+            except Exception as exception:
+                self.logger.error('Exception %s: %s.' % (type(exception).__name__, exception.message))
+                self.logger.error(traceback.format_exc())
 
 
     # Reads a message file from the outbox directory and builds a dictionary representing the message

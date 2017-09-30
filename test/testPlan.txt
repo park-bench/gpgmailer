@@ -1,5 +1,3 @@
-Note: These test cases are not yet complete.
-
 GPG Mailer Daemon - directory management:
 * /tmp/gpgmailer does not exist.
     - Create it, mount tmpfs and continue
@@ -27,11 +25,21 @@ GPG Mailer Daemon - directory management:
     - It should be sent
 
 gpgmailmessage: 
-* watch directory does not exist
+* config file does not exist
+    - crash with error message
+* watch_dir does not exist in the config file.
+    - crash with error message
+* watch_dir not specified in the config file.
+    - crash with error message
+* output or draft directory does not exist
     - crash
-* Call set_subject, set_body, add_attachment, and queue_for_sending after queue_for_sending. (Might best be tested with unit test.)
+* output or draft are not directories
     - crash
-* GpgMailMessage.configure has not been called. (Might best be tested with unit test.)
+* set_body, add_attachment, add_subject, or queue_for_sending called after queue_for_sending
+    - crash
+* queue_for_sending called and set_body never called.
+    - crash
+* GpgMailMessage.configure has not been called
     - crash
 * otherwise
     - Mail is saved successfully and sent.
@@ -63,7 +71,7 @@ Key management init:
     - Init successfuly
 * Sender key untrusted
     - Crash with decent message.
-* Sender key missing
+* Sender key missing from keyring
     - Crash with decent message.
 * Sender key invalid (not a 40 character hex string)
     - Crash with decent message.
@@ -119,6 +127,8 @@ Regular operation:
 * Test when Google times out out after 10 minutes.
   * We reconnect and send the e-mail.
 * Test when timeout time is set to high.
+  * We reconnect and send the e-mail.
+* Test when timeout time is set to low.
   * We reconnect and send the e-mail.
 * Verify SHA512 is used.
 * Create a unit test to test signing only.
