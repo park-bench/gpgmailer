@@ -28,21 +28,19 @@ message = {
 
 class gpgmailbuildertest(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         # Load the keyring
         # Initialize gpgmailbuilder
 
         config_helper = confighelper.ConfigHelper()
         config_helper.configure_logger(log_file, log_level)
-        cls.logger = logging.getLogger(__name__)
-        cls.gpgkeyring = gpgkeyring.GpgKeyRing(test_keyring_directory)
-        cls.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(cls.gpgkeyring, max_operation_time)
+        self.logger = logging.getLogger(__name__)
+        self.gpgkeyring = gpgkeyring.GpgKeyRing(test_keyring_directory)
+        self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring, max_operation_time)
 
-        cls.logger.info('Test class setup complete.')
-
-    def setUp(self):
         self.loop_current_time = time.time()
+
+        self.logger.info('Test class setup complete.')
 
     # Happy path test. We just don't want it to raise exceptions.
     def test_sign_message(self):
@@ -63,8 +61,8 @@ class gpgmailbuildertest(unittest.TestCase):
     # Any untrusted keys should throw an exception
     def test_signing_key_untrusted(self):
         self.logger.info('Testing signature with untrusted key.')
-        # should raise GpgKeyUntrustedException
-        with self.assertRaises(gpgmailbuilder.GpgKeyUntrustedException):
+        # should raise GpgKeyNotValidatedException
+        with self.assertRaises(gpgmailbuilder.GpgKeyNotValidatedException):
             signed_message = self.gpgmailbuilder.build_signed_message(message, untrusted_signing_key_fingerprint,
                 signing_key_correct_passphrase, self.loop_current_time)
 
