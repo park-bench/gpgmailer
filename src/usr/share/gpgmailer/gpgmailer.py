@@ -170,7 +170,9 @@ class GpgMailer:
         # See if the sender key has expired. (We exit the program elsewhere if the sender key expired
         #   and we don't allow sending unsigned e-mails.)
         sender_key_is_current = self.config['sender']['fingerprint'] in self.valid_key_fingerprints
-        message_dict['body'] = '%s\n\n%s' % (self.expiration_warning_message, message_dict['body'])
+
+        if self.expiration_warning_message is not None:
+            message_dict['body'] = '%s\n\n%s' % (self.expiration_warning_message, message_dict['body'])
 
         if not sender_key_is_current or not self.config['sender']['can_sign']:
             message = self.gpgmailbuilder.build_encrypted_message(

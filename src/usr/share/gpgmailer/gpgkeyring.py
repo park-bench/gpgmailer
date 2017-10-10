@@ -52,7 +52,7 @@ class GpgKeyRing:
             if key['expires'] != '':
                 expires = int(key['expires'])
 
-            signed = _is_key_signed(gpg_key)
+            signed = self._is_key_signed(key)
 
             self.fingerprint_to_key_dict[key['fingerprint']] = {
                 'expires': expires,
@@ -83,6 +83,15 @@ class GpgKeyRing:
             self.logger.trace('Key %s expired after date %s.' % (fingerprint, expiration_date))
 
         return current
+
+
+    # Checks if a GPG key with the given fingerprint is signed.
+    #
+    # fingerprint: The fingerprint of the GPG key to check.
+    def is_signed(self, fingerprint):
+        self._fingerprint_is_valid(fingerprint)
+
+        return self.fingerprint_to_key_dict[fingerprint]['signed']
 
 
     # Checks if a GPG key with the given fingerprint is trusted.
@@ -120,17 +129,17 @@ class GpgKeyRing:
     #   otherwise. (We currently have no 100% reliable way to determine if a key is signed. However,
     #   with later versions of the gnupg library, we will eventually be able to determine this
     #   accurately.
-    def _is_key_signed(gpg_key):
+    def _is_key_signed(self, gpg_key):
 
         signed = True
 
         # We assume the key is signed if the key is expired since we have no way of knowing if it
         #   is really signed or not.
-        if expires is None or expires > time.time():
+        if gpg_key['expires'] is None or gpg_key['expires'] > time.time():
 
             # Try to encrypt a test string. The key is considered signed if we encrypt successfully.
-            encrypted_payload = self.gpg.encrypt(data="Test string.",
-                recipients=[key['fingerprint']])
+            encrypted_payload = self.gpg.encrypt(data='Test string.',
+                recipients=[gpg_key['fingerprint']])
 
             # The key probably isn't signed if the string did not encrypt.
             if encrypted_payload.ok == False:
@@ -138,7 +147,7 @@ class GpgKeyRing:
                 # Theoretically the key could have expired since our last expiration check.
                 #   (Immediately before encrypting.) If so, assume the encryption failed because
                 #   the key expired. (Skip setting signed to false.)
-                if expires is not None and expires <= time.time():
+                if gpg_key['expires'] is not None and gpg_key['expires'] <= time.time():
                     signed = False
 
         return signed

@@ -69,6 +69,10 @@ Key management init:
     - Init successfuly
 * All keys valid, sender is not a recipient
     - Init successfuly
+* Key is trusted because of ultimate owner trust.
+    - Send e-mail successfully.
+* Key is trusted because of level 3 signature (or web of trust).
+    - Send e-mail successfully.
 * Sender key untrusted
     - Crash with decent message.
 * Sender key missing from keyring
@@ -81,7 +85,7 @@ Key management init:
     - Log warning message.
     - Receive e-mail with this warning.
     - Init successfuly
-* Recipient key untrusted
+* Recipient key untrusted or not signed.
     - Crash with decent message.
 * Recipient key missing
     - Crash with decent message.
