@@ -1,6 +1,7 @@
 *.pyc
 *.swp
 debian/debhelper.log
+debian/debhelper-build-stamp
 debian/files
 debian/gpgmailer.debhelper.log
 debian/gpgmailer.postinst.debhelper

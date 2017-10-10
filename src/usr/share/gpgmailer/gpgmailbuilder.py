@@ -35,8 +35,8 @@ class EncryptionError(Exception):
 class GpgKeyExpiredException(Exception):
     pass
 
-# Raised when attempting to use an untrusted key.
-class GpgKeyUntrustedException(Exception):
+# Raised when attempting to use an untrusted or unsigned key.
+class GpgKeyNotValidatedException(Exception):
     pass
 
 # Builds, signs, and encrypts PGP/MIME emails with attachments.
@@ -254,8 +254,8 @@ class GpgMailBuilder:
     #   PGP key expiration checks are based.
     def _validate_key(self, fingerprint, loop_current_time):
 
-        if not self.gpgkeyring.is_trusted(fingerprint):
-            raise GpgKeyUntrustedException('Key %s is not trusted.' % fingerprint)
+        if not self.gpgkeyring.is_trusted(fingerprint) and not self.gpgkeyring.is_signed(fingerprint):
+            raise GpgKeyNotValidatedException('Key %s is not signed or trusted.' % fingerprint)
 
         if not self.gpgkeyring.is_current(fingerprint, loop_current_time +
                 self.max_operation_time):

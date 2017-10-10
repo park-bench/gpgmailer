@@ -106,7 +106,7 @@ def parse_key_config_string(configuration_option, key_config_string):
     key_split = key_config_string.split(':')
 
     if len(key_split) is not 2:
-        logger.critical('Key config %s for %s is does not contain a colon.' % \
+        logger.critical('Key config %s for %s is does not contain a colon or is malformed.' % \
             (key_config_string, configuration_option))
         sys.exit(1)
 
@@ -216,12 +216,13 @@ def parse_key_config(config):
 # fingerprint: The fingerprint of the GPG key to check.
 def key_is_usable(gpg_keyring, fingerprint):
 
-    if not gpg_keyring.is_trusted(fingerprint):
-        logger.critical('Key with fingerprint %s is not trusted. Exiting.' % fingerprint)
+    if not gpg_keyring.is_trusted(fingerprint) and not gpg_keyring.is_signed(fingerprint):
+        logger.critical('Key with fingerprint %s is not signed (or not sufficiently trusted). ' +
+            'Exiting.' % fingerprint)
         sys.exit(1)
 
     else:
-        logger.debug('Key with fingerprint %s is trusted.' % fingerprint)
+        logger.debug('Key with fingerprint %s is signed or trusted.' % fingerprint)
 
 
 # Tests if it is possible for a GPG key to sign an arbitrary string.
