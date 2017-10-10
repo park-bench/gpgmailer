@@ -98,10 +98,8 @@ Key management init:
     - Crash with decent message.
 * Termination Signal.
     - Logs info message and quits.
-* Sender key has bad passphrase.
-    - Crash if signing is required.
-    - Continue if signing is not required.
-    - Regardless, something should tell the user to check his/her passphrase.
+* Sender key has a bad passphrase.
+    - Crash with decent message.
 * A recipient e-mail address is in the configuraiton file twice.
 * Test when the sender is also a recipient.
 

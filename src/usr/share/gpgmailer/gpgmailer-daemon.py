@@ -241,7 +241,7 @@ def signature_test(gpg_home, fingerprint, passphrase):
         detach=True, keyid=fingerprint, passphrase=passphrase)
 
     if str(signature_test_result).strip() == '':
-        logger.info('Signature test for %s failed. Check the sender key\'s passphrase.' % fingerprint)
+        logger.debug('Signature test for %s failed. Check the sender key\'s passphrase.' % fingerprint)
     else:
         logger.info('Signature test for %s passed.' % fingerprint)
         success = True
@@ -271,8 +271,9 @@ def check_all_keys(gpg_keyring, config):
         config['sender']['can_sign'] = False
 
     elif not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
-        logger.warn('Sender key failed signature test.')
-        config['sender']['can_sign'] = False
+        logger.critical('Sender key failed the signature test and the key is not expired. ' +
+                'Check the sender key\'s passphrase.')
+        sys.exit(1)
 
     else:
         logger.debug('Sender key passed signature test.')
