@@ -51,7 +51,6 @@ class GpgKeyVerifier:
         self.valid_recipient_emails = []
         self.valid_key_fingerprints = []
         self.expiration_warning_message = None
-        self.expiration_warning_email_message = None
         # Forces an expiration check the first time a public method is called.
         self.next_key_check_time = time.time()
 
@@ -85,17 +84,6 @@ class GpgKeyVerifier:
     def get_expiration_warning_message(self, loop_current_time):
         self._update_if_expiration_info_is_stale(loop_current_time)
         return self.expiration_warning_message
-
-
-    # Returns a string intended for e-mail describing keys that have expired or will expire "soon"
-    #   as defined in the configuration. None is returned if no keys have expired or will be
-    #   expiring soon.
-    #
-    # loop_current_time: The Unix time associated with the main program loop from which all
-    #   GPG key expiration checks are based.
-    def get_expiration_warning_email_message(self, loop_current_time):
-        self._update_if_expiration_info_is_stale(loop_current_time)
-        return self.expiration_warning_email_message
 
 
     # Initializes a dictionary that records information about all the e-mail addresses defined in the
@@ -154,7 +142,6 @@ class GpgKeyVerifier:
     def _calculate_recipient_info(self, loop_current_time):
         self.logger.trace('Recalculating the list of keys that are about to expire.')
         all_expiration_warning_messages = []
-        expiration_warning_email_message = ''
         expired_messages = []
         expiring_soon_messages = []
         valid_recipient_emails = []
@@ -231,11 +218,8 @@ class GpgKeyVerifier:
         self.valid_key_fingerprints = valid_key_fingerprints
         if all_expiration_warning_messages == '':
             self.expiration_warning_message = None
-            self.expiration_warning_email_message = None
         else:
             self.expiration_warning_message = all_expiration_warning_messages
-            self.expiration_warning_email_message = \
-                'A new key has expired or will expire soon.\n\n%s' % all_expiration_warning_messages
 
 
     # Build an expiration warning message for an individual e-mail and fingerprint pair. There
