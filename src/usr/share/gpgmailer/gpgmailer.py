@@ -68,10 +68,12 @@ class GpgMailer:
 
                 self.valid_recipient_emails = \
                     self.gpgkeyverifier.get_valid_recipient_emails(loop_start_time)
+
+                # TODO Brittney - getting valid key fingerprints process must be changed.
                 self.valid_key_fingerprints = \
                     self.gpgkeyverifier.get_valid_key_fingerprints(loop_start_time)
 
-                self._update_expiration_warnings(loop_start_time)
+                self._update_and_send_expiration_warnings(loop_start_time)
 
                 # Return a list of non-directory files in the outbox directory.
                 #   The first element of os.walk is the full path, the second is a
@@ -88,8 +90,9 @@ class GpgMailer:
 
                     encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
 
+                    # TODO Brittney what if recipient_emails is blank?
                     self.mailsender.sendmail(message_string=encrypted_message,
-                        recipients=self.valid_recipient_emails)
+                        recipients=message_dict['recipient_emails'])
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
@@ -140,7 +143,7 @@ class GpgMailer:
     #
     # loop_start_time: The time associated with the current program loop from which all PGP key
     #   expiration checks are based.
-    def _update_expiration_warnings(self, loop_start_time):
+    def _update_and_send_expiration_warnings(self, loop_start_time):
 
         new_expiration_warning_message = \
             self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
@@ -152,10 +155,11 @@ class GpgMailer:
             self.expiration_warning_message = new_expiration_warning_message
 
             # Actually send the warning e-mail.
+            # TODO Brittney - need to send warning emails to everybody, not just message recips.
             message_dict = {'subject': self.config['default_subject'],
                 'body': self.gpgkeyverifier.get_expiration_warning_email_message(loop_start_time)}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
-            self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
+            self.mailsender.sendmail(encrypted_message, self.gpgkeyverifier.valid_recipient_emails)
 
 
     # Builds an encrypted e-mail string with a signature if possible.

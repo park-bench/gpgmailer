@@ -45,7 +45,9 @@ class GpgKeyRing:
         self.fingerprint_to_key_dict = {}
 
         for key in self.gpg.list_keys():
-            
+
+            email_list = []
+
             # TODO: Eventually, change key expiration date to a date object instead of an int.
             # Key expiration dates are in Unix time. An expiration date of None
             #   means that the key does not expire.
@@ -54,7 +56,11 @@ class GpgKeyRing:
             else:
                 key['expires'] = int(key['expires'])
 
+            for uid in key['uids']:
+                email_list = uid.split(" ").pop().strip(">|<")
+
             self.fingerprint_to_key_dict[key['fingerprint']] = {
+                'emails': email_list,
                 'expires': key['expires'],
                 'ownertrust': key['ownertrust'],
                 'fingerprint': key['fingerprint']
