@@ -135,7 +135,8 @@ class GpgKeyRing:
 
         # We assume the key is signed if the key is expired since we have no way of knowing if it
         #   is really signed or not.
-        if gpg_key['expires'] is None or gpg_key['expires'] > time.time():
+        print gpg_key['fingerprint']
+        if gpg_key['expires'] == '' or gpg_key['expires'] > time.time():
 
             # Try to encrypt a test string. The key is considered signed if we encrypt successfully.
             encrypted_payload = self.gpg.encrypt(data='Test string.',
@@ -147,7 +148,7 @@ class GpgKeyRing:
                 # Theoretically the key could have expired since our last expiration check.
                 #   (Immediately before encrypting.) If so, assume the encryption failed because
                 #   the key expired. (Skip setting signed to false.)
-                if gpg_key['expires'] is not None and gpg_key['expires'] <= time.time():
+                if gpg_key['expires'] == '' or gpg_key['expires'] <= time.time():
                     signed = False
 
         return signed
