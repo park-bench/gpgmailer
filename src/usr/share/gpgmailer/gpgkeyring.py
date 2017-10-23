@@ -135,7 +135,6 @@ class GpgKeyRing:
 
         # We assume the key is signed if the key is expired since we have no way of knowing if it
         #   is really signed or not.
-        print gpg_key['fingerprint']
         if gpg_key['expires'] == '' or gpg_key['expires'] > time.time():
 
             # Try to encrypt a test string. The key is considered signed if we encrypt successfully.
