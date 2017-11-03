@@ -147,12 +147,13 @@ class GpgKeyVerifier:
         valid_recipient_emails = []
         valid_key_fingerprints = []
 
-        expiration_date = loop_current_time + self.config['main_loop_duration']
+        expiration_date = loop_current_time + self.config['key_check_interval'] + \
+            self.config['main_loop_duration']
         expiring_soon_date = expiration_date + self.config['expiration_warning_threshold']
 
         self.logger.trace('Checking sender key.')
         sender_expiration_data = self._build_key_expiration_warning_message(self.sender_email,
-            loop_current_time)
+            expiration_date, expiring_soon_date)
 
         if sender_expiration_data['expiring_soon'] or sender_expiration_data['is_expired']:
             if sender_expiration_data['is_expired']:
@@ -189,7 +190,7 @@ class GpgKeyVerifier:
 
             else:
                 expiration_data = self._build_key_expiration_warning_message(recipient_email,
-                    loop_current_time)
+                    expiration_date, expiring_soon_date)
 
                 if expiration_data['is_expired']:
                     expired_messages.append(expiration_data['warning_message'])
@@ -229,16 +230,17 @@ class GpgKeyVerifier:
     #   keys.
     #
     # email: The e-mail address associated with the expired key.
-    # loop_current_time: The Unix time associated with the main program loop from which all
-    #   GPG key expiration checks are based.
-    def _build_key_expiration_warning_message(self, email, loop_current_time):
+    # expiration_date: The date after which a key's expiration date should be considered
+    #   expired. Will be slightly before the current time.
+    # expiring_soon_date: The date after which a key's expiration date should be should be
+    #   considered expiring soon.
+    def _build_key_expiration_warning_message(self, email, expiration_date,
+            expiring_soon_date):
         self.logger.trace('Building expiration message for address %s.' % email)
 
         expiration_warning_message = None
         is_expired = False
         expiring_soon = False
-        expiration_date = loop_current_time + self.config['main_loop_duration']
-        expiring_soon_date = expiration_date + self.config['expiration_warning_threshold']
         fingerprint = self.email_dicts[email]['fingerprint']
 
         if self.email_dicts[email]['is_sender'] and self.email_dicts[email]['is_recipient']:
@@ -286,6 +288,8 @@ class GpgKeyVerifier:
     #   GPG key expiration checks are based.
     def _update_if_expiration_info_is_stale(self, loop_current_time):
 
+        # TODO: Eventually we should better support long pauses in execution (such as
+        #   suspend).
         if self.next_key_check_time <= loop_current_time:
             self._calculate_recipient_info(loop_current_time)
             self.next_key_check_time += self.config['key_check_interval']

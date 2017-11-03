@@ -137,11 +137,13 @@ Regular operation:
 * Create a unit test to test signing only.
 * Test when signing fails only in sign_message.
   * An exception is thrown.
-* Test when encryption fails only the encrypt_message.
+* Test when encryption key is expired only the encrypt_message.
+  * An exception is thrown.
+* Test when a sub key is expired only in encrypt_message.
   * An exception is thrown.
 * Test when trust fails in sign_message only.
   * An exception is thrown.
-* Test when key is not current in sign_message only.
+* Test when key is expired in sign_message only.
   * An exception is thrown.
 
 Key management runtime:
@@ -176,3 +178,4 @@ Key management runtime:
     - Message should indicate sender is also a recipient.
 * Test expiration recalculation. (Make sure enough time has passed for a recalculation to occur.)
 * Test keys that don't expire.
+* Test warning message concatination with multiple expiration warnings and expiration notices.
