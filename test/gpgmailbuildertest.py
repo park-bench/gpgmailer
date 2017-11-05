@@ -12,12 +12,16 @@ import unittest
 log_file = "/dev/null"
 log_level = "TRACE"
 max_operation_time = 1
+# TODO: Eventually redo key descriptions in keyring.
 valid_signing_key_fingerprint = '32C39D741B2D0F56A57F3BD5C98DBEA2DE6613E9'
-unverified_signing_key_fingerprint = '580F6E7B9360235DD4227A21CE428A67F602976B'
-valid_encryption_key_fingerprint = 'DC15C702C00A857CD2A3A638067DD2B687ABB7BE'
-expired_encryption_key_fingerprint = '4C3CFF38398060C8E1EFA78CD4199708797520DC'
-expired_encryption_subkey_key_fingerprint = '3A227B3DA67B3EBB31DA16B117EE9CEDB09285D6'
+untrusted_signing_key_fingerprint = '580F6E7B9360235DD4227A21CE428A67F602976B'
+unsigned_signing_key_fingerprint = 'B616361BA4F970857685C9076D061968AA33DD93'
 expired_signing_key_fingerprint = 'A0D0781A34CDAC9ACCB5EEDB12FE6BD0CD7C2E0A'
+expired_signing_subkey_key_fingerprint = '649F4097572E27FA57311FFED76BC35AA00A4047'
+valid_encryption_key_fingerprint = 'DC15C702C00A857CD2A3A638067DD2B687ABB7BE'
+unvalidated_encryption_key_fingerprint = '1DAFD4848F577404645B6BD0DCF9BC791CA5FD51'
+expired_encryption_key_fingerprint = '4C3CFF38398060C8E1EFA78CD4199708797520DC'
+expired_encryption_subkey_key_fingerprint = '56E3B2498A859953EF003FD8FC88955B8E4B0DF0'
 # All three keys use the same passphrase
 signing_key_correct_passphrase = 'lk\\4+v4*SL3r{vm^S(R";uP-l)nT+%)Ku;{0gS+"a5"1t;+6\'c]}TX4H)`c2'
 signing_key_wrong_passphrase = 'php is a great language'
@@ -77,17 +81,37 @@ class gpgmailbuildertest(unittest.TestCase):
             self.gpgmailbuilder.build_signed_message(message, valid_signing_key_fingerprint,
                 signing_key_wrong_passphrase, self.test_time)
 
-    # Any untrusted and unsigned keys should throw an exception
-    def test_signing_key_untrusted_and_unsigned(self):
-        self.logger.info('Testing signature with untrusted and unsigned key.')
+    # Any untrusted signing keys should throw an exception
+    def test_signing_key_untrusted(self):
+        self.logger.info('Testing signature with untrusted signing key.')
+        # should raise GpgKeyNotTrustedException
+        with self.assertRaises(gpgmailbuilder.GpgKeyNotTrustedException):
+            self.gpgmailbuilder.build_signed_message(message, untrusted_signing_key_fingerprint,
+                signing_key_correct_passphrase, self.test_time)
+
+    # Any unsigned signing keys should throw an exception
+    def test_signing_key_unsigned(self):
+        self.logger.info('Testing signature with unsigned signing key.')
+        # should raise GpgKeyNotSignedException
+        with self.assertRaises(gpgmailbuilder.GpgKeyNotSignedException):
+            self.gpgmailbuilder.build_signed_message(message, unsigned_signing_key_fingerprint,
+                signing_key_correct_passphrase, self.test_time)
+
+    # Any untrusted and unsigned recipient keys should throw an exception
+    def test_recipient_key_unsigned_and_untrusted(self):
+        self.logger.info('Testing encryption with untrusted and unsigned encryption key.')
         # should raise GpgKeyNotValidatedException
         with self.assertRaises(gpgmailbuilder.GpgKeyNotValidatedException):
-            self.gpgmailbuilder.build_signed_message(message, unverified_signing_key_fingerprint,
-                signing_key_correct_passphrase, self.test_time)
+            self.gpgmailbuilder.build_encrypted_message(message, 
+                [unvalidated_encryption_key_fingerprint], self.test_time)
 
     def test_signing_key_expired(self):
         # should raise GpgKeyExpiredException
         self.logger.info('Testing signature with expired signing key.')
+        # Due to an error (mostly with python-pgp), it is nearly impossible to create a
+        #   test key that is registered in memory as both expired and signed. To get around
+        #   this limitation, just modify the internal gpgkeyring structure.
+        self.gpgkeyring.fingerprint_to_key_dict[expired_signing_key_fingerprint]['signed'] = True
         with self.assertRaises(gpgmailbuilder.GpgKeyExpiredException):
             self.gpgmailbuilder.build_signed_message(message, expired_signing_key_fingerprint,
                 signing_key_correct_passphrase, self.test_time)
@@ -99,12 +123,18 @@ class gpgmailbuildertest(unittest.TestCase):
             self.gpgmailbuilder.build_encrypted_message(message, [expired_encryption_key_fingerprint],
                 self.test_time)
 
+    # Subkeys are not specifically handled, so this should raise the general SignatureError.
+    def test_signing_failed_due_to_expired_subkey(self):
+        self.logger.info('Testing signing with expired subkey.')
+        with self.assertRaises(gpgmailbuilder.SignatureError):
+            self.gpgmailbuilder.build_signed_message(message, expired_signing_subkey_key_fingerprint,
+                signing_key_correct_passphrase, self.test_time)
+
     # Subkeys are not specifically handled, so this should raise the general EncryptionError.
     def test_encryption_failed_due_to_expired_subkey(self):
         self.logger.info('Testing encryption with expired subkey.')
         with self.assertRaises(gpgmailbuilder.EncryptionError):
             self.gpgmailbuilder.build_encrypted_message(message, [expired_encryption_subkey_key_fingerprint],
-                # 2017-01-01T00:00:00Z - Using this date tricks gpgkeyring into thinking the key is signed.
-                1483228800)
+                1483228800)  # 2017-01-01T00:00:00Z
 
 unittest.main()

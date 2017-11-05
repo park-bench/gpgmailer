@@ -105,7 +105,7 @@ class GpgKeyRing:
             trusted = True
 
         else:
-            self.logger.warn('Key %s is not trusted.' % fingerprint)
+            self.logger.trace('Key %s is not trusted.' % fingerprint)
 
         return trusted
 
@@ -147,7 +147,7 @@ class GpgKeyRing:
                 # Theoretically the key could have expired since our last expiration check.
                 #   (Immediately before encrypting.) If so, assume the encryption failed because
                 #   the key expired. (Skip setting signed to false.)
-                if gpg_key['expires'] == '' or gpg_key['expires'] <= time.time():
+                if gpg_key['expires'] == '' or gpg_key['expires'] > time.time():
                     signed = False
 
         return signed
