@@ -126,13 +126,15 @@ class gpgmailbuildertest(unittest.TestCase):
     # Subkeys are not specifically handled, so this should raise the general SignatureError.
     def test_signing_failed_due_to_expired_subkey(self):
         self.logger.info('Testing signing with expired subkey.')
-        with self.assertRaises(gpgmailbuilder.SignatureError):
+        # TODO: Eventually we should fix this to throw a GpgKeyExpirationError.
+        with self.assertRaises(gpgmailbuilder.GpgKeyNotSignedException):
             self.gpgmailbuilder.build_signed_message(message, expired_signing_subkey_key_fingerprint,
                 signing_key_correct_passphrase, self.test_time)
 
     # Subkeys are not specifically handled, so this should raise the general EncryptionError.
     def test_encryption_failed_due_to_expired_subkey(self):
         self.logger.info('Testing encryption with expired subkey.')
+        # TODO: Eventually we should fix this to throw a GpgKeyExpirationError.
         with self.assertRaises(gpgmailbuilder.EncryptionError):
             self.gpgmailbuilder.build_encrypted_message(message, [expired_encryption_subkey_key_fingerprint],
                 1483228800)  # 2017-01-01T00:00:00Z

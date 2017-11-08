@@ -298,8 +298,8 @@ def verify_signing_config(config):
         sys.exit(1)
 
     elif not config['sender']['can_sign']:
-        logger.warn('The sending key is unable to sign. It may be expired or the password may be ' +
-            'incorrect. Gpgmailer will send unsigned messages.')
+        logger.warn('The sender key is unable to sign because it has probably expired. ' +
+            'Gpgmailer will send unsigned messages.')
 
     else:
         logger.debug('Outgoing e-mails will be signed.')

@@ -1,3 +1,5 @@
+TODO: Eventually add test cases for sender and recipient sub keys and for both init and runtime.
+
 GPG Mailer Daemon - directory management:
 * /tmp/gpgmailer does not exist.
     - Create it, mount tmpfs and continue
@@ -69,9 +71,7 @@ Key management init:
     - Init successfuly
 * All keys valid, sender is not a recipient
     - Init successfuly
-* Key is trusted because of ultimate owner trust.
-    - Send e-mail successfully.
-* Key is trusted because of level 3 signature (or web of trust).
+* Sender key is trusted because of ultimate owner trust and level 3 signature (or web of trust).
     - Send e-mail successfully.
 * Sender key untrusted
     - Crash with decent message.
@@ -81,13 +81,21 @@ Key management init:
     - Crash with decent message.
 * Sender key invalid (not a 40 character hex string)
     - Crash with decent message.
-* Sender key expired, allow_expired_signing_key is false
+* Sender key expired, allow_expired_signing_key is false, sender is recipient
     - Crash with decent message.
-* Sender key expired, allow_expired_signing_key is true
+* Sender key expired, allow_expired_signing_key is false, sender is not a recipient
+    - Crash with decent message.
+* Sender key expired, allow_expired_signing_key is true, sender is recipient
     - Log warning message.
     - Receive e-mail with this warning.
     - Init successfuly
-* Recipient key untrusted or not signed.
+* Sender key expired, allow_expired_signing_key is true, sender is not a recipient
+    - Log warning message.
+    - Receive e-mail with this warning.
+    - Init successfuly
+* Recipient key untrusted.
+    - Crash with decent message.
+* Recipient key not signed.
     - Crash with decent message.
 * Recipient key missing
     - Crash with decent message.
