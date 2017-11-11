@@ -1,4 +1,4 @@
-gpgmailer (0.7) UNRELEASED; urgency=low
+gpgmailer (0.7) stable; urgency=low
 
   * Gpgmailer now performs key checking and alerts recipients about expiring keys.
   * Improved daemonization with python-daemon.
