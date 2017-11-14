@@ -13,11 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
 import gnupg
 import logging
 import re
 import time
+
+key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
+# This trust level comes from GnuPG. 'u' means ultimate.
+valid_owner_trust_levels = ('u')
 
 # This exception is raised when a GPG fingerprint is not a 40-character hexadecimal
 #   string.
@@ -27,10 +30,6 @@ class FingerprintSyntaxException(Exception):
 # This exception is thrown when a GPG fingerprint is not in the given key ring.
 class KeyNotFoundException(Exception):
     pass
-
-key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
-# These trust levels come from GnuPG, 'u' means ultimate, 'f' means full, and 'm' means marginal.
-valid_owner_trust_levels = ('u', 'f', 'm')
 
 # GpgKeyRing caches and checks validity, expiration, and trust for GPG keys.
 class GpgKeyRing:
@@ -48,22 +47,24 @@ class GpgKeyRing:
 
             email_list = []
 
-            # TODO: Eventually, change key expiration date to a date object instead of an int.
             # Key expiration dates are in Unix time. An expiration date of None
             #   means that the key does not expire.
-            if key['expires'] == '':
-                key['expires'] = None
-            else:
-                key['expires'] = int(key['expires'])
+            # TODO: Eventually, change key expiration date to a date object instead of an int.
+            expires = None
+            if key['expires'] != '':
+                expires = int(key['expires'])
+
+            signed = self._is_key_signed(key)
 
             for uid in key['uids']:
                 email_list = uid.split(" ").pop().strip(">|<")
 
             self.fingerprint_to_key_dict[key['fingerprint']] = {
                 'emails': email_list,
-                'expires': key['expires'],
+                'expires': expires,
+                'fingerprint': key['fingerprint'],
                 'ownertrust': key['ownertrust'],
-                'fingerprint': key['fingerprint']
+                'signed': signed
             }
 
 
@@ -90,6 +91,15 @@ class GpgKeyRing:
         return current
 
 
+    # Checks if a GPG key with the given fingerprint is signed.
+    #
+    # fingerprint: The fingerprint of the GPG key to check.
+    def is_signed(self, fingerprint):
+        self._fingerprint_is_valid(fingerprint)
+
+        return self.fingerprint_to_key_dict[fingerprint]['signed']
+
+
     # Checks if a GPG key with the given fingerprint is trusted.
     #
     # fingerprint: The fingerprint of the GPG key to check.
@@ -101,7 +111,7 @@ class GpgKeyRing:
             trusted = True
 
         else:
-            self.logger.warn('Key %s is not trusted.' % fingerprint)
+            self.logger.trace('Key %s is not trusted.' % fingerprint)
 
         return trusted
 
@@ -115,6 +125,38 @@ class GpgKeyRing:
         self._fingerprint_is_valid(fingerprint)
 
         return self.fingerprint_to_key_dict[fingerprint]['expires']
+
+
+    # Determines if a 'key' dictionary from the gnupg libary is signed. The method is intended to be
+    #   called only during instantiation.
+    #
+    # key: A 'key' from the gnupg library.
+    # Returns true if the key is signed (or if we cannot determine if the key is signed). False
+    #   otherwise. (We currently have no 100% reliable way to determine if a key is signed. However,
+    #   with later versions of the gnupg library, we will eventually be able to determine this
+    #   accurately.
+    def _is_key_signed(self, gpg_key):
+
+        signed = True
+
+        # We assume the key is signed if the key is expired since we have no way of knowing if it
+        #   is really signed or not.
+        if gpg_key['expires'] == '' or float(gpg_key['expires']) > time.time():
+
+            # Try to encrypt a test string. The key is considered signed if we encrypt successfully.
+            encrypted_payload = self.gpg.encrypt(data='Test string.',
+                recipients=[gpg_key['fingerprint']])
+
+            # The key probably isn't signed if the string did not encrypt.
+            if encrypted_payload.ok == False:
+
+                # Theoretically the key could have expired since our last expiration check.
+                #   (Immediately before encrypting.) If so, assume the encryption failed because
+                #   the key expired. (Skip setting signed to false.)
+                if gpg_key['expires'] == '' or float(gpg_key['expires']) > time.time():
+                    signed = False
+
+        return signed
 
 
     # Checks if a GPG key fingerprint is valid and is in the keyring. If the key is not valid or

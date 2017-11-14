@@ -41,11 +41,11 @@ smtp_port=
 # Less standard email server details
 
 # The number of seconds until the program assumes an SMTP session has ended.
-smtp_max_idle=300
+smtp_max_idle=600
 
 # How many seconds the mailer should wait until the program determines that the sending of an
 #   e-mail has failed.
-smtp_sending_timeout=30
+smtp_sending_timeout=20
 
 
 # Email and GPG settings

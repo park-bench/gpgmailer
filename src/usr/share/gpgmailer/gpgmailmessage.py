@@ -27,8 +27,7 @@ import os
 import shutil
 import sys
 
-# This exception is raised when mail is gpgmailer is configured but the watch
-#   directories do not exist.
+# This exception is raised when gpgmailer is configured but the watch directories do not exist.
 class WatchDirectoryMissingException(Exception):
     pass
 
@@ -48,6 +47,7 @@ class GpgMailMessage:
 
     # Reads the gpgmailer config file to obtain the watch directory's path name.
     #   This method must be called before any instances are created.
+    # TODO: Eventually make this method so it can be called twice.
     @classmethod
     def configure(cls):
         logger = logging.getLogger('GpgMailMessage')
@@ -57,13 +57,9 @@ class GpgMailMessage:
 
         config_helper = confighelper.ConfigHelper()
 
-
         mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
         cls._outbox_dir = os.path.join(mail_dir, 'outbox')
         cls._draft_dir = os.path.join(mail_dir, 'draft')
-
-        # TODO: If the watch directory is not on a ramdisk, (i.e. if the daemon has
-        #   not started) and mail is saved, then the daemon will fail to start.
 
         if not(os.path.isdir(cls._outbox_dir)) or not(os.path.isdir(cls._draft_dir)):
             logger.critical('A watch subdirectory does not exist. Quitting.')
@@ -74,12 +70,13 @@ class GpgMailMessage:
 
         # Verify the 'configure' class method was called.
         if (self._outbox_dir == None) or (self._draft_dir == None):
-            #TODO: We should thrown our own exception here, not a builtin generic one.
+            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
             raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
                 'can be created.')
 
         self.saved = False
         self.message = {}
+        self.message['body'] = None
         self.message['recipients'] = []
         self.message['recipient_keys'] = []
         # need to validate recipient keys here - at least check that it's a 40 character string,
@@ -131,7 +128,7 @@ class GpgMailMessage:
             raise Exception('Tried to save message without a subject.')
 
         if self.message['body'] == None:
-            #TODO: We should thrown our own exception here, not a builtin generic one.
+            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
             raise Exception('Tried to save message without a body.')
 
         # Encode any attachments as base64.
@@ -171,5 +168,5 @@ class GpgMailMessage:
     # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
         if self.saved:
-            #TODO: We should thrown our own exception here, not a builtin generic one.
-            raise Exception('Tried to save an already saved message.')
+            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
+            raise Exception('Tried to modify an already saved message.')

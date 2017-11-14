@@ -62,8 +62,9 @@ class GpgMailer:
     # GpgMailer's main program loop. Reads the watch directory and then calls other modules
     #   to build and send e-mail. Also sends warnings about GPG key expirations.
     def start_monitoring(self):
-        try:
-            while True:
+        while True:
+            try:
+
                 loop_start_time = time.time()
 
                 self.valid_recipient_emails = \
@@ -79,7 +80,7 @@ class GpgMailer:
                 #   The first element of os.walk is the full path, the second is a
                 #   list of directories, and the third is a list of non-directory
                 #   files.
-                for file_name in next(os.walk(self.outbox_path))[2]:
+                for file_name in sorted(next(os.walk(self.outbox_path))[2]):
                     self.logger.info("Found queued e-mail in file %s." % file_name)
                     message_dict = self._read_message_file(file_name)
 
@@ -100,19 +101,19 @@ class GpgMailer:
 
                 time.sleep(self.config['main_loop_delay'])
 
-        except gpgkeyverifier.NoUsableKeysException as exception:
-            self.logger.critical('No keys available for encryption. Exiting. %s: %s' % 
-                (type(exception).__name__, exception.message))
-            self.logger.critical(traceback.format_exc())
-            sys.exit(1)
-        except gpgkeyverifier.SenderKeyExpiredException as exception:
-            self.logger.critical('Sender key has expired and sending unsigned e-mails is not ' +
-                'allowed. Exiting. %s: %s' % (type(exception).__name__, exception.message))
-            self.logger.critical(traceback.format_exc())
-            sys.exit(1)
-        except Exception as exception:
-            self.logger.error('Exception %s: %s.' % (type(exception).__name__, exception.message))
-            self.logger.error(traceback.format_exc())
+            except gpgkeyverifier.NoUsableKeysException as exception:
+                self.logger.critical('No keys available for encryption. Exiting. %s: %s' %
+                    (type(exception).__name__, exception.message))
+                self.logger.critical(traceback.format_exc())
+                sys.exit(1)
+            except gpgkeyverifier.SenderKeyExpiredException as exception:
+                self.logger.critical('Sender key has expired and sending unsigned e-mails is not ' +
+                    'allowed. Exiting. %s: %s' % (type(exception).__name__, exception.message))
+                self.logger.critical(traceback.format_exc())
+                sys.exit(1)
+            except Exception as exception:
+                self.logger.error('Exception %s: %s.' % (type(exception).__name__, exception.message))
+                self.logger.error(traceback.format_exc())
 
 
     # Reads a message file from the outbox directory and builds a dictionary representing the message
@@ -160,8 +161,8 @@ class GpgMailer:
             self.logger.warn("Hey, I just warned you!")
             # TODO Brittney - need to send warning emails to everybody, not just message recips.
             message_dict = {'subject': self.config['default_subject'],
-                            'body': self.gpgkeyverifier.get_expiration_warning_email_message(loop_start_time),
-                            'recipients': self.gpgkeyverifier.valid_recipient_emails}
+                'body': 'The expiration status of one or more keys have changed.',
+                'recipients': self.gpgkeyverifier.valid_recipient_emails}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
             self.mailsender.sendmail(encrypted_message, self.gpgkeyverifier.valid_recipient_emails)
 
@@ -178,7 +179,10 @@ class GpgMailer:
         #   and we don't allow sending unsigned e-mails.)
         sender_key_is_current = self.config['sender']['fingerprint'] in self.valid_key_fingerprints
 
-        if not (sender_key_is_current or self.config['sender']['can_sign']):
+        if self.expiration_warning_message is not None:
+            message_dict['body'] = '%s\n\n%s' % (self.expiration_warning_message, message_dict['body'])
+
+        if not sender_key_is_current or not self.config['sender']['can_sign']:
             message = self.gpgmailbuilder.build_encrypted_message(
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.

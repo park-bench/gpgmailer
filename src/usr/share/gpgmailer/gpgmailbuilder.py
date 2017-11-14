@@ -35,8 +35,16 @@ class EncryptionError(Exception):
 class GpgKeyExpiredException(Exception):
     pass
 
-# Raised when attempting to use an untrusted key.
-class GpgKeyUntrustedException(Exception):
+# Raised when attempting to use a sender untrusted key.
+class GpgKeyNotTrustedException(Exception):
+    pass
+
+# Raised when attempting to use a sender unsigned key.
+class GpgKeyNotSignedException(Exception):
+    pass
+
+# Raised when attempting to use a recipient untrusted or unsigned key.
+class GpgKeyNotValidatedException(Exception):
     pass
 
 # Builds, signs, and encrypts PGP/MIME emails with attachments.
@@ -150,7 +158,7 @@ class GpgMailBuilder:
     def _sign_message(self, message, signing_key_fingerprint, signing_key_passphrase,
         loop_current_time):
 
-        self._validate_key(signing_key_fingerprint, loop_current_time)
+        self._validate_signing_key(signing_key_fingerprint, loop_current_time)
 
         # Removes the first line and replaces LF with CR/LF.
         message_string = str(message).split('\n', 1)[1].replace('\n', '\r\n')
@@ -159,16 +167,18 @@ class GpgMailBuilder:
         signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint,
             passphrase=signing_key_passphrase)
         signature_text = str(signature_result)
-        signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
-
-        self.logger.debug('Used hash algorithm %s.' % signature_hash_algorithm)
 
         # The GnuPG library we use does not provide any granular error information
         #   or throw any exceptions for signature operations, so checking for an
         #   empty string is all we have.
         if signature_text.strip() == '':
             # TODO: Eventually, use signature_text.stderr for more granular error handling.
+            self.logger.error(signature_result.stderr)
             raise SignatureError('Error while signing message.')
+
+        signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
+
+        self.logger.debug('Used hash algorithm %s.' % signature_hash_algorithm)
 
         signature_part = MIMEApplication(_data=signature_text,
             _subtype='pgp-signature; name="signature.asc"', _encoder=encode_7or8bit)
@@ -193,7 +203,7 @@ class GpgMailBuilder:
     def _encrypt_message(self, message, encryption_keys, loop_current_time):
 
         for fingerprint in encryption_keys:
-            self._validate_key(fingerprint, loop_current_time)
+            self._validate_encryption_key(fingerprint, loop_current_time)
 
         # PGP needs a version attachment.
         pgp_version = MIMEApplication("", _subtype="pgp-encrypted", _encoder=encode_7or8bit)
@@ -250,11 +260,29 @@ class GpgMailBuilder:
     # fingerprint: The fingerprint of the key to be checked.
     # loop_current_time: The Unix time associated with the main program loop from which all
     #   PGP key expiration checks are based.
-    def _validate_key(self, fingerprint, loop_current_time):
+    def _validate_encryption_key(self, fingerprint, loop_current_time):
 
-        if not self.gpgkeyring.is_trusted(fingerprint):
-            raise GpgKeyUntrustedException('Key %s is not trusted.' % fingerprint)
+        if not self.gpgkeyring.is_trusted(fingerprint) and not self.gpgkeyring.is_signed(fingerprint):
+            raise GpgKeyNotValidatedException('Recipient key %s is not signed or trusted.' %
+                fingerprint)
 
         if not self.gpgkeyring.is_current(fingerprint, loop_current_time +
                 self.max_operation_time):
             raise GpgKeyExpiredException('Key %s is expired.' % fingerprint)
+
+
+    # Checks if the given signing key fingerprint is expired, unsigned or untrusted and throws
+    #   an appropriate exception in either case. Never returns anything.
+    #
+    # fingerprint: The fingerprint of the key to be checked.
+    # loop_current_time: The Unix time associated with the main program loop from which all
+    #   PGP key expiration checks are based.
+    def _validate_signing_key(self, fingerprint, loop_current_time):
+
+        if not self.gpgkeyring.is_trusted(fingerprint):
+            raise GpgKeyNotTrustedException('Signing key is not trusted.')
+        elif not self.gpgkeyring.is_signed(fingerprint):
+            raise GpgKeyNotSignedException('Signing key is not signed.')
+        elif not self.gpgkeyring.is_current(fingerprint, loop_current_time +
+                self.max_operation_time):
+            raise GpgKeyExpiredException('Signing key is expired.')

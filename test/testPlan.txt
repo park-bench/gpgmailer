@@ -1,14 +1,14 @@
-Note: These test cases are not yet complete.
+TODO: Eventually add test cases for sender and recipient sub keys and for both init and runtime.
 
 GPG Mailer Daemon - directory management:
-* /tmp/gpgmailer does not exist or is not a directory.
+* /tmp/gpgmailer does not exist.
     - Create it, mount tmpfs and continue
-* /tmp/gpgmailer exists and is a directory.
+* /tmp/gpgmailer is not a directory.
+    - Crash
+* /tmp/gpgmailer exists and is an empty directory.
     - Mount tmpfs and continue
 * /tmp/gpgmailer is not tmpfs and directory not empty.
     - Crash
-* /tmp/gpgmailer is not tmpfs and empty
-    - Mount tmpfs and continue
 * /tmp/gpgmailer is tmpfs and empty
     - Create subdirectories and continue
 * /tmp/gpgmailer is tmpfs and not empty
@@ -19,13 +19,27 @@ GPG Mailer Daemon - directory management:
     - Continue
 * outbox and draft do not exist
     - Create and continue
-* outbox and draft cannot be created (ex: because they are files)
+* outbox cannot be created (ex: because it is a file)
+    - Crash
+* draft cannot be created (ex: because it is a file)
     - Crash
 * mail exists in outbox.
     - It should be sent
 
 gpgmailmessage: 
-* watch directory does not exist
+* config file does not exist
+    - crash with error message
+* watch_dir does not exist in the config file.
+    - crash with error message
+* watch_dir not specified in the config file.
+    - crash with error message
+* output or draft directory does not exist
+    - crash
+* output or draft are not directories
+    - crash
+* set_body, add_attachment, add_subject, or queue_for_sending called after queue_for_sending
+    - crash
+* queue_for_sending called and set_body never called.
     - crash
 * GpgMailMessage.configure has not been called
     - crash
@@ -39,31 +53,49 @@ Program init:
     - Crash with decent message.
 * Test each option that will not accept blanks.
     - Crash with decent message.
+* Verify numbers fields only accept numbers.
+    - Crash with decent message.
+* Verify integer fields don't accept floats.
+    - Crash with decent message.
 * Perform out of range checks.
     - Crash with decent message.
 * Check that colon exists in e-mail/key string.
     - Crash with decent message.
 * Check that a non blank string exists on both sides of the colon in e-mail/key string.
     - Crash with decent message.
+* Verify no passwords are displayed in console (except maybe at trace log level).
+* Verify no passwords are displayed in log file (except maybe at trace log level).
 
 Key management init:
 * All keys valid, sender is a recipient
     - Init successfuly
 * All keys valid, sender is not a recipient
     - Init successfuly
+* Sender key is trusted because of ultimate owner trust and level 3 signature (or web of trust).
+    - Send e-mail successfully.
 * Sender key untrusted
     - Crash with decent message.
-* Sender key missing
+* Sender key is not signed.
+    - Crash with decent message.
+* Sender key missing from keyring
     - Crash with decent message.
 * Sender key invalid (not a 40 character hex string)
     - Crash with decent message.
-* Sender key expired, allow_expired_signing_key is false
+* Sender key expired, allow_expired_signing_key is false, sender is recipient
     - Crash with decent message.
-* Sender key expired, allow_expired_signing_key is true
+* Sender key expired, allow_expired_signing_key is false, sender is not a recipient
+    - Crash with decent message.
+* Sender key expired, allow_expired_signing_key is true, sender is recipient
     - Log warning message.
     - Receive e-mail with this warning.
     - Init successfuly
-* Recipient key untrusted
+* Sender key expired, allow_expired_signing_key is true, sender is not a recipient
+    - Log warning message.
+    - Receive e-mail with this warning.
+    - Init successfuly
+* Recipient key untrusted.
+    - Crash with decent message.
+* Recipient key not signed.
     - Crash with decent message.
 * Recipient key missing
     - Crash with decent message.
@@ -76,12 +108,10 @@ Key management init:
     - Crash with decent message.
 * Termination Signal.
     - Logs info message and quits.
-* Sender key has bad passphrase.
-    - Crash if signing is required.
-    - Continue if signing is not required.
-    - Regardless, something should tell the user to check his/her passphrase.
+* Sender key has a bad passphrase.
+    - Crash with decent message.
 * A recipient e-mail address is in the configuraiton file twice.
-* Test when the sender is also a recipient.
+    - Crash with decent message.
 
 Regular operation:
 * The regular warning message is not sent on the first loop given the program starts with a problematic key.
@@ -110,15 +140,19 @@ Regular operation:
   * We reconnect and send the e-mail.
 * Test when timeout time is set to high.
   * We reconnect and send the e-mail.
+* Test when timeout time is set to low.
+  * We reconnect and send the e-mail.
 * Verify SHA512 is used.
 * Create a unit test to test signing only.
 * Test when signing fails only in sign_message.
   * An exception is thrown.
-* Test when encryption fails only the encrypt_message.
+* Test when encryption key is expired only the encrypt_message.
+  * An exception is thrown.
+* Test when a sub key is expired only in encrypt_message.
   * An exception is thrown.
 * Test when trust fails in sign_message only.
   * An exception is thrown.
-* Test when key is not current in sign_message only.
+* Test when key is expired in sign_message only.
   * An exception is thrown.
 
 Key management runtime:
@@ -146,9 +180,12 @@ Key management runtime:
     - A warning message is logged once.
     - An expiration warning email is queued.
     - Messages are still sent to all recipients but the expired recipient won't be able to decrypt.
+        (The 0.7 release will not do this, but the 0.8 release should.)
 * All recipient keys have expired
     - Crash
 * Test sender expiration message when sender is also a recipient.
     - Message should indicate sender is also a recipient.
 * Test expiration recalculation. (Make sure enough time has passed for a recalculation to occur.)
-* Test keys that don't expire.
+* Test sender key that does not expire.
+* Test recipient key that does not expire.
+* Test warning message concatination with multiple expiration warnings and expiration notices.

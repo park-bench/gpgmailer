@@ -56,9 +56,9 @@ def create_watch_directories(config):
         if os.path.isdir(watch_dir) == False:
             os.makedirs(watch_dir)
     except Exception as e:
-        logger.critical('Could not create root watch directory. %s: %s\n' %
+        logger.critical('Could not create root watch directory. %s: %s' %
             (type(e).__name__, e.message))
-        logger.error(traceback.format_exc())
+        logger.critical(traceback.format_exc())
         sys.exit(1)
 
     mounted_as_tmpfs = check_if_mounted_as_tmpfs(watch_dir)
@@ -88,29 +88,34 @@ def create_watch_directories(config):
         if not os.path.isdir(draft_dir):
             os.makedirs(draft_dir)
     except Exception as e:
-        logger.critical('Could not create required watch sub-directories. %s: %s\n' %
+        logger.critical('Could not create required watch sub-directories. %s: %s' %
             (type(e).__name__, e.message))
-        logger.error(traceback.format_exc())
+        logger.critical(traceback.format_exc())
         sys.exit(1)
+
 
 # Parses the e-mail:fingerprint format used in the application config file to specify e-mail/GPG
 #   key pairs.
 #
+# configuration_option: The name of the configuration option being parsed.
 # key_config_string: The formatted string to parse.
-def parse_key_config_string(key_config_string):
+def parse_key_config_string(configuration_option, key_config_string):
 
     key_split = key_config_string.split(':')
 
     if len(key_split) is not 2:
-        logger.critical('Key config %s is does not contain a colon.' % key_config_string)
+        logger.critical('Key config %s for %s is does not contain a colon or is malformed.' % \
+            (key_config_string, configuration_option))
         sys.exit(1)
 
     if not key_split[0]:
-        logger.critical("Key config %s is missing an e-mail address." % key_config_string)
+        logger.critical("Key config %s for %s is missing an e-mail address." % \
+            (key_config_string, configuration_option))
         sys.exit(1)
 
     if not key_split[1]:
-        logger.critical("Key config %s is missing a key fingerprint." % key_config_string)
+        logger.critical("Key config %s for %s is missing a key fingerprint." % \
+            (key_config_string, configuration_option))
         sys.exit(1)
 
     # TODO: Eventually verify e-mail format.
@@ -136,8 +141,9 @@ def build_config_dict():
     config_helper = confighelper.ConfigHelper()
 
     # Figure out the logging options so that can start before anything else.
-    print('Configuring logger')
+    print('Configuring logger.')
     log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
+    # TODO: Eventually add a verify_string_list method.
     log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
 
     config_helper.configure_logger(log_file, log_level)
@@ -175,6 +181,7 @@ def build_config_dict():
 
     config['default_subject'] = config_helper.get_string_if_exists(config_file, 'default_subject')
 
+    # TODO: Eventually add verify_boolean_exists.
     config['allow_expired_signing_key'] = (config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true')
 
     log_file_handle = config_helper.get_log_file_handle()
@@ -187,34 +194,18 @@ def build_config_dict():
 # config: The config dictionary to process.
 def parse_key_config(config):
 
-    sender_key_data = parse_key_config_string(config['sender_string'])
+    sender_key_data = parse_key_config_string('sender', config['sender_string'])
     config['sender']['fingerprint'] = sender_key_data['fingerprint']
     config['sender']['email'] = sender_key_data['email']
-
 
     recipients_config_list = config['recipients_string'].split(',')
     recipients = []
 
     # We won't have recipients any more.
     for recipient_config in recipients_config_list:
-        recipients.append(parse_key_config_string(recipient_config))
+        recipients.append(parse_key_config_string('recipients', recipient_config))
 
     config['recipients'] = recipients
-
-
-# Determines whether an individual GPG key is usable. Usable is defined as a valid hexadecimal string,
-#   in the GPG keyring, and trusted. If the key is not usable, the program will exit.
-#
-# gpg_keyring: The GpgKeyring object that should contain the specified GPG key.
-# fingerprint: The fingerprint of the GPG key to check.
-def key_is_usable(gpg_keyring, fingerprint):
-
-    if not gpg_keyring.is_trusted(fingerprint):
-        logger.critical('Key with fingerprint %s is not trusted. Exiting.' % fingerprint)
-        sys.exit(1)
-
-    else:
-        logger.debug('Key with fingerprint %s is trusted.' % fingerprint)
 
 
 # Tests if it is possible for a GPG key to sign an arbitrary string.
@@ -226,7 +217,6 @@ def key_is_usable(gpg_keyring, fingerprint):
 def signature_test(gpg_home, fingerprint, passphrase):
 
     # TODO: Eventually, parse gpg output to notify that the password was wrong.
-    # TODO: Only perform signature test if sender key is not expired.
     success = False
     gpg = gnupg.GPG(gnupghome=gpg_home)
 
@@ -234,7 +224,7 @@ def signature_test(gpg_home, fingerprint, passphrase):
         detach=True, keyid=fingerprint, passphrase=passphrase)
 
     if str(signature_test_result).strip() == '':
-        logger.info('Signature test for %s failed. Check the sender key\'s passphrase.' % fingerprint)
+        logger.debug('Signature test for %s failed. Check the sender key\'s passphrase.' % fingerprint)
     else:
         logger.info('Signature test for %s passed.' % fingerprint)
         success = True
@@ -242,59 +232,57 @@ def signature_test(gpg_home, fingerprint, passphrase):
     return success
 
 
-# Checks every GPG key in the config file and exits if any of them are missing from the key ring,
-#   untrusted, or are not 40-character hex strings. Also checks and stores
+# Checks the sender GPG key in the config file and exits if it is missing from the key ring,
+#   untrusted, unsigned, or is not a 40-character hex string. Also checks and stores
 #   whether the sender key can be used to sign messages.
 #
 # gpg_keyring: The GpgKeyring object in which to look for GPG keys.
-# config: The config dict to read sender and recipient GPG key information from.
-# Returns a GpgKeyVerifier object initalized with gpg_keyring and config.
-def check_all_keys(gpg_keyring, config):
-    logger.info('Checking all keys for trust and expiration.')
+# config: The config dict to read the sender GPG key information from.
+# expiration_date: The date the singing key is validated to not expire through.
+def check_sender_key(gpg_keyring, config, expiration_date):
+    logger.info('Checking sender key for validity and expiration.')
 
-    # Make sure the sender key isn't going to expire during the first loop iteration.
-    expiration_date = time.time() + config['main_loop_duration']
+    if not gpg_keyring.is_trusted(config['sender']['fingerprint']):
+        logger.critical('Signing key is not ultimately trusted. Exiting.')
+        sys.exit(1)
 
-    key_is_usable(gpg_keyring, config['sender']['fingerprint'])
+    elif not gpg_keyring.is_signed(config['sender']['fingerprint']):
+        logger.critical('Signing key is not signed. Exiting.')
+        sys.exit(1)
 
-    if not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
+    elif not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
             gpg_keyring.get_key_expiration_date(config['sender']['fingerprint'])).strftime('%Y-%m-%d %H:%M:%S')
         logger.warn('Sender key expired on %s.' % formatted_expiration_date)
         config['sender']['can_sign'] = False
 
     elif not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
-        logger.warn('Sender key failed signature test.')
-        config['sender']['can_sign'] = False
+        logger.critical('Sender key failed the signature test and the key is not expired. ' +
+                'Check the sender key\'s passphrase.')
+        sys.exit(1)
 
     else:
         logger.debug('Sender key passed signature test.')
         config['sender']['can_sign'] = True
 
+
+# Checks every recipient GPG key in the config file and exits if any of them are missing
+#   from the key ring, untrusted and unsigned, or are not 40-character hex strings.
+#
+# gpg_keyring: The GpgKeyring object in which to look for GPG keys.
+# config: The config dict to read recipient GPG key information from.
+def check_all_recipient_keys(gpg_keyring, config):
+    logger.info('Checking recipient keys for validity and expiration.')
+
     for recipient in config['recipients']:
-        key_is_usable(gpg_keyring, recipient['fingerprint'])
-
-    # We do this here because we don't want to queue an e-mail if a configuraiton setting can
-    #   cause the program to crash later. (verify_signing_config was originally called after this
-    #   method.) This is to avoid a lot of identical queued warning e-mails.
-    verify_signing_config(config)
-
-    gpg_key_verifier = gpgkeyverifier.GpgKeyVerifier(gpg_keyring, config)
-
-    expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(expiration_date)
-
-    if expiration_warning_message is not None:
-        logger.warn('Sending expiration warning message email.');
-        message = 'Gpgmailer has just restarted.\n\n%s' % expiration_warning_message
-        gpgmailmessage.GpgMailMessage.configure()
-        mail_message = gpgmailmessage.GpgMailMessage()
-        mail_message.set_subject(config['default_subject'])
-        mail_message.set_body(message)
-        mail_message.queue_for_sending()
-
-    logger.debug('Finished initial key check.')
-
-    return gpg_key_verifier
+        if not gpg_keyring.is_trusted(recipient['fingerprint']) and \
+                not gpg_keyring.is_signed(recipient['fingerprint']):
+            logger.critical('Key with fingerprint %s is not signed (and not sufficiently trusted). Exiting.' %
+                recipient['fingerprint'])
+            sys.exit(1)
+        else:
+            logger.debug('Recipient key with fingerprint %s is signed or ultimately trusted.' %
+                recipient['fingerprint'])
 
 
 # Checks the sending GPG key and the program configuration to determine if sending unsigned e-mail
@@ -309,11 +297,36 @@ def verify_signing_config(config):
         sys.exit(1)
 
     elif not config['sender']['can_sign']:
-        logger.warn('The sending key is unable to sign. It may be expired or the password may be ' +
-            'incorrect. Gpgmailer will send unsigned messages.')
+        logger.warn('The sender key is unable to sign because it has probably expired. ' +
+            'Gpgmailer will send unsigned messages.')
 
     else:
         logger.debug('Outgoing e-mails will be signed.')
+
+
+# If needed, queues a warning message about keys that have expired or will be expiring soon.
+#
+# gpg_keyring: The GpgKeyring object in which to look for GPG keys.
+# config: The config dict to read sender and recipient GPG key information from.
+# expiration_date: The date the singing key was validated to not expire through.
+# Returns a GpgKeyVerifier object initalized with gpg_keyring and config. This is used later.
+def send_expiration_warning_message(gpg_keyring, config, expiration_date):
+
+    gpg_key_verifier = gpgkeyverifier.GpgKeyVerifier(gpg_keyring, config)
+    expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(expiration_date)
+
+    if expiration_warning_message is not None:
+        logger.warn('Sending expiration warning message email.');
+        message = 'Gpgmailer has just restarted.'
+        gpgmailmessage.GpgMailMessage.configure()
+        mail_message = gpgmailmessage.GpgMailMessage()
+        mail_message.set_subject(config['default_subject'])
+        mail_message.set_body(message)
+        mail_message.queue_for_sending()
+
+    logger.debug('Finished initial key check.')
+
+    return gpg_key_verifier
 
 
 # Signal handler for SIGTERM. Quits when SIGTERM is received.
@@ -321,45 +334,60 @@ def verify_signing_config(config):
 # signal: Object representing the signal thrown.
 # stack_frame: Represents the stack frame.
 def sig_term_handler(signal, stack_frame):
-    logger.info("SIGTERM receive. Quitting.")
+    logger.info("SIGTERM received. Quitting.")
     sys.exit(0)
 
 
 config, log_file_handle = build_config_dict()
-parse_key_config(config)
+try:
+    parse_key_config(config)
 
-create_watch_directories(config)
+    create_watch_directories(config)
 
-gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
-gpg_key_verifier = check_all_keys(gpg_keyring, config)
+    # Make sure the sender key isn't going to expire during the first loop iteration.
+    expiration_date = time.time() + config['main_loop_duration']
 
-# TODO: Eventually, check directory existence and permissions.
-# TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
+    gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
+    check_sender_key(gpg_keyring, config, expiration_date)
+    check_all_recipient_keys(gpg_keyring, config)
+    # We do this here because we don't want to queue an e-mail if a configuraiton setting
+    #   can cause the program to crash later. This is to avoid a lot of identical queued
+    #   warning e-mails.
+    verify_signing_config(config)
+    gpg_key_verifier = send_expiration_warning_message(gpg_keyring, config, expiration_date)
 
-logger.info('Verification complete.')
+    # TODO: Eventually, check directory existence and permissions.
+    # TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
+
+    logger.info('Verification complete.')
 
 
-# TODO: Eventually, either warn or crash when the config file is readable by everyone.
-# TODO: Eventually, work out a permissions setup for gpgmailer so that it doesn't run as root.
-daemon_context = daemon.DaemonContext(
-    working_directory = '/',
-    pidfile = pidlockfile.PIDLockFile(pid_file),
-    umask = 0
-    )
+    # TODO: Eventually, either warn or crash when the config file is readable by everyone.
+    # TODO: Eventually, work out a permissions setup for gpgmailer so that it doesn't run as root.
+    daemon_context = daemon.DaemonContext(
+        working_directory = '/',
+        pidfile = pidlockfile.PIDLockFile(pid_file),
+        umask = 0
+        )
 
-daemon_context.signal_map = {
-    signal.SIGTERM : sig_term_handler
-    }
+    daemon_context.signal_map = {
+        signal.SIGTERM : sig_term_handler
+        }
 
-daemon_context.files_preserve = [log_file_handle]
+    daemon_context.files_preserve = [log_file_handle]
 
-logger.info('Daemonizing...')
-with daemon_context:
-    try:
-        logger.debug('Initializing GpgMailer.')
-        the_watcher = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier)
-        the_watcher.start_monitoring()
+    logger.info('Daemonizing...')
+    with daemon_context:
+        try:
+            logger.debug('Initializing GpgMailer.')
+            the_watcher = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier)
+            the_watcher.start_monitoring()
 
-    except Exception as e:
-        logger.critical("Fatal %s: %s\n%s" % (type(e).__name__, e.message, traceback.format_exc()))
-        sys.exit(1)
+        except Exception as e:
+            logger.critical("Fatal %s: %s\n%s" % (type(e).__name__, e.message, traceback.format_exc()))
+            sys.exit(1)
+
+except Exception as exception:
+    logger.critical("Fatal %s: %s\n%s" % (type(exception).__name__, exception.message,
+        traceback.format_exc()))
+    sys.exit(1)

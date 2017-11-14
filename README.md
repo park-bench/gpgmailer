@@ -18,7 +18,7 @@ The only current method of installation for our software is building and install
 
 ## Parkbench Dependencies
 
-_watchman_ depends on one other piece of the Parkbench project, which must be installed first:
+_gpgmailer_ depends on one other piece of the Parkbench project, which must be installed first:
 
 * [_confighelper_](https://github.com/park-bench/confighelper)
 
@@ -36,3 +36,8 @@ _watchman_ depends on one other piece of the Parkbench project, which must be in
 ## Updates
 
 Updates may change configuration file options, so if you have a configuration file already, check that it has all of the required options in the current example file.
+
+## Known Errors and Limitations
+
+* No support for checking GPG subkey expiration. All subkeys are assumed to expire at the same time as their parent keys.
+* No exponential backoff while attempting to connect to the e-mail server.

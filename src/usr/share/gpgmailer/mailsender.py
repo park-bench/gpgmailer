@@ -52,7 +52,8 @@ class MailSender:
         self.logger.debug('Random ehlo generated.')
         connected = False
         while not(connected):
-            # TODO: Handle SMTP timeouts properly.
+            # TODO: Eventually handle SMTP timeouts properly.
+            # TODO: Eventually make the connection timeout configurable.
             try:
                 self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
@@ -62,19 +63,19 @@ class MailSender:
                 self.logger.info('Connected to SMTP server!')
                 connected = True
             except smtplib.SMTPAuthenticationError as e:
-                # TODO: Decide how to handle authentication errors
+                # TODO: Eventually decide how to handle authentication errors
                 self.logger.error('Failed to connect. Authentication error. Exception %s:%s' % (type(e).__name__, e.message))
-                # TODO: Make this configurable?
+                # TODO: Eventually make this configurable?
                 time.sleep(.1)
             except smtplib.SMTPDataError as e:
-                # TODO: Backoff strategy.
+                # TODO: Eventually implement backoff strategy.
                 self.logger.error('Failed to connect. Invalid response from server. Exception %s:%s' % (type(e).__name__, e.message))
-                # TODO: Make this configurable?
+                # TODO: Eventually make this configurable?
                 time.sleep(.1)
             except Exception as e:
                 self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
                 self.logger.error(traceback.format_exc())
-                # TODO: Make this configurable?
+                # TODO: Eventually make this configurable?
                 time.sleep(.1)
 
     # Sends an e-mail.
@@ -88,8 +89,8 @@ class MailSender:
         #   are aware that mail is being sent. Make it an option.
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
-        # TODO: There is probably also a hard session limit too.
-        # TODO: Make this timeout optional.
+        # TODO: There is probably also a hard session limit too. (Do this eventually.)
+        # TODO: Eventually make this timeout optional.
         if (time.time() - self.last_sent_time) > self.config['smtp_max_idle']:
             self.logger.info('Max idle time reached. Assuming the SMTP connection has been ' +
                 'remotely severed.')
