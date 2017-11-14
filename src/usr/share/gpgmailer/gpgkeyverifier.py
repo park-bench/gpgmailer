@@ -109,20 +109,26 @@ class GpgKeyVerifier:
         # Build a dict of fingerprints from the keyring that includes associated email addresses,
         # whether the key is the gpgmailer configured sender, and whether any expiry emails have
         # been sent for this key.
-        for key in self.gpgkeyring.fingerprint_to_key_dict:
+        fp_to_key_dict = self.gpgkeyring.fingerprint_to_key_dict
+        for fingerprint in fp_to_key_dict:
 
             key_dict = {
-                'fingerprint': key['fingerprint'],
-                'emails': key['emails'],
+                'fingerprint': fp_to_key_dict[fingerprint]['fingerprint'],
+                'email_list': fp_to_key_dict[fingerprint]['emails'],
                 'expired_email_sent': False,
-                'expiring_soon_email_sent': True
+                'expiring_soon_email_sent': False
             }
 
             # Mark the gpgmailer configured sender key.
-            if key['fingerprint'] == config['sender_key']:
+            if fp_to_key_dict[fingerprint]['fingerprint'] == config['sender']['fingerprint']:
                 self.sender_key = key_dict
 
-            self.recipient_keys[key['fingerprint']] = key_dict
+            self.recipient_keys[fp_to_key_dict[fingerprint]['fingerprint']] = key_dict
+
+            self.logger.debug("The sender key is: ")
+            self.logger.debug(self.sender_key)
+            self.logger.debug("The key being added is: ")
+            self.logger.debug(key_dict)
 
 
         # recipient_fingerprints = []
@@ -201,7 +207,7 @@ class GpgKeyVerifier:
                 # Always encrypt with the sender key. TODO: Eventually make this an option.
                 valid_key_fingerprints.append(self.sender_key['fingerprint'])
                 # TODO: This should add all of the associated email addresses, but for now I'm arbitrarily using only the first one just to get started.
-                valid_recipient_emails.append(self.sender_key['email_list'][0])
+                valid_recipient_emails.append(self.sender_key['email_list'])
 
             # The sender's message always shows up on top regardless of whether the key has expired
             #   or will expire soon.
@@ -212,7 +218,7 @@ class GpgKeyVerifier:
         else:
             # Always encrypt with the sender key. TODO: Eventually make this an option.
             valid_key_fingerprints.append(self.sender_key['fingerprint'])
-            valid_recipient_emails.append(self.sender_key['email_list'][0])
+            valid_recipient_emails.append(self.sender_key['email_list'])
 
         # Calculate all of the expiration information for each recipient (i.e. non-sender keys).
         self.logger.trace('Checking recipient keys.')
@@ -223,7 +229,7 @@ class GpgKeyVerifier:
             #   of checked fingerprints.
 
             if fingerprint == self.sender_key['fingerprint']:
-                self.logger.trace('Recipient %s is also a sender.' % self.sender_key['email_list'][0])
+                self.logger.trace('Recipient %s is also a sender.' % self.sender_key['email_list'])
                 expiration_data = sender_expiration_data
 
             else:
@@ -238,11 +244,11 @@ class GpgKeyVerifier:
 
                     valid_key_fingerprints.append(fingerprint)
                     # TODO: Again, loop through to append all associated email addresses.
-                    valid_recipient_emails.append(self.recipient_keys[fingerprint]['email_list'][0])
+                    valid_recipient_emails.append(self.recipient_keys[fingerprint]['email_list'])
 
                 else:
                     valid_key_fingerprints.append(fingerprint)
-                    valid_recipient_emails.append(self.recipient_keys[fingerprint]['email_list'][0])
+                    valid_recipient_emails.append(self.recipient_keys[fingerprint]['email_list'])
 
                 if expiration_data['new_message']:
                     expiration_warning_email_message = 'A new key has expired or will expire soon.'
@@ -277,7 +283,7 @@ class GpgKeyVerifier:
     def _build_key_expiration_warning_message(self, fingerprint, loop_current_time):
 
         # TODO Arbitrarily taking the first email in the list for now.
-        key_associated_email = self.recipient_keys[fingerprint]['email_list'][0]
+        key_associated_email = self.recipient_keys[fingerprint]['email_list']
 
         self.logger.trace('Building expiration message for key %s to be sent to address %s.' % (fingerprint, key_associated_email))
 

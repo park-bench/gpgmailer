@@ -191,9 +191,11 @@ def parse_key_config(config):
     config['sender']['fingerprint'] = sender_key_data['fingerprint']
     config['sender']['email'] = sender_key_data['email']
 
+
     recipients_config_list = config['recipients_string'].split(',')
     recipients = []
 
+    # We won't have recipients any more.
     for recipient_config in recipients_config_list:
         recipients.append(parse_key_config_string(recipient_config))
 

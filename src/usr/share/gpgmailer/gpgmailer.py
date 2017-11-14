@@ -91,8 +91,9 @@ class GpgMailer:
                     encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
 
                     # TODO Brittney what if recipient_emails is blank?
+                    self.logger.debug(message_dict)
                     self.mailsender.sendmail(message_string=encrypted_message,
-                        recipients=message_dict['recipient_emails'])
+                        recipients=self.gpgkeyverifier.valid_recipient_emails)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
@@ -155,9 +156,12 @@ class GpgMailer:
             self.expiration_warning_message = new_expiration_warning_message
 
             # Actually send the warning e-mail.
+            self.logger.warn(self.gpgkeyverifier.valid_recipient_emails)
+            self.logger.warn("Hey, I just warned you!")
             # TODO Brittney - need to send warning emails to everybody, not just message recips.
             message_dict = {'subject': self.config['default_subject'],
-                'body': self.gpgkeyverifier.get_expiration_warning_email_message(loop_start_time)}
+                            'body': self.gpgkeyverifier.get_expiration_warning_email_message(loop_start_time),
+                            'recipients': self.gpgkeyverifier.valid_recipient_emails}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
             self.mailsender.sendmail(encrypted_message, self.gpgkeyverifier.valid_recipient_emails)
 

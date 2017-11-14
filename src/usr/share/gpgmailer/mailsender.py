@@ -96,6 +96,7 @@ class MailSender:
             self._connect()
 
         try:
+            self.logger.debug(self.config['sender'])
             self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
         except Exception as exception:
             self.logger.error('Failed to send: %s: %s\n' % (type(exception).__name__,
