@@ -21,31 +21,37 @@ from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import time
+
 
 # Raised when something goes wrong with a GnuPG signature.
 class SignatureError(Exception):
     pass
 
+
 # Raised when something goes wrong with GnuPG encryption.
 class EncryptionError(Exception):
     pass
+
 
 # Raised when attempting to use an expired key.
 class GpgKeyExpiredException(Exception):
     pass
 
+
 # Raised when attempting to use a sender untrusted key.
 class GpgKeyNotTrustedException(Exception):
     pass
+
 
 # Raised when attempting to use a sender unsigned key.
 class GpgKeyNotSignedException(Exception):
     pass
 
+
 # Raised when attempting to use a recipient untrusted or unsigned key.
 class GpgKeyNotValidatedException(Exception):
     pass
+
 
 # Builds, signs, and encrypts PGP/MIME emails with attachments.
 #
@@ -62,8 +68,9 @@ class GpgMailBuilder:
     # Constructor.
     #
     # gpg_keyring: A GpgKeyring object.
-    # max_operation_time: The maximum time that building a message is expected to take. Used for
-    #   'last minute' key expiration checks that occur immediately prior to message construction.
+    # max_operation_time: The maximum time that building a message is expected to take.
+    #   Used for 'last minute' key expiration checks that occur immediately prior to
+    #   message construction.
     def __init__(self, gpg_keyring, max_operation_time):
 
         self.logger = logging.getLogger('GpgMailBuilder')
@@ -82,36 +89,34 @@ class GpgMailBuilder:
             '8': 'sha256',
             '9': 'sha384',
             '10': 'sha512',
-            '11': 'sha224' }
-
+            '11': 'sha224'}
 
     # Builds and returns an unsigned encrypted MIME message.
     #
-    # message_dict: A dictionary containing the body, subject, and any attachments of the message.
-    #   See class documentation for a description of the message_dict format.
+    # message_dict: A dictionary containing the body, subject, and any attachments of the
+    #   message. See class documentation for a description of the message_dict format.
     # encryption_keys: A list of GPG key fingerprints to encrypt to.
     # loop_current_time: The Unix time associated with the main program loop from which all
     #   PGP key expiration checks are based.
     def build_encrypted_message(self, message_dict, encryption_keys, loop_current_time):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
-        encrypted_message = self._encrypt_message(message=plain_message, 
+        encrypted_message = self._encrypt_message(message=plain_message,
             encryption_keys=encryption_keys, loop_current_time=loop_current_time)
         encrypted_message['Subject'] = message_dict['subject']
 
         return str(encrypted_message)
 
-
     # Builds and returns a signed unencrypted MIME message.
     #
-    # message_dict: A dictionary containing the body, subject, and any attachments of the message.
-    #   See class documentation for a description of the message_dict format.
+    # message_dict: A dictionary containing the body, subject, and any attachments of the
+    #   message. See class documentation for a description of the message_dict format.
     # signing_key_fingerprint: The fingerprint of the GPG key to sign with.
     # signing_key_passphrase: The passphrase for the previously mentioned GPG key.
     # loop_current_time: The Unix time associated with the main program loop from which all
     #   PGP key expiration checks are based.
-    def build_signed_message(self, message_dict, signing_key_fingerprint, signing_key_passphrase,
-        loop_current_time):
+    def build_signed_message(self, message_dict, signing_key_fingerprint,
+                             signing_key_passphrase, loop_current_time):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
         signed_message = self._sign_message(message=plain_message,
@@ -122,26 +127,25 @@ class GpgMailBuilder:
 
         return str(signed_message)
 
-
     # Builds and returns a signed and encrypted MIME message.
     #
-    # message_dict: A dictionary containing the body, subject, and any attachments of the message.
-    #   See class documentation for a description of the message_dict format.
+    # message_dict: A dictionary containing the body, subject, and any attachments of the
+    #   message. See class documentation for a description of the message_dict format.
     # encryption_keys: A list of GPG key fingerprints to encrypt to.
     # signing_key_fingerprint: The fingerprint of the GPG key to sign with.
     # signing_key_passphrase: The passphrase for the previously mentioned GPG key.
-    # loop_current_time: The Unix time associated with the main program loop from which all
-    #   PGP key expiration checks are based.
+    # loop_current_time: The Unix time associated with the main program loop from which
+    #   all PGP key expiration checks are based.
     def build_signed_encrypted_message(self, message_dict, encryption_keys,
         signing_key_fingerprint, signing_key_passphrase, loop_current_time):
 
         plain_message = self._build_plaintext_message_with_attachments(message_dict)
         signed_message = self._sign_message(message=plain_message,
-            loop_current_time=loop_current_time, 
-            signing_key_fingerprint=signing_key_fingerprint,
-            signing_key_passphrase=signing_key_passphrase)
+                                            loop_current_time=loop_current_time,
+                                            signing_key_fingerprint=signing_key_fingerprint,
+                                            signing_key_passphrase=signing_key_passphrase)
 
-        encrypted_message = self._encrypt_message(message=signed_message, 
+        encrypted_message = self._encrypt_message(message=signed_message,
             encryption_keys=encryption_keys, loop_current_time=loop_current_time)
         encrypted_message['Subject'] = message_dict['subject']
 
@@ -153,10 +157,10 @@ class GpgMailBuilder:
     # message: A MIME message object to sign.
     # signing_key_fingerprint: The fingerprint of the GPG key to sign with.
     # signing_key_passphrase: The passphrase for the previously mentioned GPG key.
-    # loop_current_time: The Unix time associated with the main program loop from which all
-    #   PGP key expiration checks are based.
+    # loop_current_time: The Unix time associated with the main program loop from which
+    #   all PGP key expiration checks are based.
     def _sign_message(self, message, signing_key_fingerprint, signing_key_passphrase,
-        loop_current_time):
+                      loop_current_time):
 
         self._validate_signing_key(signing_key_fingerprint, loop_current_time)
 
@@ -164,8 +168,8 @@ class GpgMailBuilder:
         message_string = str(message).split('\n', 1)[1].replace('\n', '\r\n')
 
         # Make the signature component.
-        signature_result = self.gpg.sign(message_string, detach=True, keyid=signing_key_fingerprint,
-            passphrase=signing_key_passphrase)
+        signature_result = self.gpg.sign(message_string, detach=True,
+            keyid=signing_key_fingerprint, passphrase=signing_key_passphrase)
         signature_text = str(signature_result)
 
         # The GnuPG library we use does not provide any granular error information
@@ -187,19 +191,19 @@ class GpgMailBuilder:
 
         # Make a MIME box to put the message and signature in.
         signed_message = MIMEMultipart(_subtype="signed",
-            micalg="pgp-%s" % signature_hash_algorithm, protocol="application/pgp-signature")
+                                       micalg="pgp-%s" % signature_hash_algorithm,
+                                       protocol="application/pgp-signature")
         signed_message.attach(message)
         signed_message.attach(signature_part)
 
         return signed_message
 
-
     # Encrypts a MIME message object.
     #
     # message: A MIME message object to encrypt.
     # encryption_keys: A list of GPG key fingerprints to encrypt to.
-    # loop_current_time: The Unix time associated with the main program loop from which all
-    #   PGP key expiration checks are based.
+    # loop_current_time: The Unix time associated with the main program loop from which
+    #   all PGP key expiration checks are based.
     def _encrypt_message(self, message, encryption_keys, loop_current_time):
 
         for fingerprint in encryption_keys:
@@ -216,26 +220,25 @@ class GpgMailBuilder:
 
         # This 'ok' variable is not as granular as we would like it to be.
         #   The GnuPG library does not provide more information.
-        if encrypted_payload.ok == False:
-            raise EncryptionError('Error from python-gnupg while encrypting message: %s.' % \
-                encrypted_payload.status)
+        if encrypted_payload.ok is False:
+            raise EncryptionError('Error from python-gnupg while encrypting message: %s.' %
+                                  encrypted_payload.status)
 
         encrypted_part = MIMEApplication("", _encoder=encode_7or8bit)
         encrypted_part.set_payload(encrypted_payload_string)
 
         # Pack it all into one big message.
         encrypted_message = MIMEMultipart(_subtype="encrypted",
-            protocol="application/pgp-encrypted")
+                                          protocol="application/pgp-encrypted")
         encrypted_message.attach(pgp_version)
         encrypted_message.attach(encrypted_part)
 
         return encrypted_message
 
-
     # Builds the initial plain-text multipart MIME message to be signed and/or encrypted.
     #
-    # message_dict: A dictionary containing the body, subject, and any attachments of the message.
-    #   See class documentation for a description of the message_dict format.
+    # message_dict: A dictionary containing the body, subject, and any attachments of the
+    #   message. See class documentation for a description of the message_dict format.
     def _build_plaintext_message_with_attachments(self, message_dict):
 
         multipart_message = MIMEMultipart(_subtype="mixed")
@@ -248,35 +251,34 @@ class GpgMailBuilder:
                 attachment_part.set_payload(base64.b64encode(attachment['data']))
                 attachment_part.add_header('Content-Transfer-Encoding', 'base64')
                 attachment_part.add_header('Content-Disposition', 'attachment',
-                    filename=attachment['filename'])
+                                           filename=attachment['filename'])
                 multipart_message.attach(attachment_part)
 
         return multipart_message
-
 
     # Checks if the given fingerprint is expired or untrusted and throws an
     #   appropriate exception in either case. Never returns anything.
     #
     # fingerprint: The fingerprint of the key to be checked.
-    # loop_current_time: The Unix time associated with the main program loop from which all
-    #   PGP key expiration checks are based.
+    # loop_current_time: The Unix time associated with the main program loop from which
+    #   all PGP key expiration checks are based.
     def _validate_encryption_key(self, fingerprint, loop_current_time):
 
-        if not self.gpgkeyring.is_trusted(fingerprint) and not self.gpgkeyring.is_signed(fingerprint):
+        if not self.gpgkeyring.is_trusted(fingerprint) and \
+                not self.gpgkeyring.is_signed(fingerprint):
             raise GpgKeyNotValidatedException('Recipient key %s is not signed or trusted.' %
-                fingerprint)
+                                              fingerprint)
 
         if not self.gpgkeyring.is_current(fingerprint, loop_current_time +
-                self.max_operation_time):
+                                          self.max_operation_time):
             raise GpgKeyExpiredException('Key %s is expired.' % fingerprint)
 
-
-    # Checks if the given signing key fingerprint is expired, unsigned or untrusted and throws
-    #   an appropriate exception in either case. Never returns anything.
+    # Checks if the given signing key fingerprint is expired, unsigned or untrusted and
+    #   throws an appropriate exception in either case. Never returns anything.
     #
     # fingerprint: The fingerprint of the key to be checked.
-    # loop_current_time: The Unix time associated with the main program loop from which all
-    #   PGP key expiration checks are based.
+    # loop_current_time: The Unix time associated with the main program loop from which
+    #   all PGP key expiration checks are based.
     def _validate_signing_key(self, fingerprint, loop_current_time):
 
         if not self.gpgkeyring.is_trusted(fingerprint):
@@ -284,5 +286,5 @@ class GpgMailBuilder:
         elif not self.gpgkeyring.is_signed(fingerprint):
             raise GpgKeyNotSignedException('Signing key is not signed.')
         elif not self.gpgkeyring.is_current(fingerprint, loop_current_time +
-                self.max_operation_time):
+                                            self.max_operation_time):
             raise GpgKeyExpiredException('Signing key is expired.')

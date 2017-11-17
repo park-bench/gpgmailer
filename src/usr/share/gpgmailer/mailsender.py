@@ -19,6 +19,7 @@ import smtplib
 import time
 import traceback
 
+
 # Creates and maintains an SMTP connection and sends e-mails.
 class MailSender:
 
@@ -36,16 +37,15 @@ class MailSender:
         # Used to determine SMTP session idle time.
         self.last_sent_time = time.time()
 
-
     # Attempts to connect to the configured mail server.
     def _connect(self):
 
         self.logger.info('Connecting.')
         if self.smtp is not None:
-            # I originally tried to quit the existing SMTP session here, but that just slowed things
-            #   down too much and usually, eventually threw an exception.
+            # I originally tried to quit the existing SMTP session here, but that just
+            #   slowed things down too much and usually, eventually threw an exception.
             self.smtp = None
-        
+
         # Create a random number as our host id.
         self.logger.debug('Generating random ehlo.')
         self.ehlo_id = str(random.SystemRandom().random()).split('.', 1)[1]
@@ -55,7 +55,8 @@ class MailSender:
             # TODO: Eventually handle SMTP timeouts properly.
             # TODO: Eventually make the connection timeout configurable.
             try:
-                self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
+                self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'],
+                    self.ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
                 self.smtp.starttls()
                 self.logger.debug('smtp.login.')
@@ -64,16 +65,19 @@ class MailSender:
                 connected = True
             except smtplib.SMTPAuthenticationError as e:
                 # TODO: Eventually decide how to handle authentication errors
-                self.logger.error('Failed to connect. Authentication error. Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error('Failed to connect. Authentication error. ' +
+                                  'Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
             except smtplib.SMTPDataError as e:
                 # TODO: Eventually implement backoff strategy.
-                self.logger.error('Failed to connect. Invalid response from server. Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error('Failed to connect. Invalid response from server. ' +
+                                  'Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
             except Exception as e:
-                self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error('Failed to connect. Waiting to try again. ' +
+                                  'Exception %s:%s' % (type(e).__name__, e.message))
                 self.logger.error(traceback.format_exc())
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
@@ -92,15 +96,15 @@ class MailSender:
         # TODO: There is probably also a hard session limit too. (Do this eventually.)
         # TODO: Eventually make this timeout optional.
         if (time.time() - self.last_sent_time) > self.config['smtp_max_idle']:
-            self.logger.info('Max idle time reached. Assuming the SMTP connection has been ' +
-                'remotely severed.')
+            self.logger.info('Max idle time reached. Assuming the SMTP connection has ' +
+                             'been remotely severed.')
             self._connect()
 
         try:
             self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
         except Exception as exception:
             self.logger.error('Failed to send: %s: %s\n' % (type(exception).__name__,
-                exception.message))
+                              exception.message))
             self.logger.error(traceback.format_exc())
             self.logger.error('Retrying.')
 

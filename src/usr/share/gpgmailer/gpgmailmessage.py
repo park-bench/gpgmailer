@@ -25,11 +25,13 @@ import json
 import logging
 import os
 import shutil
-import sys
 
-# This exception is raised when gpgmailer is configured but the watch directories do not exist.
+
+# This exception is raised when gpgmailer is configured but the watch directories do not
+#   exist.
 class WatchDirectoryMissingException(Exception):
     pass
+
 
 # Constructs an e-mail message and serializes it to the mail queue directory.
 #   Messages are queued in JSON format.
@@ -69,10 +71,11 @@ class GpgMailMessage:
     def __init__(self):
 
         # Verify the 'configure' class method was called.
-        if (self._outbox_dir == None) or (self._draft_dir == None):
-            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
-            raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
-                'can be created.')
+        if (self._outbox_dir is None) or (self._draft_dir is None):
+            # TODO: Eventually we should thrown our own exception here, not a builtin
+            #   generic one.
+            raise RuntimeError('GpgMailMessage.configure() must be called before an ' +
+                               'instance can be created.')
 
         self.saved = False
         self.message = {}
@@ -100,15 +103,17 @@ class GpgMailMessage:
     # data: The binary content of the attachment.
     def add_attachment(self, filename, data):
         self._check_if_saved()
-        self.message['attachments'].append({ 'filename': filename, 'data': data })
+        self.message['attachments'].append({'filename': filename, 'data': data})
 
-    # Saves the message to the 'outbox' directory and marks this message class instance as 'saved'
-    #   meaning no addtional method calls can be made on the current message object.
+    # Saves the message to the 'outbox' directory and marks this message class instance as
+    #   'saved' meaning no addtional method calls can be made on the current message
+    #   object.
     def queue_for_sending(self):
         self._check_if_saved()
 
-        if self.message['body'] == None:
-            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
+        if self.message['body'] is None:
+            # TODO: Eventually we should thrown our own exception here, not a builtin
+            #   generic one.
             raise Exception('Tried to save message without a body.')
 
         # Encode any attachments as base64.
@@ -138,8 +143,10 @@ class GpgMailMessage:
 
         return self.saved
 
-    # Checks if this message has already been saved and throws an Exception if it has been.
+    # Checks if this message has already been saved and throws an Exception if it has
+    #   been.
     def _check_if_saved(self):
         if self.saved:
-            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
+            # TODO: Eventually we should thrown our own exception here, not a builtin
+            #   generic one.
             raise Exception('Tried to modify an already saved message.')

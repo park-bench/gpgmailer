@@ -55,11 +55,11 @@ def create_watch_directories(config):
     watch_dir = os.path.normpath(config['watch_dir'])
 
     try:
-        if os.path.isdir(watch_dir) == False:
+        if os.path.isdir(watch_dir) is False:
             os.makedirs(watch_dir)
     except Exception as e:
         logger.critical('Could not create root watch directory. %s: %s' %
-            (type(e).__name__, e.message))
+                        (type(e).__name__, e.message))
         logger.critical(traceback.format_exc())
         sys.exit(1)
 
@@ -67,13 +67,13 @@ def create_watch_directories(config):
 
     # If directory is not mounted as tmpfs and there is something in the directory, fail to
     #   start.
-    if os.listdir(watch_dir) != [] and mounted_as_tmpfs == False:
-        logger.critical('Root watch directory is not empty and not mounted as a ramdisk. ' + \
-            'Startup failed.')
+    if os.listdir(watch_dir) != [] and mounted_as_tmpfs is False:
+        logger.critical('Root watch directory is not empty and not mounted as a ramdisk. ' +
+                        'Startup failed.')
         sys.exit(1)
 
     # If the root watch directory is empty and not already mounted as tmpfs, mount it as tmpfs.
-    if mounted_as_tmpfs == False:
+    if mounted_as_tmpfs is False:
         logger.info('Attempting to mount the root watch directory as a ramdisk.')
         subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', watch_dir])
 
@@ -91,13 +91,13 @@ def create_watch_directories(config):
             os.makedirs(draft_dir)
     except Exception as e:
         logger.critical('Could not create required watch sub-directories. %s: %s' %
-            (type(e).__name__, e.message))
+                        (type(e).__name__, e.message))
         logger.critical(traceback.format_exc())
         sys.exit(1)
 
 
-# Parses the e-mail:fingerprint format used in the application config file to specify e-mail/GPG
-#   key pairs.
+# Parses the e-mail:fingerprint format used in the application config file to specify
+#   e-mail/GPG key pairs.
 #
 # configuration_option: The name of the configuration option being parsed.
 # key_config_string: The formatted string to parse.
@@ -106,29 +106,29 @@ def parse_key_config_string(configuration_option, key_config_string):
     key_split = key_config_string.split(':')
 
     if len(key_split) is not 2:
-        logger.critical('Key config %s for %s is does not contain a colon or is malformed.' % \
-            (key_config_string, configuration_option))
+        logger.critical('Key config %s for %s is does not contain a colon or is malformed.' %
+                        (key_config_string, configuration_option))
         sys.exit(1)
 
     if not key_split[0]:
-        logger.critical("Key config %s for %s is missing an e-mail address." % \
-            (key_config_string, configuration_option))
+        logger.critical("Key config %s for %s is missing an e-mail address." %
+                        (key_config_string, configuration_option))
         sys.exit(1)
 
     if not key_split[1]:
-        logger.critical("Key config %s for %s is missing a key fingerprint." % \
-            (key_config_string, configuration_option))
+        logger.critical("Key config %s for %s is missing a key fingerprint." %
+                        (key_config_string, configuration_option))
         sys.exit(1)
 
     # TODO: Eventually verify e-mail format.
     key_dict = {'email': key_split[0].strip(),
-        'fingerprint': key_split[1].strip()}
+                'fingerprint': key_split[1].strip()}
 
     return key_dict
 
 
-# Reads the application config file performing only the basic verifications done in ConfigHelper
-#   and returns the config as a dictionary.
+# Reads the application config file performing only the basic verifications done in
+#   ConfigHelper and returns the config as a dictionary.
 def build_config_dict():
 
     print('Reading %s...' % config_pathname)
@@ -259,7 +259,7 @@ def check_sender_key(gpg_keyring, config, expiration_date):
 
     elif not signature_test(config['gpg_dir'], config['sender']['fingerprint'], config['sender']['password']):
         logger.critical('Sender key failed the signature test and the key is not expired. ' +
-                'Check the sender key\'s passphrase.')
+                        'Check the sender key\'s passphrase.')
         sys.exit(1)
 
     else:
@@ -279,11 +279,11 @@ def check_all_recipient_keys(gpg_keyring, config):
         if not gpg_keyring.is_trusted(recipient['fingerprint']) and \
                 not gpg_keyring.is_signed(recipient['fingerprint']):
             logger.critical('Key with fingerprint %s is not signed (and not sufficiently trusted). Exiting.' %
-                recipient['fingerprint'])
+                            recipient['fingerprint'])
             sys.exit(1)
         else:
             logger.debug('Recipient key with fingerprint %s is signed or ultimately trusted.' %
-                recipient['fingerprint'])
+                         recipient['fingerprint'])
 
 
 # Checks the sending GPG key and the program configuration to determine if sending unsigned e-mail
@@ -317,14 +317,14 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
     expiration_warning_message = gpg_key_verifier.get_expiration_warning_message(expiration_date)
 
     if expiration_warning_message is not None:
-        logger.warn('Sending expiration warning message email.');
+        logger.warn('Sending expiration warning message email.')
         message = 'Gpgmailer has just restarted.'
         gpgmailmessage.GpgMailMessage.configure()
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
         mail_message.set_body(message)
         mail_message.queue_for_sending()
-        
+
     logger.debug('Finished initial key check.')
 
     return gpg_key_verifier
@@ -366,13 +366,13 @@ try:
     # TODO: Eventually, either warn or crash when the config file is readable by everyone.
     # TODO: Eventually, work out a permissions setup for gpgmailer so that it doesn't run as root.
     daemon_context = daemon.DaemonContext(
-        working_directory = '/',
-        pidfile = pidlockfile.PIDLockFile(pid_file),
-        umask = 0
+        working_directory='/',
+        pidfile=pidlockfile.PIDLockFile(pid_file),
+        umask=0
         )
 
     daemon_context.signal_map = {
-        signal.SIGTERM : sig_term_handler
+        signal.SIGTERM: sig_term_handler
         }
 
     daemon_context.files_preserve = [log_file_handle]
@@ -390,5 +390,5 @@ try:
 
 except Exception as exception:
     logger.critical("Fatal %s: %s\n%s" % (type(exception).__name__, exception.message,
-        traceback.format_exc()))
+                    traceback.format_exc()))
     sys.exit(1)

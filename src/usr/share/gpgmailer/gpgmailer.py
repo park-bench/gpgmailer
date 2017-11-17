@@ -27,6 +27,7 @@ import sys
 import time
 import traceback
 
+
 # Contains high level program business logic. Monitors the outbox directory, manages keys, and
 #   coordinates sending e-mail.
 class GpgMailer:
@@ -58,7 +59,6 @@ class GpgMailer:
 
         self.logger.info('Done initializing gpgmailer module.')
 
-
     # GpgMailer's main program loop. Reads the watch directory and then calls other modules
     #   to build and send e-mail. Also sends warnings about GPG key expirations.
     def start_monitoring(self):
@@ -82,7 +82,6 @@ class GpgMailer:
                     self.logger.info("Found queued e-mail in file %s." % file_name)
                     message_dict = self._read_message_file(file_name)
 
-
                     # Set default subject if the queued message does not have one.
                     if message_dict['subject'] is None:
                         message_dict['subject'] = self.config['default_subject']
@@ -90,7 +89,7 @@ class GpgMailer:
                     encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
 
                     self.mailsender.sendmail(message_string=encrypted_message,
-                        recipients=self.valid_recipient_emails)
+                                             recipients=self.valid_recipient_emails)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
@@ -99,7 +98,7 @@ class GpgMailer:
 
             except gpgkeyverifier.NoUsableKeysException as exception:
                 self.logger.critical('No keys available for encryption. Exiting. %s: %s' %
-                    (type(exception).__name__, exception.message))
+                                     (type(exception).__name__, exception.message))
                 self.logger.critical(traceback.format_exc())
                 sys.exit(1)
             except gpgkeyverifier.SenderKeyExpiredException as exception:
@@ -133,7 +132,6 @@ class GpgMailer:
         self.logger.trace('Message file %s read.' % file_name)
 
         return message_dict
-
 
     # Periodically checks whether the expiration warning message has changed and if it has, start
     #   including the new expiration warning message at the top of every e-mail and send an e-mail
