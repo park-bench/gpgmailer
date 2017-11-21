@@ -185,7 +185,7 @@ class GpgKeyVerifier:
             raise NoUsableKeysException("The sender key was not found in the keyring.")
         else:
             sender_expiration_data = self._build_key_expiration_warning_message(
-                self.sender_key['fingerprint'], loop_current_time)
+                self.sender_key['fingerprint'], expiration_date, expiring_soon_date)
 
         # Add expiry messages or raise exception based on sender expiry info generated above.
         if sender_expiration_data['expiring_soon'] or sender_expiration_data['is_expired']:
@@ -223,7 +223,7 @@ class GpgKeyVerifier:
 
             else:
                 expiration_data = self._build_key_expiration_warning_message(fingerprint,
-                    loop_current_time)
+                    expiration_date, expiring_soon_date)
 
                 if expiration_data['is_expired']:
                     expired_messages.append(expiration_data['warning_message'])
