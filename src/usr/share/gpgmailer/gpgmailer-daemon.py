@@ -34,6 +34,9 @@ import sys
 import time
 import traceback
 
+# TODO: Target Ubuntu 18.04 instead of 14.04 (issue 8)
+# TODO: Use PEP 8 styling (issue 4)
+
 pid_file = '/run/gpgmailer.pid'
 config_pathname = '/etc/gpgmailer/gpgmailer.conf'
 
@@ -357,14 +360,14 @@ try:
     verify_signing_config(config)
     gpg_key_verifier = send_expiration_warning_message(gpg_keyring, config, expiration_date)
 
-    # TODO: Eventually, check directory existence and permissions.
+    # TODO: Check directory existence and permissions. (issue 9)
     # TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
 
     logger.info('Verification complete.')
 
 
-    # TODO: Eventually, either warn or crash when the config file is readable by everyone.
-    # TODO: Eventually, work out a permissions setup for gpgmailer so that it doesn't run as root.
+    # TODO: Either warn or crash when the config file is readable by everyone. (issue 9)
+    # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root. (issue 9)
     daemon_context = daemon.DaemonContext(
         working_directory='/',
         pidfile=pidlockfile.PIDLockFile(pid_file),

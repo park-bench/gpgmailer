@@ -53,7 +53,7 @@ class MailSender:
         connected = False
         while not(connected):
             # TODO: Eventually handle SMTP timeouts properly.
-            # TODO: Eventually make the connection timeout configurable.
+            # TODO: Make the connection timeout configurable.
             try:
                 self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'],
                     self.ehlo_id, int(self.config['smtp_sending_timeout']))
@@ -64,7 +64,7 @@ class MailSender:
                 self.logger.info('Connected to SMTP server!')
                 connected = True
             except smtplib.SMTPAuthenticationError as e:
-                # TODO: Eventually decide how to handle authentication errors
+                # TODO: Decide how to handle authentication errors
                 self.logger.error('Failed to connect. Authentication error. ' +
                                   'Exception %s:%s' % (type(e).__name__, e.message))
                 # TODO: Eventually make this configurable?
@@ -88,12 +88,12 @@ class MailSender:
     # recipients: An array of e-mail addresses to send the e-mail to.
     def sendmail(self, message_string, recipients):
 
-        # TODO: Eventually, send encrypted messages to all recipients,
-        #   regardless of whether it was encrypted with their key, so that they
+        # TODO: Send encrypted messages to all recipients,
+        #   regardless of whether it was encrypted with their key, so that they 
         #   are aware that mail is being sent. Make it an option.
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
-        # TODO: There is probably also a hard session limit too. (Do this eventually.)
+        # TODO: Eventually, there is probably also a hard session limit too.
         # TODO: Eventually make this timeout optional.
         if (time.time() - self.last_sent_time) > self.config['smtp_max_idle']:
             self.logger.info('Max idle time reached. Assuming the SMTP connection has ' +

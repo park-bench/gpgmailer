@@ -183,7 +183,7 @@ class GpgKeyVerifier:
         self.logger.trace('Checking recipient keys.')
         for recipient_email in self.all_recipient_emails:
             # Reuse the sender expiration data if the sender is also a recipient.
-            # TODO: Eventually, optimize all key checking, not just sender key. Maybe have a list
+            # TODO: Optimize all key checking, not just sender key. Maybe have a list
             #   of checked fingerprints.
             if self.email_dicts[recipient_email]['is_sender']:
                 self.logger.trace('Recipient %s is also a sender.' % recipient_email)

@@ -72,8 +72,6 @@ class GpgMailMessage:
 
         # Verify the 'configure' class method was called.
         if (self._outbox_dir is None) or (self._draft_dir is None):
-            # TODO: Eventually we should thrown our own exception here, not a builtin
-            #   generic one.
             raise RuntimeError('GpgMailMessage.configure() must be called before an ' +
                                'instance can be created.')
 
@@ -112,8 +110,8 @@ class GpgMailMessage:
         self._check_if_saved()
 
         if self.message['body'] is None:
-            # TODO: Eventually we should thrown our own exception here, not a builtin
-            #   generic one.
+            # TODO: We should thrown our own exception here, not a builtin
+            #   generic one. (issue 10)
             raise Exception('Tried to save message without a body.')
 
         # Encode any attachments as base64.
@@ -147,6 +145,6 @@ class GpgMailMessage:
     #   been.
     def _check_if_saved(self):
         if self.saved:
-            # TODO: Eventually we should thrown our own exception here, not a builtin
-            #   generic one.
+            # TODO: We should thrown our own exception here, not a builtin
+            #   generic one. (issue 10)
             raise Exception('Tried to modify an already saved message.')

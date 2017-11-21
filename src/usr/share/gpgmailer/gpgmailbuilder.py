@@ -176,7 +176,7 @@ class GpgMailBuilder:
         #   or throw any exceptions for signature operations, so checking for an
         #   empty string is all we have.
         if signature_text.strip() == '':
-            # TODO: Eventually, use signature_text.stderr for more granular error handling.
+            # TODO: Eventually, use signature_text.stderr for more granular error handling. (issue 7)
             self.logger.error(signature_result.stderr)
             raise SignatureError('Error while signing message.')
 
