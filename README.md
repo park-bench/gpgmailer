@@ -15,6 +15,8 @@ The only current method of installation for our software is building and install
 * You are already familiar with using a Linux terminal.
 * You already know how to use GnuPG.
 * You are already somewhat familiar with using debuild.
+* `build-essential` is installed.
+* `devscripts` is installed.
 
 ## Parkbench Dependencies
 
@@ -30,7 +32,7 @@ _gpgmailer_ depends on one other piece of the Parkbench project, which must be i
 4.   Use `apt-get -f install` to resolve any missing dependencies. The daemon will attempt to start and fail. (This is expected.)
 5.   Locate the example configuration file at `/etc/gpgmailer/gpgmailer.conf.example`. Copy or rename this file to `gpgmailer.conf` in the same directory. Edit this file to change any configuration details.
 6.   Create a keyring at the location specified in gpgmailer.conf. It will be read from and written to by root, so DO NOT use your home directory's keyring.
-7.   Use `gnupg` with the shell variable `GNUPGHOME` set to the location of your new keyring. Import a sender and all recipient keys and set them all to at least marginal trust.
+7.   Use `gpg` with the option `--homedir` set to the location of your new keyring. Import a sender and all recipient keys and set them all to at least marginal trust.
 8.   Restart the daemon with `service gpgmailer restart`. If the configuration file and keyring are set up correctly, the service will now start successfully.
 
 ## Updates
