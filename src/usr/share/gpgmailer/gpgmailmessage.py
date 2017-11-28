@@ -32,6 +32,19 @@ import shutil
 class WatchDirectoryMissingException(Exception):
     pass
 
+# This exception is raised when a message without a body is attempted to be saved.
+class SaveMessageWithoutBodyException(Exception):
+    pass
+
+# This exception is raised when a message is attempted to be saved after already having been saved.
+class ModifyAlreadySavedMessageException(Exception):
+    pass
+
+# This exception is raised when a GpgMailMessage object is instantiated without calling the class's
+#   configure method beforehand.
+class GpgMailMessageNotConfigured(Exception):
+    pass
+
 
 # Constructs an e-mail message and serializes it to the mail queue directory.
 #   Messages are queued in JSON format.
@@ -72,8 +85,9 @@ class GpgMailMessage:
 
         # Verify the 'configure' class method was called.
         if (self._outbox_dir is None) or (self._draft_dir is None):
-            raise RuntimeError('GpgMailMessage.configure() must be called before an ' +
-                               'instance can be created.')
+            # TODO: Consider just calling configure here instead of raising an exception.
+            raise GpgMailMessageNotConfiguredException('GpgMailMessage.configure() must be called '
+                    'an instance can be created.')
 
         self.saved = False
         self.message = {}
@@ -110,9 +124,7 @@ class GpgMailMessage:
         self._check_if_saved()
 
         if self.message['body'] is None:
-            # TODO: We should thrown our own exception here, not a builtin
-            #   generic one. (issue 10)
-            raise Exception('Tried to save message without a body.')
+            raise SaveMessageWithoutBodyException('Tried to save a message without a body.')
 
         # Encode any attachments as base64.
         for attachment in self.message['attachments']:
@@ -145,6 +157,4 @@ class GpgMailMessage:
     #   been.
     def _check_if_saved(self):
         if self.saved:
-            # TODO: We should thrown our own exception here, not a builtin
-            #   generic one. (issue 10)
-            raise Exception('Tried to modify an already saved message.')
+            raise ModifyAlreadySavedMessageException('Tried to modify an already saved message.')
