@@ -1,3 +1,9 @@
+gpgmailer (0.8) UNRELEASED; urgency=medium
+
+  * GpgMailMessage now throws custom exceptions.
+
+ -- Andrew Klapp <andklapp@null.net>  Mon, 27 Nov 2017 20:26:19 -0600
+
 gpgmailer (0.7) stable; urgency=low
 
   * Gpgmailer now performs key checking and alerts recipients about expiring keys.
