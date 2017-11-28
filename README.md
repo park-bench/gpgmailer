@@ -15,6 +15,8 @@ The only current method of installation for our software is building and install
 * You are already familiar with using a Linux terminal.
 * You already know how to use GnuPG.
 * You are already somewhat familiar with using debuild.
+* `build-essential` is installed.
+* `devscripts` is installed.
 
 ## Parkbench Dependencies
 
