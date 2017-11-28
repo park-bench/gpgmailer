@@ -42,7 +42,7 @@ class ModifyAlreadySavedMessageException(Exception):
 
 # This exception is raised when a GpgMailMessage object is instantiated without calling the class's
 #   configure method beforehand.
-class GpgMailMessageNotConfigured(Exception):
+class GpgMailMessageNotConfiguredException(Exception):
     pass
 
 
