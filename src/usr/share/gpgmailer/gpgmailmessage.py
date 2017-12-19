@@ -27,44 +27,48 @@ import os
 import shutil
 
 
-# This exception is raised when gpgmailer is configured but the watch directories do not
-#   exist.
 class WatchDirectoryMissingException(Exception):
-    pass
+    """This exception is raised when gpgmailer is configured but the watch directories do not
+    exist.
+    """
 
-# This exception is raised when a message without a body is attempted to be saved.
+
 class SaveMessageWithoutBodyException(Exception):
-    pass
+    """This exception is raised when a message without a body is attempted to be saved."""
 
-# This exception is raised when a message is attempted to be saved after already having been saved.
+
 class ModifyAlreadySavedMessageException(Exception):
-    pass
+    """This exception is raised when a message is attempted to be saved after already having
+    been saved.
+    """
 
-# This exception is raised when a GpgMailMessage object is instantiated without calling the class's
-#   configure method beforehand.
+
 class GpgMailMessageNotConfiguredException(Exception):
-    pass
+    """This exception is raised when a GpgMailMessage object is instantiated without calling
+    the class's configure method beforehand.
+    """
 
 
-# Constructs an e-mail message and serializes it to the mail queue directory.
-#   Messages are queued in JSON format.
-#
-# This class is not thread safe.
-#
-# This class assumes a logger has already been instantiated.
-#
-# Note: Each method should check if this object has already been saved and
-#   throw an exception if it has.
 class GpgMailMessage:
+    """Constructs an e-mail message and serializes it to the mail queue directory.
+    Messages are queued in JSON format.
 
+    This class is not thread safe.
+
+    This class assumes a logger has already been instantiated.
+
+    Note: Each method should check if this object has already been saved and
+      throw an exception if it has.
+    """
     _outbox_dir = None
     _draft_dir = None
 
-    # Reads the gpgmailer config file to obtain the watch directory's path name.
-    #   This method must be called before any instances are created.
     # TODO: Eventually make this method so it can be called twice.
     @classmethod
     def configure(cls):
+        """Reads the gpgmailer config file to obtain the watch directory's path name.
+        This method must be called before any instances are created.
+        """
         logger = logging.getLogger('GpgMailMessage')
 
         config_file = ConfigParser.SafeConfigParser()
@@ -80,14 +84,14 @@ class GpgMailMessage:
             logger.critical('A watch subdirectory does not exist. Quitting.')
             raise WatchDirectoryMissingException('A watch subdirectory does not exist.')
 
-    # Initializes the class.
     def __init__(self):
+        """Initializes the class."""
 
         # Verify the 'configure' class method was called.
         if (self._outbox_dir is None) or (self._draft_dir is None):
             # TODO: Consider just calling configure here instead of raising an exception.
-            raise GpgMailMessageNotConfiguredException('GpgMailMessage.configure() must be called '
-                    'an instance can be created.')
+            raise GpgMailMessageNotConfiguredException(
+                'GpgMailMessage.configure() must be called an instance can be created.')
 
         self.saved = False
         self.message = {}
@@ -95,32 +99,36 @@ class GpgMailMessage:
         self.message['attachments'] = []
         self.message['subject'] = None
 
-    # Adds the plain-text subject of the message.
-    #
-    # subject: The plain-text subject to set.
     def set_subject(self, subject):
+        """Adds the plain-text subject of the message.
+
+        subject: The plain-text subject to set.
+        """
         self._check_if_saved()
         self.message['subject'] = subject
 
-    # Adds the plain-text body of the message.
-    #
-    # body: The plain-text body to set.
     def set_body(self, body):
+        """Adds the plain-text body of the message.
+
+        body: The plain-text body to set.
+        """
         self._check_if_saved()
         self.message['body'] = body
 
-    # Adds an attachment to the message.
-    #
-    # filename: The filename for the attachment.
-    # data: The binary content of the attachment.
     def add_attachment(self, filename, data):
+        """Adds an attachment to the message.
+
+        filename: The filename for the attachment.
+        data: The binary content of the attachment.
+        """
         self._check_if_saved()
         self.message['attachments'].append({'filename': filename, 'data': data})
 
-    # Saves the message to the 'outbox' directory and marks this message class instance as
-    #   'saved' meaning no addtional method calls can be made on the current message
-    #   object.
     def queue_for_sending(self):
+        """Saves the message to the 'outbox' directory and marks this message class instance
+        as 'saved' meaning no addtional method calls can be made on the current message
+        object.
+        """
         self._check_if_saved()
 
         if self.message['body'] is None:
@@ -153,8 +161,10 @@ class GpgMailMessage:
 
         return self.saved
 
-    # Checks if this message has already been saved and throws an Exception if it has
-    #   been.
     def _check_if_saved(self):
+        """Checks if this message has already been saved and throws an Exception if it has
+        been.
+        """
         if self.saved:
-            raise ModifyAlreadySavedMessageException('Tried to modify an already saved message.')
+            raise ModifyAlreadySavedMessageException(
+                'Tried to modify an already saved message.')

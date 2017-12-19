@@ -20,13 +20,14 @@ import time
 import traceback
 
 
-# Creates and maintains an SMTP connection and sends e-mails.
 class MailSender:
+    """Creates and maintains an SMTP connection and sends e-mails."""
 
-    # Initializes an instance of the class.
-    #
-    # config: Contains the program's configuration settings.
     def __init__(self, config):
+        """Initializes an instance of the class.
+
+        config: Contains the program's configuration settings.
+        """
         self.logger = logging.getLogger('MailSender')
 
         self.config = config
@@ -37,8 +38,8 @@ class MailSender:
         # Used to determine SMTP session idle time.
         self.last_sent_time = time.time()
 
-    # Attempts to connect to the configured mail server.
     def _connect(self):
+        """Attempts to connect to the configured mail server."""
 
         self.logger.info('Connecting.')
         if self.smtp is not None:
@@ -55,7 +56,8 @@ class MailSender:
             # TODO: Eventually handle SMTP timeouts properly.
             # TODO: Make the connection timeout configurable.
             try:
-                self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'],
+                self.smtp = smtplib.SMTP(
+                    self.config['smtp_domain'], self.config['smtp_port'],
                     self.ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
                 self.smtp.starttls()
@@ -65,8 +67,8 @@ class MailSender:
                 connected = True
             except smtplib.SMTPAuthenticationError as e:
                 # TODO: Decide how to handle authentication errors
-                self.logger.error('Failed to connect. Authentication error. ' +
-                                  'Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error('Failed to connect. Authentication error. Exception '
+                                  '%s:%s' % (type(e).__name__, e.message))
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
             except smtplib.SMTPDataError as e:
@@ -82,21 +84,21 @@ class MailSender:
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
 
-    # Sends an e-mail.
-    #
-    # message_string: A MIME formatted message.
-    # recipients: An array of e-mail addresses to send the e-mail to.
     def sendmail(self, message_string, recipients):
+        """Sends an e-mail.
 
-        # TODO: Send encrypted messages to all recipients,
-        #   regardless of whether it was encrypted with their key, so that they 
-        #   are aware that mail is being sent. Make it an option.
+        message_string: A MIME formatted message.
+        recipients: An array of e-mail addresses to send the e-mail to.
+        """
+        # TODO: Send encrypted messages to all recipients, regardless of whether it was
+        #   encrypted with their key, so that they are aware that mail is being sent. Make
+        #   it an option.
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: Eventually, there is probably also a hard session limit too.
         # TODO: Eventually make this timeout optional.
         if (time.time() - self.last_sent_time) > self.config['smtp_max_idle']:
-            self.logger.info('Max idle time reached. Assuming the SMTP connection has ' +
+            self.logger.info('Max idle time reached. Assuming the SMTP connection has '
                              'been remotely severed.')
             self._connect()
 
