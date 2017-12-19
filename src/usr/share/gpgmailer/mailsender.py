@@ -19,6 +19,8 @@ import smtplib
 import time
 import traceback
 
+__all__ = ['MailSender']
+
 
 class MailSender:
     """Creates and maintains an SMTP connection and sends e-mails."""

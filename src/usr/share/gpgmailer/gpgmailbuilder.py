@@ -22,6 +22,11 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+__all__ = [
+    'SignatureError', 'EncryptionError', 'GpgKeyExpiredException',
+    'GpgKeyNotTrustedException', 'GpgKeyNotSignedException', 'GpgKeyNotValidatedException',
+    'GpgMailBuilder']
+
 
 class SignatureError(Exception):
     """Raised when something goes wrong with a GnuPG signature."""

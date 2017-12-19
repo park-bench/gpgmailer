@@ -18,6 +18,8 @@ import logging
 import re
 import time
 
+__all__ = ['FingerprintSyntaxException', 'KeyNotFoundException', 'GpgKeyRing']
+
 key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
 # This trust level comes from GnuPG. 'u' means ultimate.
 valid_owner_trust_levels = ('u')

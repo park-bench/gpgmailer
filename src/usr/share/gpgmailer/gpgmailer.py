@@ -27,6 +27,8 @@ import sys
 import time
 import traceback
 
+__all__ = ['GpgMailer']
+
 
 class GpgMailer:
     """Contains high level program business logic. Monitors the outbox directory, manages

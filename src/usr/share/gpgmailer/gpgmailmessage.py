@@ -26,6 +26,11 @@ import logging
 import os
 import shutil
 
+__all__ = [
+    'WatchDirectoryMissingException', 'SaveMessageWithoutBodyException',
+    'ModifyAlreadySavedMessageException', 'GpgMailMessageNotConfiguredException',
+    'GpgMailMessage']
+
 
 class WatchDirectoryMissingException(Exception):
     """This exception is raised when gpgmailer is configured but the watch directories do not
