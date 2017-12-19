@@ -94,7 +94,7 @@ class GpgMailer:
                     # TODO Brittney what if recipient_emails is blank?
                     self.logger.debug(message_dict)
                     self.mailsender.sendmail(message_string=encrypted_message,
-                        recipients=self.gpgkeyverifier.valid_recipient_emails)
+                        recipients=message_dict['recipients'])
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
