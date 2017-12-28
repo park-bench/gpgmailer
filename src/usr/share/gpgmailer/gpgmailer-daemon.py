@@ -30,7 +30,11 @@ import gpgmailer
 import gpgmailmessage
 import logging
 import os
-from daemon import pidlockfile
+# TODO: Remove try/except when we drop support for Ubuntu 14.04 LTS.
+try:
+    from lockfile import pidlockfile
+except ImportError:
+    from daemon import pidlockfile
 import signal
 import subprocess
 import sys
