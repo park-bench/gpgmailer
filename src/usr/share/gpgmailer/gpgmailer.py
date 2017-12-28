@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+__all__ = ['GpgMailer']
+__author__ = 'Joel Luellwitz, Andrew Klapp, and Brittney Scaccia'
+__version__ = '0.8'
+
 import base64
 import gpgkeyverifier
 import gpgmailbuilder
@@ -26,8 +30,6 @@ import os
 import sys
 import time
 import traceback
-
-__all__ = ['GpgMailer']
 
 
 class GpgMailer:

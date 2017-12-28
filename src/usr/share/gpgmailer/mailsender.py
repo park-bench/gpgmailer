@@ -13,13 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+__all__ = ['MailSender']
+__author__ = 'Joel Luellwitz and Andrew Klapp'
+__version__ = '0.8'
+
 import logging
 import random
 import smtplib
 import time
 import traceback
-
-__all__ = ['MailSender']
 
 
 class MailSender:

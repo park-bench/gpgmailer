@@ -13,16 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+__all__ = ['FingerprintSyntaxException', 'KeyNotFoundException', 'GpgKeyRing']
+__author__ = 'Joel Luellwitz and Andrew Klapp'
+__version__ = '0.8'
+
 import gnupg
 import logging
 import re
 import time
 
-__all__ = ['FingerprintSyntaxException', 'KeyNotFoundException', 'GpgKeyRing']
-
-key_fingerprint_regex = re.compile('^[0-9a-fA-F]{40}$')
+KEY_FINGERPRINT_REGEX = re.compile('^[0-9a-fA-F]{40}$')
 # This trust level comes from GnuPG. 'u' means ultimate.
-valid_owner_trust_levels = ('u')
+VALID_OWNER_TRUST_LEVELS = ('u')
 
 
 class FingerprintSyntaxException(Exception):
@@ -111,7 +113,7 @@ class GpgKeyRing:
         self._fingerprint_is_valid(fingerprint)
 
         if self.fingerprint_to_key_dict[
-                fingerprint]['ownertrust'] in valid_owner_trust_levels:
+                fingerprint]['ownertrust'] in VALID_OWNER_TRUST_LEVELS:
             trusted = True
 
         else:
@@ -168,7 +170,7 @@ class GpgKeyRing:
     # fingerprint: The fingerprint of the GPG key to check.
     def _fingerprint_is_valid(self, fingerprint):
 
-        if not key_fingerprint_regex.match(fingerprint):
+        if not KEY_FINGERPRINT_REGEX.match(fingerprint):
             message = 'String %s is not a valid PGP fingerprint.' % fingerprint
             self.logger.error(message)
             raise FingerprintSyntaxException(message)

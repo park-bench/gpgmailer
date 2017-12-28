@@ -16,6 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+__all__ = [
+    'WatchDirectoryMissingException', 'SaveMessageWithoutBodyException',
+    'ModifyAlreadySavedMessageException', 'GpgMailMessageNotConfiguredException',
+    'GpgMailMessage']
+__author__ = 'Joel Luellwitz, Andrew Klapp, and Brittney Scaccia'
+__version__ = '0.8'
+
 import confighelper
 import ConfigParser
 import base64
@@ -25,11 +32,6 @@ import json
 import logging
 import os
 import shutil
-
-__all__ = [
-    'WatchDirectoryMissingException', 'SaveMessageWithoutBodyException',
-    'ModifyAlreadySavedMessageException', 'GpgMailMessageNotConfiguredException',
-    'GpgMailMessage']
 
 
 class WatchDirectoryMissingException(Exception):

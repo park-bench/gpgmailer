@@ -13,6 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+__all__ = [
+    'SignatureError', 'EncryptionError', 'GpgKeyExpiredException',
+    'GpgKeyNotTrustedException', 'GpgKeyNotSignedException', 'GpgKeyNotValidatedException',
+    'GpgMailBuilder']
+__author__ = 'Joel Luellwitz and Andrew Klapp'
+__version__ = '0.8'
+
 import base64
 from email.Encoders import encode_7or8bit
 import gnupg
@@ -21,11 +28,6 @@ from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
-__all__ = [
-    'SignatureError', 'EncryptionError', 'GpgKeyExpiredException',
-    'GpgKeyNotTrustedException', 'GpgKeyNotSignedException', 'GpgKeyNotValidatedException',
-    'GpgMailBuilder']
 
 
 class SignatureError(Exception):
