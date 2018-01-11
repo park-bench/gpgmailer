@@ -108,15 +108,13 @@ class GpgMailer:
             except gpgkeyverifier.NoUsableKeysException as exception:
                 self.logger.critical('No keys available for encryption. Exiting. %s: %s' %
                                      (type(exception).__name__, exception.message))
-                self.logger.critical(traceback.format_exc())
-                sys.exit(1)
+                raise exception
             except gpgkeyverifier.SenderKeyExpiredException as exception:
                 self.logger.critical(
                     'Sender key has expired and sending unsigned e-mails is not allowed. '
                     'Exiting. %s: %s' %
                     (type(exception).__name__, exception.message))
-                self.logger.critical(traceback.format_exc())
-                sys.exit(1)
+                raise exception
             except Exception as exception:
                 self.logger.error('Exception %s: %s.' % (
                     type(exception).__name__, exception.message))

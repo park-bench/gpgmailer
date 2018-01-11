@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015-2017 Joel Allen Luellwitz, Andrew Klapp and Brittney
+# Copyright 2015-2018 Joel Allen Luellwitz, Andrew Klapp and Brittney
 # Scaccia.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -42,12 +42,17 @@ import time
 import traceback
 
 # TODO: Target Ubuntu 18.04 instead of 14.04 (issue 8)
-# TODO: Use PEP 8 styling (issue 4)
 
 PID_FILE = '/run/gpgmailer.pid'
 CONFIG_PATHNAME = '/etc/gpgmailer/gpgmailer.conf'
 
 logger = None
+
+
+class InitializationException(Exception):
+    """Indicates an expected fatal error occurred during gpgmailer's initialization.
+    Initialization is implied to mean, before daemonization.
+    """
 
 
 def check_if_mounted_as_tmpfs(pathname):
@@ -68,19 +73,21 @@ def create_watch_directories(config):
         if os.path.isdir(watch_dir) is False:
             os.makedirs(watch_dir)
     except Exception as e:
-        logger.critical('Could not create root watch directory. %s: %s' %
-                        (type(e).__name__, e.message))
+        message = 'Could not create root watch directory. %s: %s' % (
+            type(e).__name__, e.message)
+        logger.critical(message)
         logger.critical(traceback.format_exc())
-        sys.exit(1)
+        raise InitializationException(message)
 
     mounted_as_tmpfs = check_if_mounted_as_tmpfs(watch_dir)
 
     # If directory is not mounted as tmpfs and there is something in the directory, fail to
     #   start.
     if os.listdir(watch_dir) != [] and mounted_as_tmpfs is False:
-        logger.critical('Root watch directory is not empty and not mounted as a ramdisk. '
-                        'Startup failed.')
-        sys.exit(1)
+        message = 'Root watch directory is not empty and not mounted as a ramdisk. ' \
+                  'Startup failed.'
+        logger.critical(message)
+        raise InitializationException(message)
 
     # If the root watch directory is empty and not already mounted as tmpfs, mount it as
     #   tmpfs.
@@ -89,8 +96,9 @@ def create_watch_directories(config):
         subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', watch_dir])
 
     if check_if_mounted_as_tmpfs(watch_dir) is False:
-        logger.critical('Root watch directory was not mounted as a ramdisk. Startup failed.')
-        sys.exit(1)
+        message = 'Root watch directory was not mounted as a ramdisk. Startup failed.'
+        logger.critical(message)
+        raise InitializationException(message)
 
     outbox_dir = os.path.join(watch_dir, 'outbox')
     draft_dir = os.path.join(watch_dir, 'draft')
@@ -101,10 +109,11 @@ def create_watch_directories(config):
         if not os.path.isdir(draft_dir):
             os.makedirs(draft_dir)
     except Exception as e:
-        logger.critical('Could not create required watch sub-directories. %s: %s' %
-                        (type(e).__name__, e.message))
+        message = 'Could not create required watch sub-directories. %s: %s' % (
+            type(e).__name__, e.message)
+        logger.critical(message)
         logger.critical(traceback.format_exc())
-        sys.exit(1)
+        raise InitializationException(message)
 
 
 def parse_key_config_string(configuration_option, key_config_string):
@@ -117,19 +126,22 @@ def parse_key_config_string(configuration_option, key_config_string):
     key_split = key_config_string.split(':')
 
     if len(key_split) is not 2:
-        logger.critical('Key config %s for %s is does not contain a colon or is malformed.' %
-                        (key_config_string, configuration_option))
-        sys.exit(1)
+        message = 'Key config %s for %s is does not contain a colon or is malformed.' % (
+            key_config_string, configuration_option)
+        logger.critical(message)
+        raise InitializationException(message)
 
     if not key_split[0]:
-        logger.critical("Key config %s for %s is missing an e-mail address." %
-                        (key_config_string, configuration_option))
-        sys.exit(1)
+        message = 'Key config %s for %s is missing an e-mail address.' % (
+            key_config_string, configuration_option)
+        logger.critical(message)
+        raise InitializationException(message)
 
     if not key_split[1]:
-        logger.critical("Key config %s for %s is missing a key fingerprint." %
-                        (key_config_string, configuration_option))
-        sys.exit(1)
+        message = 'Key config %s for %s is missing a key fingerprint.' % (
+            key_config_string, configuration_option)
+        logger.critical(message)
+        raise InitializationException(message)
 
     # TODO: Eventually verify e-mail format.
     key_dict = {'email': key_split[0].strip(),
@@ -145,8 +157,8 @@ def build_config_dict():
     print('Reading %s...' % CONFIG_PATHNAME)
 
     if not os.path.isfile(CONFIG_PATHNAME):
-        print('Configuration file %s does not exist. Quitting.' % CONFIG_PATHNAME)
-        sys.exit(1)
+        raise InitializationExcpetion(
+            'Configuration file %s does not exist. Quitting.' % CONFIG_PATHNAME)
 
     config_file = ConfigParser.RawConfigParser()
     config_file.read(CONFIG_PATHNAME)
@@ -247,7 +259,7 @@ def signature_test(gpg_home, fingerprint, passphrase):
     gpg = gnupg.GPG(gnupghome=gpg_home)
 
     signature_test_result = gpg.sign(
-        'I\'ve got a lovely bunch of coconuts.', detach=True, keyid=fingerprint,
+        "I've got a lovely bunch of coconuts.", detach=True, keyid=fingerprint,
         passphrase=passphrase)
 
     if str(signature_test_result).strip() == '':
@@ -272,12 +284,14 @@ def check_sender_key(gpg_keyring, config, expiration_date):
     logger.info('Checking sender key for validity and expiration.')
 
     if not gpg_keyring.is_trusted(config['sender']['fingerprint']):
-        logger.critical('Signing key is not ultimately trusted. Exiting.')
-        sys.exit(1)
+        message = 'Signing key is not ultimately trusted. Exiting.'
+        logger.critical(message)
+        raise InitializationException(message)
 
     elif not gpg_keyring.is_signed(config['sender']['fingerprint']):
-        logger.critical('Signing key is not signed. Exiting.')
-        sys.exit(1)
+        message = 'Signing key is not signed. Exiting.'
+        logger.critical(message)
+        raise InitializationException(message)
 
     elif not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
@@ -289,9 +303,10 @@ def check_sender_key(gpg_keyring, config, expiration_date):
     elif not signature_test(
             config['gpg_dir'], config['sender']['fingerprint'],
             config['sender']['password']):
-        logger.critical('Sender key failed the signature test and the key is not expired. '
-                        'Check the sender key\'s passphrase.')
-        sys.exit(1)
+        message = 'Sender key failed the signature test and the key is not expired. ' \
+                  "Check the sender key's passphrase."
+        logger.critical(message)
+        raise InitializationException(message)
 
     else:
         logger.debug('Sender key passed signature test.')
@@ -310,10 +325,10 @@ def check_all_recipient_keys(gpg_keyring, config):
     for recipient in config['recipients']:
         if (not gpg_keyring.is_trusted(recipient['fingerprint']) and
                 not gpg_keyring.is_signed(recipient['fingerprint'])):
-            logger.critical(
-                'Key with fingerprint %s is not signed (and not sufficiently trusted). '
-                'Exiting.' % recipient['fingerprint'])
-            sys.exit(1)
+            message = 'Key with fingerprint %s is not signed (and not sufficiently ' \
+                'trusted). Exiting.' % recipient['fingerprint']
+            logger.critical(message)
+            raise InitializationException(message)
         else:
             logger.debug('Recipient key with fingerprint %s is signed or ultimately '
                          'trusted.' % recipient['fingerprint'])
@@ -321,15 +336,16 @@ def check_all_recipient_keys(gpg_keyring, config):
 
 def verify_signing_config(config):
     """Checks the sending GPG key and the program configuration to determine if sending
-    unsigned e-mail is allowed. Crashes if the sending key cannot sign and sending unsigned
+    unsigned e-mail is allowed.  Crashes if the sending key cannot sign and sending unsigned
     e-mail is disabled.
 
     config: The program config dictionary to read the key configuration from.
     """
     if not config['allow_expired_signing_key'] and not config['sender']['can_sign']:
-        logger.critical('The sender key with fingerprint %s can not sign and '
-            'unsigned e-mail is not allowed. Exiting.' % config['sender']['fingerprint'])
-        sys.exit(1)
+        message = 'The sender key with fingerprint %s can not sign and ' \
+            'unsigned e-mail is not allowed. Exiting.' % config['sender']['fingerprint']
+        logger.critical(message)
+        raise InitializationException(message)
 
     elif not config['sender']['can_sign']:
         logger.warn('The sender key is unable to sign because it has probably expired. '
@@ -418,17 +434,11 @@ try:
 
     logger.info('Daemonizing...')
     with daemon_context:
-        try:
-            logger.debug('Initializing GpgMailer.')
-            the_watcher = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier)
-            the_watcher.start_monitoring()
-
-        except Exception as e:
-            logger.critical("Fatal %s: %s\n%s" % (
-                type(e).__name__, e.message, traceback.format_exc()))
-            sys.exit(1)
+        logger.debug('Initializing GpgMailer.')
+        the_watcher = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier)
+        the_watcher.start_monitoring()
 
 except Exception as exception:
     logger.critical("Fatal %s: %s\n%s" % (type(exception).__name__, exception.message,
                     traceback.format_exc()))
-    sys.exit(1)
+    raise exception
