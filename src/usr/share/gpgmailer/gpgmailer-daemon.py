@@ -167,9 +167,9 @@ def build_config_dict():
 
     # Figure out the logging options so that can start before anything else.
     print('Configuring logger.')
-    log_file = config_helper.verify_string_exists_prelogging(config_file, 'log_file')
+    log_file = config_helper.verify_string_exists(config_file, 'log_file')
     # TODO: Eventually add a verify_string_list method.
-    log_level = config_helper.verify_string_exists_prelogging(config_file, 'log_level')
+    log_level = config_helper.verify_string_exists(config_file, 'log_level')
 
     config_helper.configure_logger(log_file, log_level)
 
