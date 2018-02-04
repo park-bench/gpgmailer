@@ -2,9 +2,6 @@
 
 [General]
 
-# Specifies the location of the program's log file.
-log_file=/var/log/gpgmailer.log
-
 # Specifies the verbosity of the program's log. Valid values are 'critical', 'error', 'info',
 #   'debug', and 'trace'. This value is case insensitive.
 log_level=info
@@ -13,9 +10,6 @@ log_level=info
 # keys you intend to use.  This is not included yet, you should set
 # this up yourself first.
 gpg_dir=/etc/gpgmailer/gnupg
-
-# The root directory that gpgmailer checks for new JSON mail objects to send.
-watch_dir=/tmp/gpgmailer
 
 # The number of seconds between each main program loop iteration. It is 
 #   essentially how often the watch directory is checked for new e-mails. This value does not

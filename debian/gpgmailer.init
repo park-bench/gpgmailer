@@ -36,7 +36,7 @@ DESC="GPG Mailer"
 NAME=gpgmailer
 DAEMON=/usr/share/gpgmailer/gpgmailer-daemon.py
 DAEMON_ARGS=
-PIDFILE=/run/$NAME.pid
+PIDFILE=/run/$NAME/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed

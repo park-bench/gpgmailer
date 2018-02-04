@@ -7,5 +7,5 @@ Standards-Version: 3.9.6.1
 
 Package: gpgmailer
 Architecture: all
-Depends: confighelper (>=0.3),python-gnupg,python-daemon
+Depends: adduser (>= 3.11), confighelper (>=0.3), python-gnupg, python-daemon
 Description: Daemon to send multipart encrypted e-mails.
