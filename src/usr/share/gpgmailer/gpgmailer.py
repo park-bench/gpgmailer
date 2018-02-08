@@ -37,7 +37,7 @@ class GpgMailer:
     keys, and coordinates sending e-mail.
     """
 
-    def __init__(self, config, gpgkeyring, gpgkeyverifier):
+    def __init__(self, config, gpgkeyring, gpgkeyverifier, outbox_path):
         """Constructs an instance of the class including creating local instances of
         mailsender and gpgmailbuilder.
 
@@ -46,6 +46,7 @@ class GpgMailer:
           program's keyring.
         gpgkeyverifier: The GpgKeyVerifier object managing key expiration for all sender and
           recipient GPG keys keys.
+        outbox_path: The directory to monitor for outgoing mail (in our custom JSON format).
         """
         self.logger = logging.getLogger('GpgMailer')
         self.logger.info('Initializing gpgmailer module.')
@@ -57,7 +58,7 @@ class GpgMailer:
             self.gpgkeyring, self.config['main_loop_duration'])
         self.mailsender = mailsender.MailSender(self.config)
 
-        self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
+        self.outbox_path = outbox_path
 
         # Set this here so that the string equality check in
         #   _update_expiration_warning_message evaluates to equal on the initial loop.
@@ -67,7 +68,7 @@ class GpgMailer:
         self.logger.info('Done initializing gpgmailer module.')
 
     def start_monitoring(self):
-        """GpgMailer's main program loop. Reads the watch directory and then calls other
+        """GpgMailer's main program loop. Reads the spool directory and then calls other
         modules to build and send e-mail. Also sends warnings about GPG key expirations.
         """
         while True:

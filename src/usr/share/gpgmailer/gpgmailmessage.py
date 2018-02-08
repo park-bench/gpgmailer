@@ -37,7 +37,7 @@ OUTBOX_DIR = os.path.join(SPOOL_DIR, 'outbox')
 
 
 class WatchDirectoryMissingException(Exception):
-    """This exception is raised when gpgmailer is configured but the watch directories do not
+    """This exception is raised when gpgmailer is configured but the spool directories do not
     exist.
     """
 

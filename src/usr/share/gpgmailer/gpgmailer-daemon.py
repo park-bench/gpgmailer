@@ -200,6 +200,9 @@ def verify_safe_file_permissions(config, program_uid):
         raise InitializationException(
             'File %s can only have user access permissions set.' % CONFIGURATION_PATHNAME)
 
+    if not os.path.isdir(config['gpg_dir']):
+        raise InitializationException('GPG keyring %s does not exist.' % config['gpg_dir'])
+
     gpg_dir_stat = os.stat(config['gpg_dir'])
     if gpg_dir_stat.st_uid != program_uid:
         raise InitializationException(
@@ -399,11 +402,12 @@ def check_if_mounted_as_tmpfs(pathname):
 
 # TODO: Add a switch to not spool to a RAM disk. (issue 21)
 def create_spool_directories(program_uid, program_gid):
-    """Mounts the program spool directory as a ramdisk and creates the draft and outbox
+    """Mounts the program spool directory as a ramdisk and creates the partial and outbox
     subfolders. Exit if any part of this method fails.
 
     program_uid: The system user ID that should own all the spool directories.
     program_gid: The system group ID that should be assigned to all the spool directories.
+    Returns the outbox spool pathname.
     """
     logger.info('Creating spool directories.')
 
@@ -449,6 +453,8 @@ def create_spool_directories(program_uid, program_gid):
         logger.critical('Could not create required spool sub-directories. %s: %s' % (
             type(exception).__name__, exception.message))
         raise exception
+
+    return os.path.join(spool_dir, OUTBOX_DIR)
 
 
 def drop_permissions_forever(uid, gid):
@@ -536,8 +542,7 @@ config, config_helper, logger = read_configuration_and_create_logger(
     program_uid, program_gid)
 
 try:
-    # TODO: Check directory existence and permissions. (issue 9)
-    verify_safe_file_permissions(config)
+    verify_safe_file_permissions(config, program_uid)
 
     parse_key_config(config)
 
@@ -549,9 +554,14 @@ try:
     check_all_recipient_keys(gpg_keyring, config)
     verify_signing_config(config)
 
+    # Non-root users cannot create files in /run, so create a directory that can be written
+    #   to. Full access to user only.
+    create_directory(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, program_uid, program_gid,
+        stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+
     # Do this relatively last because gpgmailmessage assumes the daemon has started if these
     #   directories exist.
-    create_spool_directories(program_uid, program_gid)
+    outbox_dir = create_spool_directories(program_uid, program_gid)
 
     # Configuration has been read and directories setup. Now drop permissions forever.
     drop_permissions_forever(program_uid, program_gid)
@@ -567,7 +577,7 @@ try:
         config_helper.get_log_file_handle(), program_uid, program_gid)
 
     logger.debug('Initializing GpgMailer.')
-    gpgmailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier)
+    gpgmailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier, outbox_dir)
 
     logger.info('Daemonizing...')
     with daemon_context:
