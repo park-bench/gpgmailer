@@ -84,6 +84,9 @@ class MailSender:
     # recipients: An array of e-mail addresses to send the e-mail to.
     def sendmail(self, message_string, recipients):
 
+        if not recipients:
+            raise Exception('The message has no recipients.')
+
         # TODO: Eventually, send encrypted messages to all recipients,
         #   regardless of whether it was encrypted with their key, so that they
         #   are aware that mail is being sent. Make it an option.

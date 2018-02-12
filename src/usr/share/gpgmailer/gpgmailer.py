@@ -49,6 +49,8 @@ class GpgMailer:
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring,
             self.config['main_loop_duration'])
         self.mailsender = mailsender.MailSender(self.config)
+        self.valid_recipient_emails = []
+        self.valid_key_fingerprints = []
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
@@ -70,7 +72,6 @@ class GpgMailer:
                 self.valid_recipient_emails = \
                     self.gpgkeyverifier.get_valid_recipient_emails(loop_start_time)
 
-                # TODO Brittney - getting valid key fingerprints process must be changed.
                 self.valid_key_fingerprints = \
                     self.gpgkeyverifier.get_valid_key_fingerprints(loop_start_time)
 
@@ -91,7 +92,6 @@ class GpgMailer:
 
                     encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
 
-                    # TODO Brittney what if recipient_emails is blank?
                     self.logger.debug(message_dict)
                     self.mailsender.sendmail(message_string=encrypted_message,
                         recipients=message_dict['recipients'])
@@ -157,14 +157,12 @@ class GpgMailer:
             self.expiration_warning_message = new_expiration_warning_message
 
             # Actually send the warning e-mail.
-            self.logger.warn(self.gpgkeyverifier.valid_recipient_emails)
-            self.logger.warn("Hey, I just warned you!")
-            # TODO Brittney - need to send warning emails to everybody, not just message recips.
-            message_dict = {'subject': self.config['default_subject'],
-                'body': 'The expiration status of one or more keys have changed.',
-                'recipients': self.gpgkeyverifier.valid_recipient_emails}
-            encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
-            self.mailsender.sendmail(encrypted_message, self.gpgkeyverifier.valid_recipient_emails)
+            for email in self.gpgkeyverifier.valid_recipient_emails:
+                message_dict = {'subject': self.config['default_subject'],
+                    'body': 'The expiration status of one or more keys have changed.',
+                    'recipients': email['email']}
+                encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
+                self.mailsender.sendmail(encrypted_message, email['email'])
 
 
     # Builds an encrypted e-mail string with a signature if possible.

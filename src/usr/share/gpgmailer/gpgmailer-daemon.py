@@ -53,7 +53,7 @@ def create_watch_directories(config):
     watch_dir = os.path.normpath(config['watch_dir'])
 
     try:
-        if os.path.isdir(watch_dir) == False:
+        if not os.path.isdir(watch_dir):
             os.makedirs(watch_dir)
     except Exception as e:
         logger.critical('Could not create root watch directory. %s: %s' %
@@ -71,11 +71,11 @@ def create_watch_directories(config):
         sys.exit(1)
 
     # If the root watch directory is empty and not already mounted as tmpfs, mount it as tmpfs.
-    if mounted_as_tmpfs == False:
+    if not mounted_as_tmpfs:
         logger.info('Attempting to mount the root watch directory as a ramdisk.')
         subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', watch_dir])
 
-    if check_if_mounted_as_tmpfs(watch_dir) == False:
+    if not check_if_mounted_as_tmpfs(watch_dir):
         logger.critical('Root watch directory was not mounted as a ramdisk. Startup failed.')
         sys.exit(1)
 
@@ -201,7 +201,7 @@ def parse_key_config(config):
     recipients_config_list = config['recipients_string'].split(',')
     recipients = []
 
-    # We won't have recipients any more.
+    # We won't use these recipients any more.
     for recipient_config in recipients_config_list:
         recipients.append(parse_key_config_string('recipients', recipient_config))
 
@@ -322,6 +322,13 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
         mail_message.set_body(message)
+        recipient_emails = []
+        recipient_keys = []
+        for recipient in config['recipients']:
+            recipient_emails.append(recipient['email'])
+            recipient_keys.append(recipient['fingerprint'])
+        mail_message.set_recipient_keys(recipient_keys)
+        mail_message.set_recipients(recipient_emails)
         mail_message.queue_for_sending()
 
     logger.debug('Finished initial key check.')

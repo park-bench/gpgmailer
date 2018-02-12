@@ -57,7 +57,7 @@ class GpgKeyRing:
             signed = self._is_key_signed(key)
 
             for uid in key['uids']:
-                email_list = uid.split(" ").pop().strip(">|<")
+                email_list.append(uid.split(" ").pop().strip(">|<"))
 
             self.fingerprint_to_key_dict[key['fingerprint']] = {
                 'emails': email_list,
@@ -74,7 +74,7 @@ class GpgKeyRing:
     # expiration_date: The date (in Unix time) to compare against the GPG key's expiration date.
     def is_current(self, fingerprint, expiration_date):
         current = False
-        self._fingerprint_is_valid(fingerprint)
+        self._fingerprint_exists_on_keyring(fingerprint)
 
         self.logger.trace('Checking expiration for GPG key %s at date %s.' % (fingerprint,
             expiration_date))
@@ -95,7 +95,7 @@ class GpgKeyRing:
     #
     # fingerprint: The fingerprint of the GPG key to check.
     def is_signed(self, fingerprint):
-        self._fingerprint_is_valid(fingerprint)
+        self._fingerprint_exists_on_keyring(fingerprint)
 
         return self.fingerprint_to_key_dict[fingerprint]['signed']
 
@@ -105,7 +105,7 @@ class GpgKeyRing:
     # fingerprint: The fingerprint of the GPG key to check.
     def is_trusted(self, fingerprint):
         trusted = False
-        self._fingerprint_is_valid(fingerprint)
+        self._fingerprint_exists_on_keyring(fingerprint)
 
         if self.fingerprint_to_key_dict[fingerprint]['ownertrust'] in valid_owner_trust_levels:
             trusted = True
@@ -122,7 +122,7 @@ class GpgKeyRing:
     # fingerprint: A GPG key fingerprint.
     # Returns the key's expiration date or None if no expiration date exist.
     def get_key_expiration_date(self, fingerprint):
-        self._fingerprint_is_valid(fingerprint)
+        self._fingerprint_exists_on_keyring(fingerprint)
 
         return self.fingerprint_to_key_dict[fingerprint]['expires']
 
@@ -163,7 +163,7 @@ class GpgKeyRing:
     #   does not exist in the keyring, an exception is thrown.
     #
     # fingerprint: The fingerprint of the GPG key to check.
-    def _fingerprint_is_valid(self, fingerprint):
+    def _fingerprint_exists_on_keyring(self, fingerprint):
 
         if not key_fingerprint_regex.match(fingerprint):
             message = 'String %s is not a valid PGP fingerprint.' % fingerprint

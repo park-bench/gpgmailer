@@ -25,7 +25,6 @@ import json
 import logging
 import os
 import shutil
-import sys
 
 # This exception is raised when gpgmailer is configured but the watch directories do not exist.
 class WatchDirectoryMissingException(Exception):
@@ -75,14 +74,7 @@ class GpgMailMessage:
                 'can be created.')
 
         self.saved = False
-        self.message = {}
-        self.message['body'] = None
-        self.message['recipients'] = []
-        self.message['recipient_keys'] = []
-        # need to validate recipient keys here - at least check that it's a 40 character string,
-        # probably also need to check in this class if the key is on the keyring.
-        self.message['attachments'] = []
-        self.message['subject'] = None
+        self.message = {'body': None, 'recipients': [], 'recipient_keys': [], 'attachments': [], 'subject': None}
 
     # Adds the plain-text subject of the message.
     #
@@ -123,19 +115,16 @@ class GpgMailMessage:
     def queue_for_sending(self):
         self._check_if_saved()
 
-        # Check for subject, message, and recipients. Throw an exception if they aren't there.
-        if self.message['subject'] == None:
-            raise Exception('Tried to save message without a subject.')
+        # Check for message, recipients, and keys. Throw an exception if they aren't there.
 
-        if self.message['body'] == None:
+        if not self.message['body']:
             #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
             raise Exception('Tried to save message without a body.')
 
-        # Encode any attachments as base64.
-        if self.message['recipients'] == None:
+        if not self.message['recipients']:
             raise Exception('Tried to send message with no recipients.')
 
-        if self.message['recipient_keys'] == None:
+        if not self.message['recipient_keys']:
             raise Exception('Tried to send message without gpg keys for recipients.')
 
         # Encode any attachments as base64
