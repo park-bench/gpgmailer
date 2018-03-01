@@ -45,8 +45,6 @@ class GpgKeyRing:
 
         for key in self.gpg.list_keys():
 
-            email_list = []
-
             # Key expiration dates are in Unix time. An expiration date of None
             #   means that the key does not expire.
             # TODO: Eventually, change key expiration date to a date object instead of an int.
@@ -56,6 +54,7 @@ class GpgKeyRing:
 
             signed = self._is_key_signed(key)
 
+            email_list = []
             for uid in key['uids']:
                 email_list.append(uid.split(" ").pop().strip(">|<"))
 

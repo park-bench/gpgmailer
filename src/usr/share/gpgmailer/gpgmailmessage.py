@@ -92,7 +92,7 @@ class GpgMailMessage:
 
     # Adds a list of recipients.
     #
-    # recipients: a list of one or more recipients for the message.
+    # recipients: a list of email addresses.
     def set_recipients(self, recipients):
         self._check_if_saved()
         self.message['recipients'] = recipients

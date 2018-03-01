@@ -49,8 +49,6 @@ class GpgMailer:
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring,
             self.config['main_loop_duration'])
         self.mailsender = mailsender.MailSender(self.config)
-        self.valid_recipient_emails = []
-        self.valid_key_fingerprints = []
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
@@ -69,12 +67,6 @@ class GpgMailer:
 
                 loop_start_time = time.time()
 
-                self.valid_recipient_emails = \
-                    self.gpgkeyverifier.get_valid_recipient_emails(loop_start_time)
-
-                self.valid_key_fingerprints = \
-                    self.gpgkeyverifier.get_valid_key_fingerprints(loop_start_time)
-
                 self._update_and_send_expiration_warnings(loop_start_time)
 
                 # Return a list of non-directory files in the outbox directory.
@@ -92,7 +84,6 @@ class GpgMailer:
 
                     encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
 
-                    self.logger.debug(message_dict)
                     self.mailsender.sendmail(message_string=encrypted_message,
                         recipients=message_dict['recipients'])
                     self.logger.info('Message %s sent successfully.' % file_name)
@@ -157,10 +148,9 @@ class GpgMailer:
             self.expiration_warning_message = new_expiration_warning_message
 
             # Actually send the warning e-mail.
-            for email in self.gpgkeyverifier.valid_recipient_emails:
+            for email in self.gpgkeyverifier.get_valid_recipient_emails(loop_start_time):
                 message_dict = {'subject': self.config['default_subject'],
-                    'body': 'The expiration status of one or more keys have changed.',
-                    'recipients': email['email']}
+                    'body': 'The expiration status of one or more keys have changed.'}
                 encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
                 self.mailsender.sendmail(encrypted_message, email['email'])
 
