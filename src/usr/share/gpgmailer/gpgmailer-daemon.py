@@ -116,7 +116,7 @@ def read_configuration_and_create_logger(program_uid, program_gid):
 
     # Create logging directory.
     log_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | \
-        stat.S_IROTH | stat.S_IXOTH
+        stat.S_IROTH | stat.S_IXOTH  # drwxr-xr-x gpgmailer gpgmailer
     # TODO: Look into defaulting the logging to the console until the program gets more
     #   bootstrapped. (issue 18)
     print('Creating logging directory %s.' % LOG_DIR)
@@ -131,8 +131,6 @@ def read_configuration_and_create_logger(program_uid, program_gid):
     os.setegid(program_gid)
     os.seteuid(program_uid)
     config_helper.configure_logger(os.path.join(LOG_DIR, LOG_FILE), config['log_level'])
-    os.seteuid(os.getuid())
-    os.setegid(os.getgid())
 
     logger = logging.getLogger('%s-daemon' % PROGRAM_NAME)
 
@@ -414,7 +412,7 @@ def create_spool_directories(program_uid, program_gid):
     try:
         create_directory(
             SYSTEM_SPOOL_DIR, PROGRAM_NAME, program_uid, program_gid,
-            # d-----xrwx gpgmailer gpgmailer
+            # drwx--x--- gpgmailer gpgmailer
             stat.S_IXGRP | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
     except Exception as exception:
         logger.critical('Could not create program spool directory. %s: %s' % (
@@ -441,14 +439,16 @@ def create_spool_directories(program_uid, program_gid):
             'Program spool directory was not mounted as a ramdisk. Startup failed.')
 
     try:
+        # TODO: issue 26: File Permissions Alone Should Be Enough to Protect Files In
+        #   'partial' and 'outbox'
         create_directory(
             spool_dir, PARTIAL_DIR, program_uid, program_gid,
             stat.S_IWGRP | stat.S_IXGRP | stat.S_ISGID | stat.S_IRUSR | stat.S_IWUSR |
-            stat.S_IXUSR | stat.S_ISVTX)  # d----wsrwt gpgmailer gpgmailer
+            stat.S_IXUSR | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
         create_directory(
             spool_dir, OUTBOX_DIR, program_uid, program_gid,
-            stat.S_IWGRP | stat.S_IRGRP | stat.S_ISGID | stat.S_IRUSR | stat.S_IWUSR |
-            stat.S_IXUSR | stat.S_ISVTX)  # d---rwSrwt gpgmailer gpgmailer
+            stat.S_IWGRP | stat.S_IXGRP | stat.S_ISGID | stat.S_IRUSR | stat.S_IWUSR |
+            stat.S_IXUSR | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
     except Exception as exception:
         logger.critical('Could not create required spool sub-directories. %s: %s' % (
             type(exception).__name__, exception.message))
@@ -546,18 +546,14 @@ try:
 
     parse_key_config(config)
 
-    # Make sure the sender key isn't going to expire during the first loop iteration.
-    expiration_date = time.time() + config['main_loop_duration']
-
-    gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
-    check_sender_key(gpg_keyring, config, expiration_date)
-    check_all_recipient_keys(gpg_keyring, config)
-    verify_signing_config(config)
+    # Re-establish root permissions to create required directories.
+    os.seteuid(os.getuid())
+    os.setegid(os.getgid())
 
     # Non-root users cannot create files in /run, so create a directory that can be written
     #   to. Full access to user only.
     create_directory(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, program_uid, program_gid,
-        stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)  # drwx------ gpgmailer gpgmailer
 
     # Do this relatively last because gpgmailmessage assumes the daemon has started if these
     #   directories exist.
@@ -565,6 +561,14 @@ try:
 
     # Configuration has been read and directories setup. Now drop permissions forever.
     drop_permissions_forever(program_uid, program_gid)
+
+    # Make sure the sender key isn't going to expire during the first loop iteration.
+    expiration_date = time.time() + config['main_loop_duration']
+
+    gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
+    check_sender_key(gpg_keyring, config, expiration_date)
+    check_all_recipient_keys(gpg_keyring, config)
+    verify_signing_config(config)
 
     # We do this here because we don't want to queue an e-mail if a configuraiton setting
     #   can cause the program to crash later. This is to avoid a lot of identical queued

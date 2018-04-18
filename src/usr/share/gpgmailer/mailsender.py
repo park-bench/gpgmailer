@@ -37,10 +37,8 @@ class MailSender:
         self.config = config
         self.smtp = None
 
-        self._connect()
-
         # Used to determine SMTP session idle time.
-        self.last_sent_time = time.time()
+        self.last_sent_time = 0
 
     def _connect(self):
         """Attempts to connect to the configured mail server."""
@@ -48,7 +46,7 @@ class MailSender:
         self.logger.info('Connecting.')
         if self.smtp is not None:
             # I originally tried to quit the existing SMTP session here, but that just
-            #   slowed things down too much and usually, eventually threw an exception.
+            #   slowed things down too much and usually eventually threw an exception.
             self.smtp = None
 
         # Create a random number as our host id.

@@ -124,15 +124,15 @@ class GpgMailMessage:
         message_json = json.dumps(self.message)
 
         # Write message to filesystem.
-        message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
+        # For security, the filename should not be guessable. Hence the random component.
+        message_filename = '%s-%s' % (time_string, os.urandom(16).encode('hex'))
         # Write to a 'partial' directory so the message doesn't get picked up before it is
         #   fully created.
-        message_filename = '%s-%s' % (time_string, message_sha256)
         partial_pathname = os.path.join(PARTIAL_DIR, message_filename)
         with os.fdopen(os.open(
                 partial_pathname, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-                stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP), 'w+') as message_file:
+                stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP), 'w') as message_file:
             message_file.write(message_json)
 
         # Move the file to the outbox which should be an atomic operation
