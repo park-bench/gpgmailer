@@ -24,6 +24,9 @@ import time
 import traceback
 
 
+# TODO: Trim this down and remove any Gmail-specific parts.
+# TODO: Eventually, in a different branch, implement simple fallback logic.
+
 class MailSender:
     """Creates and maintains an SMTP connection and sends e-mails."""
 
