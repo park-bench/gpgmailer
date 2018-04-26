@@ -48,6 +48,7 @@ class MailSender:
 
     def _connect(self):
         """Attempts to connect to the configured mail server."""
+        # TODO: Make authentication optional.
 
         self.logger.info('Connecting.')
         if self.smtp is not None:
