@@ -179,7 +179,6 @@ def build_config_dict():
     config = {}
 
     # Reads the SMTP configuration.
-    config['smtp_domain'] = config_helper.verify_string_exists(config_file, 'smtp_domain')
     config['smtp_port'] = config_helper.verify_integer_within_range(
         config_file, 'smtp_port', lower_bound=1, upper_bound=65536)
     config['smtp_username'] = config_helper.verify_string_exists(

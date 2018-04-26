@@ -23,6 +23,7 @@ import smtplib
 import time
 import traceback
 
+SMTP_DOMAIN = 'localhost'
 
 # TODO: Trim this down and remove any Gmail-specific parts.
 # TODO: Eventually, in a different branch, implement simple fallback logic.
@@ -64,7 +65,7 @@ class MailSender:
             # TODO: Make the connection timeout configurable.
             try:
                 self.smtp = smtplib.SMTP(
-                    self.config['smtp_domain'], self.config['smtp_port'],
+                    SMTP_DOMAIN, self.config['smtp_port'],
                     self.ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
                 self.smtp.starttls()
