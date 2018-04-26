@@ -44,3 +44,6 @@ smtp_use_tls = yes
 Restart the Postfix daemon and then test it.
 `sudo systemctl restart postfix`
 `echo "test email body" | mail -s "test subject" <recipient email>`
+
+TODO: This is for a default Postfix setup. We want to disable using the `mail` command and
+use plaintext SMTP authentication on only the loopback interface.
