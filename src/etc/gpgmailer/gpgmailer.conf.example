@@ -34,7 +34,7 @@ key_check_interval=60
 # Standard email server details
 smtp_username=
 smtp_password=
-smtp_port=
+smtp_port=25
 
 
 # Less standard email server details
