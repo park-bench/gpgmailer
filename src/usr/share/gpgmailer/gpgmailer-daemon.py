@@ -157,7 +157,7 @@ def build_config_dict():
     print('Reading %s...' % CONFIG_PATHNAME)
 
     if not os.path.isfile(CONFIG_PATHNAME):
-        raise InitializationExcpetion(
+        raise InitializationException(
             'Configuration file %s does not exist. Quitting.' % CONFIG_PATHNAME)
 
     config_file = ConfigParser.RawConfigParser()
@@ -183,7 +183,7 @@ def build_config_dict():
         config_file, 'smtp_port', lower_bound=1, upper_bound=65536)
     config['smtp_username'] = config_helper.get_string_if_exists(
         config_file, 'smtp_username')
-    
+
     # TODO: Decide how to handle options that are not required in confighelper.
     # This is not nice code, but it works for the moment.
     try:
