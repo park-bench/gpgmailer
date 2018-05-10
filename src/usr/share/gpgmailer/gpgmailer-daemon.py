@@ -33,11 +33,7 @@ import gpgmailmessage
 import grp
 import logging
 import os
-# TODO: Remove try/except when we drop support for Ubuntu 14.04 LTS.
-try:
-    from lockfile import pidlockfile
-except ImportError:
-    from daemon import pidlockfile
+from lockfile import pidlockfile
 import pwd
 import signal
 import stat
@@ -46,7 +42,6 @@ import sys
 import time
 import traceback
 
-# TODO: Target Ubuntu 18.04 instead of 14.04 (issue 8)
 # TODO: Consider running in a chroot or jail. (issue 17)
 
 # Constants
@@ -89,7 +84,6 @@ def get_user_and_group_ids():
     return program_user.pw_uid, program_group.gr_gid
 
 
-# TODO: Either warn or crash when the config file is readable by everyone. (issue 9)
 def read_configuration_and_create_logger(program_uid, program_gid):
     """Reads the configuration file and creates the application logger. This is done in the
     same function because part of the logger creation is dependent upon reading the
@@ -180,18 +174,19 @@ def read_configuration_and_create_logger(program_uid, program_gid):
     return (config, config_helper, logger)
 
 
-# TOOD: Consider checking ACLs. (issue 22)
+# TODO: Consider checking ACLs. (issue 22)
 def verify_safe_file_permissions(config, program_uid):
     """Crashes the application if unsafe file and directory permissions exist on application
     configuration files.
 
     config: The program config dictionary to read the application GPG keyring location from.
-    program_uid: The system user ID that should own the configuration files.
+    program_uid: The system user ID that should own the GPG keyring.
     """
+    # The configuration file should be owned by root. 
     config_file_stat = os.stat(CONFIGURATION_PATHNAME)
-    if config_file_stat.st_uid != program_uid:
+    if config_file_stat.st_uid != 0:
         raise InitializationException(
-            'File %s must be owned by %s.' % (CONFIGURATION_PATHNAME, PROGRAM_NAME))
+            'File %s must be owned by root.' % CONFIGURATION_PATHNAME)
     if bool(config_file_stat.st_mode & (
             stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH | stat.S_IRGRP | stat.S_IWGRP |
             stat.S_IXGRP)):
