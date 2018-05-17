@@ -20,6 +20,7 @@ __version__ = '0.8'
 import logging
 import random
 import smtplib
+import subprocess
 import time
 import traceback
 
@@ -92,6 +93,23 @@ class MailSender:
                 self.logger.error(traceback.format_exc())
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
+
+    def local_sendmail(self, message_object, recipients):
+        # TODO: Add recipients to email header.
+        self.logger.info('Sending message via sendmail.')
+        recipients_string = recipients[0]
+        for recipient in recipients:
+            if recipient is not recipients[0]:
+                recipients_string += ', %s' % recipient
+
+        message_object['To:'] = recipients_string
+
+        sendmail_process = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE)
+        sendmail_process.communicate(str(message_object))
+        sendmail_process.stdin.close()
+
+        self.logger.debug('Message sent successfully.')
+        self.last_sent_time = time.time()
 
     def sendmail(self, message_string, recipients):
         """Sends an e-mail.
