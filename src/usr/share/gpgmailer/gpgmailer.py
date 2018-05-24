@@ -25,8 +25,8 @@ import gpgkeyverifier
 import gpgmailbuilder
 import json
 import logging
-import mailsender
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -38,8 +38,8 @@ class GpgMailer:
     """
 
     def __init__(self, config, gpgkeyring, gpgkeyverifier):
-        """Constructs an instance of the class including creating local instances of
-        mailsender and gpgmailbuilder.
+        """Constructs an instance of the class including creating a local instance of
+        gpgmailbuilder.
 
         config: The config dictionary read from the program configuration file.
         gpgkeyring: The GpgKeyring object containing information on all the GPG keys in the
@@ -55,7 +55,6 @@ class GpgMailer:
         self.gpgkeyverifier = gpgkeyverifier
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(
             self.gpgkeyring, self.config['main_loop_duration'])
-        self.mailsender = mailsender.MailSender(self.config)
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
 
@@ -97,7 +96,7 @@ class GpgMailer:
                     encrypted_message = self._build_encrypted_message(
                         message_dict, loop_start_time)
 
-                    self.mailsender.local_sendmail(message_object=encrypted_message,
+                    self.local_sendmail(message_object=encrypted_message,
                                              recipients=self.valid_recipient_emails)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
@@ -166,7 +165,7 @@ class GpgMailer:
                 'subject': self.config['default_subject'],
                 'body': 'The expiration status of one or more keys have changed.'}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
-            self.mailsender.local_sendmail(encrypted_message, self.valid_recipient_emails)
+            self.local_sendmail(encrypted_message, self.valid_recipient_emails)
 
     def _build_encrypted_message(self, message_dict, loop_start_time):
         """Builds an encrypted e-mail string with a signature if possible.
@@ -205,3 +204,20 @@ class GpgMailer:
                 loop_current_time=loop_start_time)
 
         return message
+
+    def local_sendmail(self, message_object, recipients):
+        # TODO: Add recipients to email header.
+        self.logger.info('Sending message via sendmail.')
+        recipients_string = recipients[0]
+        for recipient in recipients:
+            if recipient is not recipients[0]:
+                recipients_string += ', %s' % recipient
+
+        message_object['From'] = self.config['sender']['email']
+        message_object['To'] = recipients_string
+
+        sendmail_process = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE)
+        sendmail_process.communicate(str(message_object))
+        sendmail_process.stdin.close()
+
+        self.logger.debug('Message sent successfully.')
