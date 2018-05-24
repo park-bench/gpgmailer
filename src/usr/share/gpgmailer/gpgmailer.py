@@ -97,7 +97,7 @@ class GpgMailer:
                     encrypted_message = self._build_encrypted_message(
                         message_dict, loop_start_time)
 
-                    self.mailsender.sendmail(message_string=encrypted_message,
+                    self.mailsender.local_sendmail(message_object=encrypted_message,
                                              recipients=self.valid_recipient_emails)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
@@ -166,7 +166,7 @@ class GpgMailer:
                 'subject': self.config['default_subject'],
                 'body': 'The expiration status of one or more keys have changed.'}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
-            self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
+            self.mailsender.local_sendmail(encrypted_message, self.valid_recipient_emails)
 
     def _build_encrypted_message(self, message_dict, loop_start_time):
         """Builds an encrypted e-mail string with a signature if possible.

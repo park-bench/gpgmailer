@@ -42,7 +42,7 @@ class MailSender:
         self.config = config
         self.smtp = None
 
-        self._connect()
+        #self._connect()
 
         # Used to determine SMTP session idle time.
         self.last_sent_time = time.time()
@@ -102,7 +102,8 @@ class MailSender:
             if recipient is not recipients[0]:
                 recipients_string += ', %s' % recipient
 
-        message_object['To:'] = recipients_string
+        message_object['From'] = self.config['sender']['email']
+        message_object['To'] = recipients_string
 
         sendmail_process = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE)
         sendmail_process.communicate(str(message_object))
