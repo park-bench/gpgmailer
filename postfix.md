@@ -46,11 +46,13 @@ Restart the Postfix daemon and then test it.
 `echo "test email body" | mail -s "test subject" <recipient email>`
 
 Now that you can see it works, it should be secured against unauthorized users. To change
-which users can send via `sendmail` or `mail`. To block all users, edit
+which users can send via `sendmail` or `mail`. To block all users but root, edit
 `/etc/postfix/main.cf` and add the line:
 ```
-authorized_submit_users = !static:all
+authorized_submit_users = root
 ```
 
-TODO: This is for a default Postfix setup. We want to disable using the `mail` command and
-use plaintext SMTP authentication on only the loopback interface.
+If you do not want to leak your system's hostname, you can set one in `main.cf`.
+```
+myhostname = desired_hostname
+```
