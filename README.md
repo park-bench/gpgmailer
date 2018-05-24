@@ -17,6 +17,9 @@ The only current method of installation for our software is building and install
 * You are already somewhat familiar with using debuild.
 * `build-essential` is installed.
 * `devscripts` is installed.
+* An MTA that replaces `sendmail` is installed and configured. If you don't have
+a preference, we have a short, basic guide for Postfix
+[here](./postfix.md).
 
 ## Parkbench Dependencies
 
