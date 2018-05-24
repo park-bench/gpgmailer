@@ -178,25 +178,6 @@ def build_config_dict():
 
     config = {}
 
-    # Reads the SMTP configuration.
-    config['smtp_port'] = config_helper.verify_integer_within_range(
-        config_file, 'smtp_port', lower_bound=1, upper_bound=65536)
-    config['smtp_username'] = config_helper.get_string_if_exists(
-        config_file, 'smtp_username')
-
-    # TODO: Decide how to handle options that are not required in confighelper.
-    # This is not nice code, but it works for the moment.
-    try:
-        config['smtp_password'] = config_helper.verify_password_exists(
-            config_file, 'smtp_password')  # Note this is a password!
-    except ValueError as e:
-        config['smtp_password'] = None
-
-    config['smtp_max_idle'] = config_helper.verify_integer_within_range(
-        config_file, 'smtp_max_idle', lower_bound=1)
-    config['smtp_sending_timeout'] = config_helper.verify_integer_within_range(
-        config_file, 'smtp_sending_timeout', lower_bound=1)  # In seconds.
-
     # Reads the key configuration.
     config['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
     config['sender'] = {}
