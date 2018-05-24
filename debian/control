@@ -7,5 +7,5 @@ Standards-Version: 3.9.6.1
 
 Package: gpgmailer
 Architecture: all
-Depends: confighelper (>=0.3),python-gnupg,python-daemon
+Depends: confighelper (>=0.3),python-gnupg,python-daemon,postfix | mail-transfer-agent
 Description: Daemon to send multipart encrypted e-mails.

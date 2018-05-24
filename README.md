@@ -17,9 +17,8 @@ The only current method of installation for our software is building and install
 * You are already somewhat familiar with using debuild.
 * `build-essential` is installed.
 * `devscripts` is installed.
-* An MTA that replaces `sendmail` is installed and configured. If you don't have
-a preference, we have a short, basic guide for Postfix
-[here](./postfix.md).
+* A local MTA installed that provides `mail-transfer-agent`, as the majority of them do. If
+you don't have a preference, we have a short, basic guide for Postfix [here](./postfix.md).
 
 ## Parkbench Dependencies
 
@@ -29,6 +28,7 @@ _gpgmailer_ depends on one other piece of the Parkbench project, which must be i
 
 ## Steps to Build and Install
 
+0.   Install and configure your local MTA.
 1.   Clone the latest release tag. (Do not clone the master branch. `master` may not be stable.)
 2.   Use `debuild` in the project root directory to build the package.
 3.   Use `dpkg -i` to install the package.
