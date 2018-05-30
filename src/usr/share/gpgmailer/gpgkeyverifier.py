@@ -107,7 +107,7 @@ class GpgKeyVerifier:
 
         # Record e-mail information for all the recipients.
         for recipient in config['recipients']:
-            # TODO: Eventually, handle multiple keys for one address.
+            # TODO #38: Eventually, handle multiple keys for one address.
             if recipient['email'] in self.all_recipient_emails:
                 raise RecipientEmailCollision('Email %s is already configured.' %
                                               recipient['email'])
@@ -174,7 +174,7 @@ class GpgKeyVerifier:
                         'e-mail with an expired sender GPG key.')
 
             else:
-                # Always encrypt with the sender key. TODO: Eventually make this an option.
+                # Always encrypt with the sender key. TODO #36: Eventually make this an option.
                 valid_key_fingerprints.append(
                     self.email_dicts[self.sender_email]['fingerprint'])
 
@@ -186,7 +186,7 @@ class GpgKeyVerifier:
             expired_messages.append(sender_expiration_data['warning_message'])
 
         else:
-            # Always encrypt with the sender key. TODO: Eventually make this an option.
+            # Always encrypt with the sender key. TODO #36: Eventually make this an option.
             valid_key_fingerprints.append(self.email_dicts[self.sender_email]['fingerprint'])
 
             if self.email_dicts[self.sender_email]['is_recipient']:
@@ -195,7 +195,7 @@ class GpgKeyVerifier:
         self.logger.trace('Checking recipient keys.')
         for recipient_email in self.all_recipient_emails:
             # Reuse the sender expiration data if the sender is also a recipient.
-            # TODO: Optimize all key checking, not just sender key. Maybe have a list
+            # TODO #39: Optimize all key checking, not just sender key. Maybe have a list
             #   of checked fingerprints.
             if self.email_dicts[recipient_email]['is_sender']:
                 self.logger.trace('Recipient %s is also a sender.' % recipient_email)
@@ -297,7 +297,7 @@ class GpgKeyVerifier:
                 'is_expired': is_expired,
                 'expiring_soon': expiring_soon}
 
-    # TODO: Eventually we should better support long pauses in execution (such as
+    # TODO #40: Eventually we should better support long pauses in execution (such as
     #   suspend).
     def _update_if_expiration_info_is_stale(self, loop_current_time):
         """Determines whether the recipient and sender GPG key expiration information is

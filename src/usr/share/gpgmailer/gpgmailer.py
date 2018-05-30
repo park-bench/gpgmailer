@@ -154,7 +154,7 @@ class GpgMailer:
         new_expiration_warning_message = \
             self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
 
-        # TODO: Eventually, change this so it isn't a string comparison.
+        # TODO #35: Eventually, change this so it isn't a string comparison.
         if self.expiration_warning_message != new_expiration_warning_message:
             self.logger.info(
                 'The expiration status of one or more keys have changed. Sending an '
@@ -190,7 +190,7 @@ class GpgMailer:
             message = self.gpgmailbuilder.build_encrypted_message(
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.
-                # TODO: We should eventually make it an option to not include the sender key.
+                # TODO #36: We should eventually make it an option to not include the sender key.
                 encryption_keys=self.valid_key_fingerprints,
                 loop_current_time=loop_start_time)
 
@@ -198,7 +198,7 @@ class GpgMailer:
             message = self.gpgmailbuilder.build_signed_encrypted_message(
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.
-                # TODO: We should eventually make it an option to not include the sender key.
+                # TODO #36: We should eventually make it an option to not include the sender key.
                 encryption_keys=self.valid_key_fingerprints,
                 signing_key_fingerprint=self.config['sender']['fingerprint'],
                 signing_key_passphrase=self.config['sender']['password'],

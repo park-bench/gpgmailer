@@ -24,6 +24,7 @@ import time
 import traceback
 
 
+# Not making issues for any TODOs in this file because this file is deleted in a pull request.
 class MailSender:
     """Creates and maintains an SMTP connection and sends e-mails."""
 

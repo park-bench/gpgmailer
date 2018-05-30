@@ -55,7 +55,7 @@ class GpgKeyRing:
 
             # Key expiration dates are in Unix time. An expiration date of None
             #   means that the key does not expire.
-            # TODO: Eventually, change key expiration date to a date object instead of an
+            # TODO #37: Eventually, change key expiration date to a date object instead of an
             #   int.
             expires = None
             if key['expires'] != '':

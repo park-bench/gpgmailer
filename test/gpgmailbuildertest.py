@@ -27,7 +27,7 @@ import unittest
 log_file = "/dev/null"
 log_level = "TRACE"
 max_operation_time = 1
-# TODO: Eventually redo key descriptions in keyring.
+# TODO #42: Eventually redo key descriptions in keyring.
 valid_signing_key_fingerprint = '32C39D741B2D0F56A57F3BD5C98DBEA2DE6613E9'
 untrusted_signing_key_fingerprint = '580F6E7B9360235DD4227A21CE428A67F602976B'
 unsigned_signing_key_fingerprint = 'B616361BA4F970857685C9076D061968AA33DD93'
@@ -73,7 +73,7 @@ class gpgmailbuildertest(unittest.TestCase):
             self.test_time)
         # Make sure the signed_message is not empty.
         self.assertTrue(signed_message)
-        # TODO: Eventually, consider verifying the signature here.
+        # TODO #43: Eventually, consider verifying the signature here.
 
     def test_encrypt_message_succeeds(self):
         self.logger.info('Testing encryption with valid key.')
@@ -81,7 +81,7 @@ class gpgmailbuildertest(unittest.TestCase):
             message, [valid_encryption_key_fingerprint], self.test_time)
         # Make sure the encrypted_message is not empty.
         self.assertTrue(encrypted_message)
-        # TODO: Eventually, consider verifying the signature here.
+        # TODO #43: Eventually, consider verifying the signature here.
 
     def test_signed_encrypted_message_succeeds(self):
         self.logger.info('Testing signed encrypted message with valid key.')
@@ -90,7 +90,7 @@ class gpgmailbuildertest(unittest.TestCase):
             signing_key_correct_passphrase, self.test_time)
         # Make sure the signed_encrypted_message is not empty.
         self.assertTrue(signed_encrypted_message)
-        # TODO: Eventually, consider verifying the signature here.
+        # TODO #43: Eventually, consider verifying the signature here.
 
     # Wrong passwords are not specifically handled, so this should raise the general
     #   SignatureError exception.
@@ -149,7 +149,7 @@ class gpgmailbuildertest(unittest.TestCase):
     # Subkeys are not specifically handled, so this should raise the general SignatureError.
     def test_signing_failed_due_to_expired_subkey(self):
         self.logger.info('Testing signing with expired subkey.')
-        # TODO: Eventually we should fix this to throw a GpgKeyExpirationError.
+        # TODO #41: Eventually we should fix this to throw a GpgKeyExpirationError.
         with self.assertRaises(gpgmailbuilder.GpgKeyNotSignedException):
             self.gpgmailbuilder.build_signed_message(message,
                 expired_signing_subkey_key_fingerprint, signing_key_correct_passphrase,
@@ -159,7 +159,7 @@ class gpgmailbuildertest(unittest.TestCase):
     #   EncryptionError.
     def test_encryption_failed_due_to_expired_subkey(self):
         self.logger.info('Testing encryption with expired subkey.')
-        # TODO: Eventually we should fix this to throw a GpgKeyExpirationError.
+        # TODO #41: Eventually we should fix this to throw a GpgKeyExpirationError.
         with self.assertRaises(gpgmailbuilder.EncryptionError):
             self.gpgmailbuilder.build_encrypted_message(
                 message, [expired_encryption_subkey_key_fingerprint],

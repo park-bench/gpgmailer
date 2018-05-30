@@ -30,7 +30,7 @@ import gpgmailer
 import gpgmailmessage
 import logging
 import os
-# TODO: Remove try/except when we drop support for Ubuntu 14.04 LTS.
+# TODO #33: Remove try/except when we drop support for Ubuntu 14.04 LTS.
 try:
     from lockfile import pidlockfile
 except ImportError:
@@ -41,7 +41,7 @@ import sys
 import time
 import traceback
 
-# TODO: Target Ubuntu 18.04 instead of 14.04 (issue 8)
+# TODO #8: Target Ubuntu 18.04 instead of 14.04.
 
 PID_FILE = '/run/gpgmailer.pid'
 CONFIG_PATHNAME = '/etc/gpgmailer/gpgmailer.conf'
@@ -143,7 +143,7 @@ def parse_key_config_string(configuration_option, key_config_string):
         logger.critical(message)
         raise InitializationException(message)
 
-    # TODO: Eventually verify e-mail format.
+    # TODO #34: Eventually verify e-mail format.
     key_dict = {'email': key_split[0].strip(),
                 'fingerprint': key_split[1].strip()}
 

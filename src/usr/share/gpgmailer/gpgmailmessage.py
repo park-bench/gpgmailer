@@ -70,7 +70,7 @@ class GpgMailMessage:
     _outbox_dir = None
     _draft_dir = None
 
-    # TODO: Eventually make this method so it can be called twice.
+    # TODO #31: Eventually make this method so it can be called twice.
     @classmethod
     def configure(cls):
         """Reads the gpgmailer config file to obtain the watch directory's path name.
@@ -96,7 +96,7 @@ class GpgMailMessage:
 
         # Verify the 'configure' class method was called.
         if (self._outbox_dir is None) or (self._draft_dir is None):
-            # TODO: Consider just calling configure here instead of raising an exception.
+            # TODO #32: Consider just calling configure here instead of raising an exception.
             raise GpgMailMessageNotConfiguredException(
                 'GpgMailMessage.configure() must be called an instance can be created.')
 
