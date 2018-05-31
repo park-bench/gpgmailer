@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2018 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,12 +22,12 @@ __version__ = '0.8'
 
 import base64
 from email.Encoders import encode_7or8bit
-import gnupg
-import logging
 from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import logging
+import gnupg
 
 
 class SignatureError(Exception):
@@ -188,7 +188,7 @@ class GpgMailBuilder:
 
         signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
 
-        self.logger.debug('Used hash algorithm %s.' % signature_hash_algorithm)
+        self.logger.debug('Used hash algorithm %s.', signature_hash_algorithm)
 
         signature_part = MIMEApplication(
             _data=signature_text, _subtype='pgp-signature; name="signature.asc"',
