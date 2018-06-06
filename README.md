@@ -28,15 +28,15 @@ _gpgmailer_ depends on one other piece of the Parkbench project, which must be i
 
 ## Steps to Build and Install
 
-0.   Install and configure your local MTA.
-1.   Clone the latest release tag. (Do not clone the master branch. `master` may not be stable.)
-2.   Use `debuild` in the project root directory to build the package.
-3.   Use `dpkg -i` to install the package.
-4.   Use `apt-get -f install` to resolve any missing dependencies. The daemon will attempt to start and fail. (This is expected.)
-5.   Locate the example configuration file at `/etc/gpgmailer/gpgmailer.conf.example`. Copy or rename this file to `gpgmailer.conf` in the same directory. Edit this file to change any configuration details.
-6.   Create a keyring at the location specified in gpgmailer.conf. It will be read from and written to by root, so DO NOT use your home directory's keyring.
-7.   Use `gpg` with the option `--homedir` set to the location of your new keyring. Import a sender and all recipient keys and set them all to at least marginal trust.
-8.   Restart the daemon with `service gpgmailer restart`. If the configuration file and keyring are set up correctly, the service will now start successfully.
+1.   Install and configure your local MTA. We included instructions for [Postfix](./postfix.md).
+2.   Clone the latest release tag. (Do not clone the master branch. `master` may not be stable.)
+3.   Use `debuild` in the project root directory to build the package.
+4.   Use `dpkg -i` to install the package.
+5.   Use `apt-get -f install` to resolve any missing dependencies. The daemon will attempt to start and fail. (This is expected.)
+6.   Locate the example configuration file at `/etc/gpgmailer/gpgmailer.conf.example`. Copy or rename this file to `gpgmailer.conf` in the same directory. Edit this file to change any configuration details.
+7.   Create a keyring at the location specified in gpgmailer.conf. It will be read from and written to by root, so DO NOT use your home directory's keyring.
+8.   Use `gpg` with the option `--homedir` set to the location of your new keyring. Import a sender and all recipient keys and set them all to at least marginal trust.
+9.   Restart the daemon with `service gpgmailer restart`. If the configuration file and keyring are set up correctly, the service will now start successfully.
 
 ## Updates
 
