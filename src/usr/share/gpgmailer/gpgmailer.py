@@ -214,10 +214,8 @@ class GpgMailer:
         recipients:     A list of e-mail addresses to send the e-mail to.
         """
         self.logger.info('Sending message via sendmail.')
-        recipients_string = recipients[0]
-        for recipient in recipients:
-            if recipient is not recipients[0]:
-                recipients_string += ', %s' % recipient
+
+        recipients_string = ', '.join(recipients)
 
         mime_message['From'] = self.config['sender']['email']
         mime_message['To'] = recipients_string
