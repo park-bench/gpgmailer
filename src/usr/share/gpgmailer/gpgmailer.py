@@ -96,8 +96,8 @@ class GpgMailer:
                     encrypted_message = self._build_encrypted_message(
                         message_dict, loop_start_time)
 
-                    self._sendmail(message_object=encrypted_message,
-                                             recipients=self.valid_recipient_emails)
+                    self._send_mail(mime_message=encrypted_message,
+                                   recipients=self.valid_recipient_emails)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
@@ -165,7 +165,7 @@ class GpgMailer:
                 'subject': self.config['default_subject'],
                 'body': 'The expiration status of one or more keys have changed.'}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
-            self._sendmail(message_object=encrypted_message,
+            self._send_mail(mime_message=encrypted_message,
                            recipients=self.valid_recipient_emails)
 
     def _build_encrypted_message(self, message_dict, loop_start_time):
@@ -206,13 +206,12 @@ class GpgMailer:
 
         return message
 
-    def _sendmail(self, message_object, recipients):
-        """
-            Adds From and To headers to the message object, then passes it to sendmail to be
-            queued by the local MTA.
+    def _send_mail(self, mime_message, recipients):
+        """Adds From and To headers to the message object, then passes it to sendmail to be
+        queued by the local MTA.
 
-            message_object: A MIMEMultipart message object describing the email to send.
-            recipients:     A list of email addresses to send the email to.
+        mime_message: A MIMEMultipart message object describing the e-mail to send.
+        recipients:     A list of e-mail addresses to send the e-mail to.
         """
         self.logger.info('Sending message via sendmail.')
         recipients_string = recipients[0]
@@ -220,11 +219,11 @@ class GpgMailer:
             if recipient is not recipients[0]:
                 recipients_string += ', %s' % recipient
 
-        message_object['From'] = self.config['sender']['email']
-        message_object['To'] = recipients_string
+        mime_message['From'] = self.config['sender']['email']
+        mime_message['To'] = recipients_string
 
         sendmail_process = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE)
-        sendmail_process.communicate(str(message_object))
+        sendmail_process.communicate(str(mime_message))
         sendmail_process.stdin.close()
 
-        self.logger.debug('Message sent successfully.')
+        self.logger.debug('Message queued successfully.')
