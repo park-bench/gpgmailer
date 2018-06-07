@@ -1,7 +1,7 @@
 # Configuring postfix as a simple SMTP relay
 
 ## Installation
-Install the `postfix` package with apt: `sudo apt install postfix`.
+Install the `postfix` and `libsasl2-modules` packages with apt: `sudo apt install postfix libsasl2-modules`.
 
 If Postfix is already installed, reconfigure it with `sudo dpkg-reconfigure postfix`.
 
