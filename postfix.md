@@ -1,4 +1,4 @@
-# Configuring postfix as a simple SMTP relay
+# Configuring Postfix as a simple SMTP relay
 
 ## Installation
 Install the `postfix` and `libsasl2-modules` packages with apt: `sudo apt install postfix libsasl2-modules`.
@@ -11,17 +11,19 @@ name, which should be your provider's server. In this example, we will be using 
 
 
 ## Configuration
-First, write the authentication details in a file. create the file`/etc/postfix/sasl_passwd`
+First, write the authentication details in a file. Create the file `/etc/postfix/sasl_passwd`
 and add this line:
 `[smtp.gmail.com]:587 <username>:<password>`
 
-Make that file only readable to root:
+Make the sasl_passwd file only readable to root:
 `sudo chmod 400 /etc/postfix/sasl_passwd`
 
-Then tell postfix to use it:
+Then tell Postfix to use it:
 `sudo postmap /etc/postfix/sasl_passwd`
 
-Copy an appropriate CA cert to `/etc/postfix/cacert.pem`:
+Copy a CA certificate that can be used to verify your SMTP host's SSL certificate to
+`/etc/postfix/cacert.pem`:
+
 `sudo cp /etc/ssl/certs/thawte_Primary_Root_CA.pem /etc/postfix/cacert.pem`
 
 Add the following lines to `/etc/postfix/main.cf`:
@@ -33,14 +35,14 @@ smtp_sasl_security_options = noanonymous
 smtp_tls_CAfile = /etc/postfix/cacert.pem
 smtp_use_tls = yes
 ```
-`relayhost` may already exist.
+`relayhost` should already exist.
 
 Restart the Postfix daemon and then test it.
 `sudo systemctl restart postfix`
 `echo "test email body" | mail -s "test subject" <recipient email>`
 
-Now that you can see it works, it should be secured against unauthorized users. To change
-which users can send via `sendmail` or `mail`. To block all users but root, edit
+After verifying that Postfix works, it should be secured against unauthorized users by
+changing which users can send via `sendmail` or `mail`. To block all users but root, edit
 `/etc/postfix/main.cf` and add the line:
 ```
 authorized_submit_users = root
