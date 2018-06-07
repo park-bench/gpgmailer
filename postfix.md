@@ -52,3 +52,13 @@ If you do not want to leak your system's hostname, you can set one in `main.cf`.
 ```
 myhostname = desired_hostname
 ```
+
+Postfix has configuration options for exponential backoff to prevent being treated as spam.
+This project prioritizes speed, and recommends overriding some of the default options in
+`main.cf`:
+```
+queue_run_delay=1s
+minimal_backoff_time=1s
+maximal_backoff_time=10m
+maximal_queue_lifetime=520w
+```
