@@ -36,11 +36,11 @@ import traceback
 import confighelper
 import daemon
 import gnupg
+from lockfile import pidlockfile
 import gpgkeyring
 import gpgkeyverifier
 import gpgmailer
 import gpgmailmessage
-from lockfile import pidlockfile
 
 # TODO: Consider running in a chroot or jail. (issue 17)
 
@@ -55,6 +55,7 @@ LOG_FILE = '%s.log' % PROGRAM_NAME
 SYSTEM_SPOOL_DIR = '/var/spool'
 PARTIAL_DIR = 'partial'
 OUTBOX_DIR = 'outbox'
+OUTBOX_PATHNAME = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME, OUTBOX_DIR)
 PROCESS_USERNAME = PROGRAM_NAME
 PROCESS_GROUP_NAME = PROGRAM_NAME
 PROGRAM_UMASK = 0o027  # -rw-r----- and drwxr-x---
@@ -76,11 +77,15 @@ def get_user_and_group_ids():
     try:
         program_user = pwd.getpwnam(PROCESS_USERNAME)
     except KeyError as key_error:
-        raise Exception('User %s does not exist.' % PROCESS_USERNAME, key_error)
+        # TODO: When switching to Python 3, convert to chained exception.
+        print('User %s does not exist.' % PROCESS_USERNAME)
+        raise key_error
     try:
         program_group = grp.getgrnam(PROCESS_GROUP_NAME)
     except KeyError as key_error:
-        raise Exception('Group %s does not exist.' % PROCESS_GROUP_NAME, key_error)
+        # TODO: When switching to Python 3, convert to chained exception.
+        print('Group %s does not exist.' % PROCESS_GROUP_NAME)
+        raise key_error
 
     return program_user.pw_uid, program_group.gr_gid
 
@@ -220,7 +225,7 @@ def verify_safe_file_permissions(config, program_uid):
                     'Directory %s and all its contents must be owned by %s.' % (
                         config['gpg_dir'], PROGRAM_NAME))
 
-    if bool(gpg_dir_stat.st_mode & (
+    if bool(os.stat(config['gpg_dir']).st_mode & (
             stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH | stat.S_IRGRP | stat.S_IWGRP |
             stat.S_IXGRP)):
         raise InitializationException(
@@ -389,7 +394,7 @@ def create_directory(system_path, program_dirs, uid, gid, mode):
     program_dirs: A string representing additional directories that should be created under
       the system path that should take on the following ownership and permissions.
     uid: The system user ID that should own the directory.
-    gid: The system group ID that should own be associated with the directory.
+    gid: The system group ID that should be associated with the directory.
     mode: The umask of the directory access permissions.
     """
     logger.info('Creating directory %s.', os.path.join(system_path, program_dirs))
@@ -420,7 +425,6 @@ def create_spool_directories(program_uid, program_gid):
 
     program_uid: The system user ID that should own all the spool directories.
     program_gid: The system group ID that should be assigned to all the spool directories.
-    Returns the outbox spool pathname.
     """
     logger.info('Creating spool directories.')
 
@@ -428,10 +432,10 @@ def create_spool_directories(program_uid, program_gid):
         create_directory(
             SYSTEM_SPOOL_DIR, PROGRAM_NAME, program_uid, program_gid,
             # drwx--x--- gpgmailer gpgmailer
-            stat.S_IXGRP | stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IXGRP)
     except Exception as exception:
         logger.critical('Could not create program spool directory. %s: %s',
-                        type(exception).__name__, exception.message)
+                        type(exception).__name__, str(exception))
         raise exception
 
     spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
@@ -454,22 +458,20 @@ def create_spool_directories(program_uid, program_gid):
             'Program spool directory was not mounted as a ramdisk. Startup failed.')
 
     try:
-        # TODO: issue 26: File Permissions Alone Should Be Enough to Protect Files In
-        #   'partial' and 'outbox'
+        # TODO: File Permissions Alone Should Be Enough to Protect Files In
+        #   'partial' and 'outbox'. (issue 26)
         create_directory(
             spool_dir, PARTIAL_DIR, program_uid, program_gid,
-            stat.S_IWGRP | stat.S_IXGRP | stat.S_ISGID | stat.S_IRUSR | stat.S_IWUSR |
-            stat.S_IXUSR | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IWGRP | stat.S_IXGRP |
+            stat.S_ISGID | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
         create_directory(
             spool_dir, OUTBOX_DIR, program_uid, program_gid,
-            stat.S_IWGRP | stat.S_IXGRP | stat.S_ISGID | stat.S_IRUSR | stat.S_IWUSR |
-            stat.S_IXUSR | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IWGRP | stat.S_IXGRP |
+            stat.S_ISGID | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
     except Exception as exception:
         logger.critical('Could not create required spool sub-directories. %s: %s',
-                        type(exception).__name__, exception.message)
+                        type(exception).__name__, str(exception))
         raise exception
-
-    return os.path.join(spool_dir, OUTBOX_DIR)
 
 
 def drop_permissions_forever(uid, gid):
@@ -478,7 +480,7 @@ def drop_permissions_forever(uid, gid):
     uid: The system user ID to drop to.
     gid: The system group ID to drop to.
     """
-    logger.info('Dropping permissions for user %s.' % PROCESS_USERNAME)
+    logger.info('Dropping permissions for user %s.', PROCESS_USERNAME)
     os.initgroups(PROCESS_USERNAME, gid)
     os.setgid(gid)
     os.setuid(uid)
@@ -523,7 +525,7 @@ def sig_term_handler(signal, stack_frame):
 
 
 def setup_daemon_context(log_file_handle, program_uid, program_gid):
-    """Creates the daemon context. vSpecifies daemon permissions, PID file information, and
+    """Creates the daemon context.  Specifies daemon permissions, PID file information, and
     signal handler.
 
     log_file_handle: The file handle to the log file.
@@ -572,7 +574,7 @@ try:
 
     # Do this relatively last because gpgmailmessage assumes the daemon has started if these
     #   directories exist.
-    outbox_dir = create_spool_directories(program_uid, program_gid)
+    create_spool_directories(program_uid, program_gid)
 
     # Configuration has been read and directories setup. Now drop permissions forever.
     drop_permissions_forever(program_uid, program_gid)
@@ -596,13 +598,13 @@ try:
         config_helper.get_log_file_handle(), program_uid, program_gid)
 
     logger.debug('Initializing GpgMailer.')
-    gpgmailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier, outbox_dir)
+    gpgmailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier, OUTBOX_PATHNAME)
 
     logger.info('Daemonizing...')
     with daemon_context:
         gpgmailer.start_monitoring()
 
 except Exception as exception:
-    logger.critical("Fatal %s: %s\n%s", type(exception).__name__, exception.message,
+    logger.critical("Fatal %s: %s\n%s", type(exception).__name__, str(exception),
                     traceback.format_exc())
     raise exception

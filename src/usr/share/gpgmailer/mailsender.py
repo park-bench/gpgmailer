@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2018 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import time
 import traceback
 
 
-class MailSender:
+class MailSender(object):
     """Creates and maintains an SMTP connection and sends e-mails."""
 
     def __init__(self, config):
@@ -51,37 +51,38 @@ class MailSender:
 
         # Create a random number as our host id.
         self.logger.debug('Generating random ehlo.')
-        self.ehlo_id = str(random.SystemRandom().random()).split('.', 1)[1]
+        ehlo_id = str(random.SystemRandom().random()).split('.', 1)[1]
         self.logger.debug('Random ehlo generated.')
         connected = False
-        while not(connected):
+        while not connected:
             # TODO: Eventually handle SMTP timeouts properly.
             # TODO: Make the connection timeout configurable.
             try:
                 self.smtp = smtplib.SMTP(
                     self.config['smtp_domain'], self.config['smtp_port'],
-                    self.ehlo_id, int(self.config['smtp_sending_timeout']))
+                    ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
                 self.smtp.starttls()
                 self.logger.debug('smtp.login.')
                 self.smtp.login(self.config['smtp_username'], self.config['smtp_password'])
                 self.logger.info('Connected to SMTP server!')
                 connected = True
-            except smtplib.SMTPAuthenticationError as e:
+            except smtplib.SMTPAuthenticationError as exception:
                 # TODO: Decide how to handle authentication errors
                 self.logger.error('Failed to connect. Authentication error. Exception '
-                                  '%s:%s' % (type(e).__name__, e.message))
+                                  '%s:%s', type(exception).__name__, str(exception))
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
-            except smtplib.SMTPDataError as e:
+            except smtplib.SMTPDataError as exception:
                 # TODO: Eventually implement backoff strategy.
-                self.logger.error('Failed to connect. Invalid response from server. ' +
-                                  'Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error(
+                    'Failed to connect. Invalid response from server. Exception %s:%s',
+                    type(exception).__name__, str(exception))
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
-            except Exception as e:
-                self.logger.error('Failed to connect. Waiting to try again. ' +
-                                  'Exception %s:%s' % (type(e).__name__, e.message))
+            except Exception as exception:
+                self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s',
+                                  type(exception).__name__, str(exception))
                 self.logger.error(traceback.format_exc())
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
@@ -107,8 +108,8 @@ class MailSender:
         try:
             self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
         except Exception as exception:
-            self.logger.error('Failed to send: %s: %s\n' % (type(exception).__name__,
-                              exception.message))
+            self.logger.error('Failed to send: %s: %s', type(exception).__name__,
+                              str(exception))
             self.logger.error(traceback.format_exc())
             self.logger.error('Retrying.')
 

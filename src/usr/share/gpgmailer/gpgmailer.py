@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015-2017 Joel Allen Luellwitz, Andrew Klapp and Brittney
+# Copyright 2015-2018 Joel Allen Luellwitz, Andrew Klapp and Brittney
 # Scaccia.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -21,19 +21,18 @@ __author__ = 'Joel Luellwitz, Andrew Klapp, and Brittney Scaccia'
 __version__ = '0.8'
 
 import base64
-import gpgkeyverifier
-import gpgmailbuilder
 import json
 import logging
-import mailsender
 import os
-import sys
 import time
 import traceback
+import gpgkeyverifier
+import gpgmailbuilder
+import mailsender
 
 
-class GpgMailer:
-    """Contains high level program business logic. Monitors the outbox directory, manages
+class GpgMailer(object):
+    """Contains high level program business logic.  Monitors the outbox directory, manages
     keys, and coordinates sending e-mail.
     """
 
@@ -68,8 +67,8 @@ class GpgMailer:
         self.logger.info('Done initializing gpgmailer module.')
 
     def start_monitoring(self):
-        """GpgMailer's main program loop. Reads the spool directory and then calls other
-        modules to build and send e-mail. Also sends warnings about GPG key expirations.
+        """GpgMailer's main program loop.  Reads the spool directory and then calls other
+        modules to build and send e-mail.  Also sends warnings about GPG key expirations.
         """
         while True:
             try:
@@ -88,7 +87,7 @@ class GpgMailer:
                 #   list of directories, and the third is a list of non-directory
                 #   files.
                 for file_name in sorted(next(os.walk(self.outbox_path))[2]):
-                    self.logger.info("Found queued e-mail in file %s." % file_name)
+                    self.logger.info('Found queued e-mail in file %s.', file_name)
                     message_dict = self._read_message_file(file_name)
 
                     # Set default subject if the queued message does not have one.
@@ -100,25 +99,24 @@ class GpgMailer:
 
                     self.mailsender.sendmail(message_string=encrypted_message,
                                              recipients=self.valid_recipient_emails)
-                    self.logger.info('Message %s sent successfully.' % file_name)
+                    self.logger.info('Message %s sent successfully.', file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
 
                 time.sleep(self.config['main_loop_delay'])
 
             except gpgkeyverifier.NoUsableKeysException as exception:
-                self.logger.critical('No keys available for encryption. Exiting. %s: %s' %
-                                     (type(exception).__name__, exception.message))
+                self.logger.critical('No keys available for encryption. Exiting. %s: %s',
+                                     type(exception).__name__, str(exception))
                 raise exception
             except gpgkeyverifier.SenderKeyExpiredException as exception:
                 self.logger.critical(
                     'Sender key has expired and sending unsigned e-mails is not allowed. '
-                    'Exiting. %s: %s' %
-                    (type(exception).__name__, exception.message))
+                    'Exiting. %s: %s', type(exception).__name__, str(exception))
                 raise exception
             except Exception as exception:
-                self.logger.error('Exception %s: %s.' % (
-                    type(exception).__name__, exception.message))
+                self.logger.error('Exception %s: %s.', type(exception).__name__,
+                                  str(exception))
                 self.logger.error(traceback.format_exc())
 
     def _read_message_file(self, file_name):
@@ -155,7 +153,7 @@ class GpgMailer:
         new_expiration_warning_message = \
             self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
 
-        # TODO: Eventually, change this so it isn't a string comparison.
+        # TODO: Eventually, change this so it isn't a string comparison. (issue 35)
         if self.expiration_warning_message != new_expiration_warning_message:
             self.logger.info(
                 'The expiration status of one or more keys have changed. Sending an '
@@ -192,6 +190,7 @@ class GpgMailer:
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.
                 # TODO: We should eventually make it an option to not include the sender key.
+                #   (issue 36)
                 encryption_keys=self.valid_key_fingerprints,
                 loop_current_time=loop_start_time)
 
@@ -200,6 +199,7 @@ class GpgMailer:
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.
                 # TODO: We should eventually make it an option to not include the sender key.
+                #   (issue 36)
                 encryption_keys=self.valid_key_fingerprints,
                 signing_key_fingerprint=self.config['sender']['fingerprint'],
                 signing_key_passphrase=self.config['sender']['password'],

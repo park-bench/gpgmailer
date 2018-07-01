@@ -21,7 +21,7 @@ __author__ = 'Joel Luellwitz and Andrew Klapp'
 __version__ = '0.8'
 
 import base64
-from email.Encoders import encode_7or8bit
+from email.encoders import encode_7or8bit
 from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -54,17 +54,17 @@ class GpgKeyNotValidatedException(Exception):
     """Raised when attempting to use a recipient untrusted or unsigned key."""
 
 
-class GpgMailBuilder:
+class GpgMailBuilder(object):
     """Builds, signs, and encrypts PGP/MIME emails with attachments.
 
     All public methods have a message_dict parameter which has the following format:
       message_dict
       +- subject: The plain-text message subject.
       +- body: The plain-text message body.
-      \- attachments: An array of dictionaries.
-         \- Array[n]
+      +- attachments: An array of dictionaries.
+         +- Array[n]
             +- filename: The filename of the attachment.
-            \- data: The binary data of the attachment.
+            +- data: The binary data of the attachment.
     """
 
     def __init__(self, gpg_keyring, max_operation_time):

@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2018 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,10 @@ __all__ = ['FingerprintSyntaxException', 'KeyNotFoundException', 'GpgKeyRing']
 __author__ = 'Joel Luellwitz and Andrew Klapp'
 __version__ = '0.8'
 
-import gnupg
 import logging
 import re
 import time
+import gnupg
 
 KEY_FINGERPRINT_REGEX = re.compile('^[0-9a-fA-F]{40}$')
 # This trust level comes from GnuPG. 'u' means ultimate.
@@ -37,7 +37,7 @@ class KeyNotFoundException(Exception):
     """This exception is thrown when a GPG fingerprint is not in the given key ring."""
 
 
-class GpgKeyRing:
+class GpgKeyRing(object):
     """GpgKeyRing caches and checks validity, expiration, and trust for GPG keys."""
 
     def __init__(self, gnupg_home):
@@ -56,7 +56,7 @@ class GpgKeyRing:
             # Key expiration dates are in Unix time. An expiration date of None
             #   means that the key does not expire.
             # TODO: Eventually, change key expiration date to a date object instead of an
-            #   int.
+            #   int. (issue 37)
             expires = None
             if key['expires'] != '':
                 expires = int(key['expires'])
@@ -80,18 +80,18 @@ class GpgKeyRing:
         current = False
         self._fingerprint_is_valid(fingerprint)
 
-        self.logger.trace('Checking expiration for GPG key %s at date %s.' % (fingerprint,
-                          expiration_date))
+        self.logger.trace('Checking expiration for GPG key %s at date %s.', fingerprint,
+                          expiration_date)
 
         if (self.fingerprint_to_key_dict[fingerprint]['expires'] is None or
                 self.fingerprint_to_key_dict[fingerprint]['expires'] > expiration_date):
 
             current = True
-            self.logger.trace('Key %s is current.' % fingerprint)
+            self.logger.trace('Key %s is current.', fingerprint)
 
         else:
             self.logger.trace(
-                'Key %s expired after date %s.' % (fingerprint, expiration_date))
+                'Key %s expired after date %s.', fingerprint, expiration_date)
 
         return current
 
@@ -117,7 +117,7 @@ class GpgKeyRing:
             trusted = True
 
         else:
-            self.logger.trace('Key %s is not trusted.' % fingerprint)
+            self.logger.trace('Key %s is not trusted.', fingerprint)
 
         return trusted
 

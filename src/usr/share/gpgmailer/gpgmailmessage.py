@@ -24,7 +24,6 @@ __version__ = '0.8'
 
 import base64
 import datetime
-import hashlib
 import json
 import logging
 import os
@@ -52,7 +51,7 @@ class ModifyAlreadySavedMessageException(Exception):
     """
 
 
-class GpgMailMessage:
+class GpgMailMessage(object):
     """Constructs an e-mail message and serializes it to the mail queue directory.
     Messages are queued in JSON format.
 
@@ -70,7 +69,7 @@ class GpgMailMessage:
         logger = logging.getLogger('GpgMailMessage')
 
         # Verify there is some place to save the e-mails.
-        if not(os.path.isdir(PARTIAL_DIR)) or not(os.path.isdir(OUTBOX_DIR)):
+        if not os.path.isdir(PARTIAL_DIR) or not os.path.isdir(OUTBOX_DIR):
             error_message = 'A gpgmailer spool subdirectory does not exist.'
             logger.error(error_message)
             raise WatchDirectoryMissingException(error_message)
@@ -131,8 +130,9 @@ class GpgMailMessage:
         #   fully created.
         partial_pathname = os.path.join(PARTIAL_DIR, message_filename)
         with os.fdopen(os.open(
-                partial_pathname, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-                stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP), 'w') as message_file:
+            partial_pathname, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+            # -rw-r-----
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP), 'w') as message_file:
             message_file.write(message_json)
 
         # Move the file to the outbox which should be an atomic operation
