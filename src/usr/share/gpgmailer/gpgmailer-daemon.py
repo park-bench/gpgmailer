@@ -64,7 +64,7 @@ logger = None
 
 
 class InitializationException(Exception):
-    """Indicates an expected fatal error occurred during gpgmailer's initialization.
+    """Indicates an expected fatal error occurred during program initialization.
     Initialization is implied to mean, before daemonization.
     """
 
@@ -202,11 +202,10 @@ def verify_safe_file_permissions(config, program_uid):
     if config_file_stat.st_uid != 0:
         raise InitializationException(
             'File %s must be owned by root.' % CONFIGURATION_PATHNAME)
-    if bool(config_file_stat.st_mode & (
-            stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH | stat.S_IRGRP | stat.S_IWGRP |
-            stat.S_IXGRP)):
+    if bool(config_file_stat.st_mode & (stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)):
         raise InitializationException(
-            'File %s can only have user access permissions set.' % CONFIGURATION_PATHNAME)
+            "File %s cannot have 'other user' access permissions set."
+            % CONFIGURATION_PATHNAME)
 
     if not os.path.isdir(config['gpg_dir']):
         raise InitializationException('GPG keyring %s does not exist.' % config['gpg_dir'])
@@ -226,10 +225,9 @@ def verify_safe_file_permissions(config, program_uid):
                         config['gpg_dir'], PROGRAM_NAME))
 
     if bool(os.stat(config['gpg_dir']).st_mode & (
-            stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH | stat.S_IRGRP | stat.S_IWGRP |
-            stat.S_IXGRP)):
+            stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)):
         raise InitializationException(
-            'Directory %s can only have user access permissions set.' %
+            "Directory %s cannot have 'other user' access permissions set." %
             config['gpg_dir'])
 
 
