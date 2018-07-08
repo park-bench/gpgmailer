@@ -11,6 +11,12 @@ log_level=info
 # this up yourself first.
 gpg_dir=/etc/gpgmailer/gnupg
 
+# Queue messages to a ramdisk. This ensures plaintext messages never hit secondary storage.
+#   The ramdisk is not destroyed on program exit, so setting this option to false will not
+#   automatically destroy the ramdisk. However, this setting will take effect after a system
+#   restart or if you manually unmount the ramdisk.
+use_tmpfs_spool=false
+
 # The number of seconds between each main program loop iteration. It is 
 #   essentially how often the spool directory is checked for new e-mails. This value does not
 #   have to be a whole number. Setting this value too low can starve other processes of CPU
