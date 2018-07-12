@@ -66,7 +66,7 @@ class GpgMailMessage(object):
     def __init__(self):
         """Initializes the class."""
 
-        logger = logging.getLogger('GpgMailMessage')
+        logger = logging.getLogger(__name__)
 
         # Verify there is some place to save the e-mails.
         if not os.path.isdir(PARTIAL_DIR) or not os.path.isdir(OUTBOX_DIR):

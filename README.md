@@ -31,7 +31,7 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
 
 ## Steps to Build and Install
 
-1.  Clone the repository and checkout the lastest release tag. (Do not build against the
+1.  Clone the repository and checkout the latest release tag. (Do not build against the
     `master` branch. The `master` branch might not be stable.)
 2.  Use `debuild` in the project root directory to build the package.
 3.  Use `dpkg -i` to install the package.
