@@ -2,8 +2,8 @@
 
 [General]
 
-# Specifies the verbosity of the program's log. Valid values are 'critical', 'error', 'info',
-#   'debug', and 'trace'. This value is case insensitive.
+# Specifies the verbosity of the program's log. Valid values are CRITICAL, ERROR, WARNING,
+#   INFO, DEBUG, and TRACE. This value is case insensitive.
 log_level=info
 
 # gpg_dir should be the gnupg keyring directory containing all of the

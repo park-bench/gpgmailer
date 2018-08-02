@@ -50,7 +50,7 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
     user.
 10. Use `chmod` to clear the _other user_ permissions bits of `gpgmailer.conf` and the GPG
     keyring directory. Namely, remove read, write, and execute permissions for _other_.
-11. To ease system maintenance, add `gpgmailer` as a supplimental group to administrative
+11. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
     users. Doing this will allow these users to view gpgmailer log files.
 12. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
     keyring are valid, named correctly, and have the correct file permissions, the service
