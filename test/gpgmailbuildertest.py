@@ -27,7 +27,7 @@ import gpgmailbuilder
 log_file = "/dev/null"
 log_level = "TRACE"
 max_operation_time = 1
-# TODO: Eventually redo key descriptions in keyring.
+# TODO #42: Eventually redo key descriptions in keyring.
 valid_signing_key_fingerprint = '32C39D741B2D0F56A57F3BD5C98DBEA2DE6613E9'
 untrusted_signing_key_fingerprint = '580F6E7B9360235DD4227A21CE428A67F602976B'
 unsigned_signing_key_fingerprint = 'B616361BA4F970857685C9076D061968AA33DD93'

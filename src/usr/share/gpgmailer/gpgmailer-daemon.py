@@ -77,13 +77,13 @@ def get_user_and_group_ids():
     try:
         program_user = pwd.getpwnam(PROCESS_USERNAME)
     except KeyError as key_error:
-        # TODO: When switching to Python 3, convert to chained exception.
+        # TODO: When switching to Python 3, convert to chained exception. (issue 15)
         print('User %s does not exist.' % PROCESS_USERNAME)
         raise key_error
     try:
         program_group = grp.getgrnam(PROCESS_GROUP_NAME)
     except KeyError as key_error:
-        # TODO: When switching to Python 3, convert to chained exception.
+        # TODO: When switching to Python 3, convert to chained exception. (issue 15)
         print('Group %s does not exist.' % PROCESS_GROUP_NAME)
         raise key_error
 
@@ -173,7 +173,7 @@ def read_configuration_and_create_logger(program_uid, program_gid):
     config['default_subject'] = config_helper.get_string_if_exists(
         config_file, 'default_subject')
 
-    # TODO: Eventually add verify_boolean_exists (issue 19).
+    # TODO: Eventually add verify_boolean_exists. (issue 19)
     config['allow_expired_signing_key'] = (config_helper.verify_string_exists(
         config_file, 'allow_expired_signing_key').lower() == 'true')
 
@@ -186,6 +186,7 @@ def raise_exception(exception):
     exception: Any exception.
     """
     # TODO: Add custom error message and chain this exception when we move to Python 3.
+    #   (issue 15)
     raise exception
 
 
@@ -255,7 +256,7 @@ def parse_key_config_string(configuration_option, key_config_string):
             'Key config %s for %s is missing a key fingerprint.' %
             (key_config_string, configuration_option))
 
-    # TODO: Eventually verify e-mail format.
+    # TODO: Eventually verify e-mail format. (issue 34)
     key_dict = {'email': key_split[0].strip(),
                 'fingerprint': key_split[1].strip()}
 
@@ -289,7 +290,7 @@ def signature_test(gpg_home, fingerprint, passphrase):
     passphrase: The passphrase for the signing key.
     Returns True if there are no signing errors.  False otherwise.
     """
-    # TODO: Eventually, parse gpg output to notify that the password was wrong.
+    # TODO: Eventually, parse gpg output to notify that the password was wrong. (issue 47)
     success = False
     gpg = gnupg.GPG(gnupghome=gpg_home)
 
