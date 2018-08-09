@@ -586,7 +586,7 @@ try:
     check_all_recipient_keys(gpg_keyring, config)
     verify_signing_config(config)
 
-    # We do this here because we don't want to queue an e-mail if a configuraiton setting
+    # We do this here because we don't want to queue an e-mail if a configuration setting
     #   can cause the program to crash later. This is to avoid a lot of identical queued
     #   warning e-mails.
     gpg_key_verifier = send_expiration_warning_message(gpg_keyring, config, expiration_date)
