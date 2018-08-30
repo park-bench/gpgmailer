@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2018 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,77 +13,89 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+__all__ = ['MailSender']
+__author__ = 'Joel Luellwitz and Andrew Klapp'
+__version__ = '0.8'
+
 import logging
 import random
 import smtplib
 import time
 import traceback
 
-# Creates and maintains an SMTP connection and sends e-mails.
-class MailSender:
 
-    # Initializes an instance of the class.
-    #
-    # config: Contains the program's configuration settings.
+# Not making issues for any TODOs in this file because this file is deleted in a pull request.
+class MailSender(object):
+    """Creates and maintains an SMTP connection and sends e-mails."""
+
     def __init__(self, config):
+        """Initializes an instance of the class.
+
+        config: Contains the program's configuration settings.
+        """
         self.logger = logging.getLogger('MailSender')
 
         self.config = config
         self.smtp = None
 
-        self._connect()
-
         # Used to determine SMTP session idle time.
-        self.last_sent_time = time.time()
+        self.last_sent_time = 0
 
-
-    # Attempts to connect to the configured mail server.
     def _connect(self):
+        """Attempts to connect to the configured mail server."""
 
         self.logger.info('Connecting.')
         if self.smtp is not None:
-            # I originally tried to quit the existing SMTP session here, but that just slowed things
-            #   down too much and usually, eventually threw an exception.
+            # I originally tried to quit the existing SMTP session here, but that just
+            #   slowed things down too much and usually eventually threw an exception.
             self.smtp = None
-        
+
         # Create a random number as our host id.
         self.logger.debug('Generating random ehlo.')
-        self.ehlo_id = str(random.SystemRandom().random()).split('.', 1)[1]
+        ehlo_id = str(random.SystemRandom().random()).split('.', 1)[1]
         self.logger.debug('Random ehlo generated.')
         connected = False
-        while not(connected):
+        while not connected:
             # TODO: Eventually handle SMTP timeouts properly.
-            # TODO: Eventually make the connection timeout configurable.
+            # TODO: Make the connection timeout configurable.
             try:
-                self.smtp = smtplib.SMTP(self.config['smtp_domain'], self.config['smtp_port'], self.ehlo_id, int(self.config['smtp_sending_timeout']))
+                self.smtp = smtplib.SMTP(
+                    self.config['smtp_domain'], self.config['smtp_port'],
+                    ehlo_id, int(self.config['smtp_sending_timeout']))
                 self.logger.debug('starttls.')
                 self.smtp.starttls()
                 self.logger.debug('smtp.login.')
                 self.smtp.login(self.config['smtp_username'], self.config['smtp_password'])
                 self.logger.info('Connected to SMTP server!')
                 connected = True
-            except smtplib.SMTPAuthenticationError as e:
-                # TODO: Eventually decide how to handle authentication errors
-                self.logger.error('Failed to connect. Authentication error. Exception %s:%s' % (type(e).__name__, e.message))
+            except smtplib.SMTPAuthenticationError as exception:
+                # TODO: Decide how to handle authentication errors
+                self.logger.error('Failed to connect. Authentication error. Exception '
+                                  '%s:%s', type(exception).__name__, str(exception))
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
-            except smtplib.SMTPDataError as e:
+            except smtplib.SMTPDataError as exception:
                 # TODO: Eventually implement backoff strategy.
-                self.logger.error('Failed to connect. Invalid response from server. Exception %s:%s' % (type(e).__name__, e.message))
+                self.logger.error(
+                    'Failed to connect. Invalid response from server. Exception %s:%s',
+                    type(exception).__name__, str(exception))
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
-            except Exception as e:
-                self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s' % (type(e).__name__, e.message))
+            except Exception as exception:
+                self.logger.error('Failed to connect. Waiting to try again. Exception %s:%s',
+                                  type(exception).__name__, str(exception))
                 self.logger.error(traceback.format_exc())
                 # TODO: Eventually make this configurable?
                 time.sleep(.1)
 
-    # Sends an e-mail.
-    #
-    # message_string: A MIME formatted message.
-    # recipients: An array of e-mail addresses to send the e-mail to.
     def sendmail(self, message_string, recipients):
+        """Sends an e-mail.
 
+        message_string: A MIME formatted message.
+        recipients: An array of e-mail addresses to send the e-mail to.
+        """
+        # TODO: Decide if this should be an exception or a warning. (Actually, this probably
+        #   won't matter once Em merges in her branch.)
         if not recipients:
             raise Exception('The message has no recipients.')
 
@@ -92,19 +104,19 @@ class MailSender:
         #   are aware that mail is being sent. Make it an option.
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
-        # TODO: There is probably also a hard session limit too. (Do this eventually.)
+        # TODO: Eventually, there is probably also a hard session limit too.
         # TODO: Eventually make this timeout optional.
         if (time.time() - self.last_sent_time) > self.config['smtp_max_idle']:
-            self.logger.info('Max idle time reached. Assuming the SMTP connection has been ' +
-                'remotely severed.')
+            self.logger.info('Max idle time reached. Assuming the SMTP connection has '
+                             'been remotely severed.')
             self._connect()
 
         try:
             self.logger.debug(self.config['sender'])
             self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
         except Exception as exception:
-            self.logger.error('Failed to send: %s: %s\n' % (type(exception).__name__,
-                exception.message))
+            self.logger.error('Failed to send: %s: %s', type(exception).__name__,
+                              str(exception))
             self.logger.error(traceback.format_exc())
             self.logger.error('Retrying.')
 

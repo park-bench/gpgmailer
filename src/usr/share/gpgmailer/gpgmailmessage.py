@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015-2017 Joel Allen Luellwitz, Andrew Klapp and Brittney
+# Copyright 2015-2018 Joel Allen Luellwitz, Andrew Klapp and Brittney
 # Scaccia.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,110 +16,112 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import confighelper
-import ConfigParser
+__all__ = [
+    'WatchDirectoryMissingException', 'SaveMessageWithoutBodyException',
+    'ModifyAlreadySavedMessageException', 'GpgMailMessage']
+__author__ = 'Joel Luellwitz, Andrew Klapp, and Brittney Scaccia'
+__version__ = '0.8'
+
 import base64
 import datetime
-import hashlib
 import json
 import logging
 import os
 import shutil
+import stat
 
-# This exception is raised when gpgmailer is configured but the watch directories do not exist.
+SPOOL_DIR = '/var/spool/gpgmailer'
+PARTIAL_DIR = os.path.join(SPOOL_DIR, 'partial')
+OUTBOX_DIR = os.path.join(SPOOL_DIR, 'outbox')
+
+
 class WatchDirectoryMissingException(Exception):
-    pass
+    """This exception is raised when gpgmailer is configured but the spool directories do not
+    exist.
+    """
 
-# Constructs an e-mail message and serializes it to the mail queue directory.
-#   Messages are queued in JSON format.
-#
-# This class is not thread safe.
-#
-# This class assumes a logger has already been instantiated.
-#
-# Note: Each method should check if this object has already been saved and
-#   throw an exception if it has.
-class GpgMailMessage:
 
-    _outbox_dir = None
-    _draft_dir = None
+class SaveMessageWithoutBodyException(Exception):
+    """This exception is raised when a message without a body is attempted to be saved."""
 
-    # Reads the gpgmailer config file to obtain the watch directory's path name.
-    #   This method must be called before any instances are created.
-    # TODO: Eventually make this method so it can be called twice.
-    @classmethod
-    def configure(cls):
-        logger = logging.getLogger('GpgMailMessage')
 
-        config_file = ConfigParser.SafeConfigParser()
-        config_file.read('/etc/gpgmailer/gpgmailer.conf')
+class ModifyAlreadySavedMessageException(Exception):
+    """This exception is raised when a message is attempted to be saved after already having
+    been saved.
+    """
 
-        config_helper = confighelper.ConfigHelper()
 
-        mail_dir = config_helper.verify_string_exists(config_file, 'watch_dir')
-        cls._outbox_dir = os.path.join(mail_dir, 'outbox')
-        cls._draft_dir = os.path.join(mail_dir, 'draft')
+class GpgMailMessage(object):
+    """Constructs an e-mail message and serializes it to the mail queue directory.
+    Messages are queued in JSON format.
 
-        if not(os.path.isdir(cls._outbox_dir)) or not(os.path.isdir(cls._draft_dir)):
-            logger.critical('A watch subdirectory does not exist. Quitting.')
-            raise WatchDirectoryMissingException('A watch subdirectory does not exist.')
+    This class is not thread safe.
 
-    # Initializes the class.
+    This class assumes a logger has already been instantiated.
+
+    Note: Each method should check if this object has already been saved and
+      throw an exception if it has.
+    """
+
     def __init__(self):
+        """Initializes the class."""
 
-        # Verify the 'configure' class method was called.
-        if (self._outbox_dir == None) or (self._draft_dir == None):
-            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
-            raise RuntimeError('GpgMailMessage.configure() must be called before an instance ' + \
-                'can be created.')
+        logger = logging.getLogger(__name__)
+
+        # Verify there is some place to save the e-mails.
+        if not os.path.isdir(PARTIAL_DIR) or not os.path.isdir(OUTBOX_DIR):
+            error_message = 'A gpgmailer spool subdirectory does not exist.'
+            logger.error(error_message)
+            raise WatchDirectoryMissingException(error_message)
 
         self.saved = False
         self.message = {'body': None, 'recipients': [], 'recipient_keys': [], 'attachments': [], 'subject': None}
 
-    # Adds the plain-text subject of the message.
-    #
-    # subject: The plain-text subject to set.
     def set_subject(self, subject):
+        """Adds the plain-text subject of the message.
+
+        subject: The plain-text subject to set.
+        """
         self._check_if_saved()
         self.message['subject'] = subject
 
-    # Adds the plain-text body of the message.
-    #
-    # body: The plain-text body to set.
     def set_body(self, body):
+        """Adds the plain-text body of the message.
+
+        body: The plain-text body to set.
+        """
         self._check_if_saved()
         self.message['body'] = body
 
-    # Adds a list of recipients.
-    #
-    # recipients: a list of email addresses.
-    def set_recipients(self, recipients):
+   def set_recipients(self, recipients):
+        """Adds an arry of recipient e-mails.
+ 
+        recipients: An array of e-mail addresses.
+        """
         self._check_if_saved()
         self.message['recipients'] = recipients
 
-    # Adds a list of gpg key fingerprints for recipients of the message.
-    def set_recipient_keys(self, recipient_keys):
-        self._check_if_saved()
-        self.message['recipient_keys'] = recipient_keys
 
-    # Adds an attachment to the message.
-    #
-    # filename: The filename for the attachment.
-    # data: The binary content of the attachment.
     def add_attachment(self, filename, data):
-        self._check_if_saved()
-        self.message['attachments'].append({ 'filename': filename, 'data': data })
+        """Adds an attachment to the message.
 
-    # Saves the message to the 'outbox' directory and marks this message class instance as 'saved'
-    #   meaning no additional method calls can be made on the current message object.
+        filename: The filename for the attachment.
+        data: The binary content of the attachment.
+        """
+        self._check_if_saved()
+        self.message['attachments'].append({'filename': filename, 'data': data})
+
     def queue_for_sending(self):
+        """Saves the message to the 'outbox' directory and marks this message class instance
+        as 'saved' meaning no additional method calls can be made on the current message
+        object.
+        """
         self._check_if_saved()
 
         # Check for message, recipients, and keys. Throw an exception if they aren't there.
 
         if not self.message['body']:
-            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
-            raise Exception('Tried to save message without a body.')
+            raise SaveMessageWithoutBodyException('Tried to save a message without a body.')
 
         if not self.message['recipients']:
             raise Exception('Tried to send message with no recipients.')
@@ -135,27 +137,31 @@ class GpgMailMessage:
         message_json = json.dumps(self.message)
 
         # Write message to filesystem.
-        message_sha256 = hashlib.sha256(message_json).hexdigest()
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
-        # Write to a draft directory so the message doesn't get picked up before it is
+        # For security, the filename should not be guessable. Hence the random component.
+        message_filename = '%s-%s' % (time_string, os.urandom(16).encode('hex'))
+        # Write to a 'partial' directory so the message doesn't get picked up before it is
         #   fully created.
-        message_filename = '%s-%s' % (time_string, message_sha256)
-        draft_pathname = os.path.join(self._draft_dir, message_filename)
-        message_file = open(draft_pathname, 'w+')
-        message_file.write(message_json)
-        message_file.close()
+        partial_pathname = os.path.join(PARTIAL_DIR, message_filename)
+        with os.fdopen(os.open(
+            partial_pathname, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+            # -rw-r-----
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP), 'w') as message_file:
+            message_file.write(message_json)
 
         # Move the file to the outbox which should be an atomic operation
-        outbox_pathname = os.path.join(self._outbox_dir, message_filename)
-        shutil.move(draft_pathname, outbox_pathname)
+        outbox_pathname = os.path.join(OUTBOX_DIR, message_filename)
+        shutil.move(partial_pathname, outbox_pathname)
 
         # Causes all future methods calls to fail.
         self.saved = True
 
         return self.saved
 
-    # Checks if this message has already been saved and throws an Exception if it has been.
     def _check_if_saved(self):
+        """Checks if this message has already been saved and throws an Exception if it has
+        been.
+        """
         if self.saved:
-            #TODO: Eventually we should thrown our own exception here, not a builtin generic one.
-            raise Exception('Tried to modify an already saved message.')
+            raise ModifyAlreadySavedMessageException(
+                'Tried to modify an already saved message.')
