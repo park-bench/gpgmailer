@@ -75,7 +75,8 @@ class GpgMailMessage(object):
             raise WatchDirectoryMissingException(error_message)
 
         self.saved = False
-        self.message = {'body': None, 'recipients': [], 'recipient_keys': [], 'attachments': [], 'subject': None}
+        self.message = {
+            'body': None, 'recipient_addresses': [], 'attachments': [], 'subject': None}
 
     def set_subject(self, subject):
         """Adds the plain-text subject of the message.
@@ -93,13 +94,13 @@ class GpgMailMessage(object):
         self._check_if_saved()
         self.message['body'] = body
 
-   def set_recipients(self, recipients):
-        """Adds an arry of recipient e-mails.
- 
-        recipients: An array of e-mail addresses.
+    def set_recipient_addresses(self, recipient_addresses):
+        """Adds an array of recipient e-mail addresses.
+
+        recipients: An array of recipient e-mail addresses.
         """
         self._check_if_saved()
-        self.message['recipients'] = recipients
+        self.message['recipient_addresses'] = recipient_addresses
 
 
     def add_attachment(self, filename, data):
@@ -118,16 +119,13 @@ class GpgMailMessage(object):
         """
         self._check_if_saved()
 
-        # Check for message, recipients, and keys. Throw an exception if they aren't there.
+        # Check for message and recipients. Throw an exception if they aren't there.
 
         if not self.message['body']:
             raise SaveMessageWithoutBodyException('Tried to save a message without a body.')
 
-        if not self.message['recipients']:
-            raise Exception('Tried to send message with no recipients.')
-
-        if not self.message['recipient_keys']:
-            raise Exception('Tried to send message without gpg keys for recipients.')
+        if not self.message['recipient_addresses']:
+            raise Exception('Tried to send a message with no recipients.')
 
         # Encode any attachments as base64
         for attachment in self.message['attachments']:

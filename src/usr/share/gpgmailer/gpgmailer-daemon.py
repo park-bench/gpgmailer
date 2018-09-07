@@ -240,10 +240,6 @@ def parse_key_config_string(configuration_option, key_config_string):
     """
     key_split = key_config_string.split(':')
 
-    # TODO: Eventually add verify_boolean_exists.
-    config['allow_expired_signing_key'] = (
-                config_helper.verify_string_exists(config_file, 'allow_expired_signing_key').lower() == 'true')
-
     if len(key_split) != 2:
         raise InitializationException(
             'Key config %s for %s does not contain a colon or is malformed.' %
@@ -357,7 +353,7 @@ def check_all_recipient_keys(gpg_keyring, config):
     logger.info('Checking recipient keys for validity and expiration.')
 
     for recipient in config['recipients']:
-        if not gpg_keyring.is_trusted(recipient['fingerprint']) and
+        if not gpg_keyring.is_trusted(recipient['fingerprint']) and \
                 not gpg_keyring.is_signed(recipient['fingerprint']):
             raise InitializationException(
                 'Key with fingerprint %s is not signed (and not sufficiently trusted). '
@@ -510,13 +506,10 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
         mail_message.set_body(message)
-        recipient_emails = []
-        recipient_keys = []
+        recipient_addresses = []
         for recipient in config['recipients']:
-            recipient_emails.append(recipient['email'])
-            recipient_keys.append(recipient['fingerprint'])
-        mail_message.set_recipient_keys(recipient_keys)
-        mail_message.set_recipients(recipient_emails)
+            recipient_addresses.append(recipient['email'])
+        mail_message.set_recipient_addresses(recipient_addresses)
         mail_message.queue_for_sending()
 
     logger.debug('Finished initial key check.')

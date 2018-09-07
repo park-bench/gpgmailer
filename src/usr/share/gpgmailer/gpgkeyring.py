@@ -63,12 +63,24 @@ class GpgKeyRing(object):
 
             signed = self._is_key_signed(key)
 
-            email_list = []
+            emails = []
             for uid in key['uids']:
-                email_list.append(uid.split(" ").pop().strip(">|<"))
+                # uid contains a string that can look like this:
+                #   Joel Allen Luellwitz (eviljoel) <eviljoel@linux.com>
+                identity_parts = uid.split(" ")
+                # It is possible to have a blank identity.
+                if identity_parts:
+                    # The last part is always the e-mail address if an e-mail address
+                    #   is part of the identity.
+                    last_part = identity_parts.pop()
+                    # Only the e-mail address can have a last character of a greater than
+                    #   sign. Comments can have angled brackets but the last character is
+                    #   always a closing parenthesis.
+                    if last_part[-1:] == '>':
+                        emails.append(last_part.strip('<>'))
 
             self.fingerprint_to_key_dict[key['fingerprint']] = {
-                'emails': email_list,
+                'emails': emails,
                 'expires': expires,
                 'fingerprint': key['fingerprint'],
                 'ownertrust': key['ownertrust'],
@@ -169,12 +181,12 @@ class GpgKeyRing(object):
 
         return signed
 
-    # Checks if a GPG key fingerprint is valid and is in the keyring. If the key is not valid
-    #   or does not exist in the keyring, an exception is thrown.
-    #
-    # fingerprint: The fingerprint of the GPG key to check.
     def _fingerprint_exists_on_keyring(self, fingerprint):
+        """Checks if a GPG key fingerprint is valid and is in the keyring. If the key is not
+        valid or does not exist in the keyring, an exception is thrown.
 
+        fingerprint: The fingerprint of the GPG key to check.
+        """
         if not KEY_FINGERPRINT_REGEX.match(fingerprint):
             message = 'String %s is not a valid PGP fingerprint.' % fingerprint
             self.logger.error(message)
