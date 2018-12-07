@@ -7,7 +7,7 @@ If Postfix is already installed, reconfigure it with `sudo dpkg-reconfigure post
 
 There will be several prompts for configuration options. The first is a general
 configuration category, choose `Sattelite system`. It will also ask for an SMTP relay host
-name, which should be your provider's server. In this example, we will be using Gmail.
+name, which should be your SMTP host's server. In this example, we will be using Gmail.
 
 
 ## Configuration

@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __all__ = ['GpgMailer']
-__author__ = 'Joel Luellwitz, Andrew Klapp, and Brittney Scaccia'
+__author__ = 'Joel Luellwitz and Emily Frost'
 __version__ = '0.8'
 
 import base64
@@ -97,7 +97,7 @@ class GpgMailer:
                         message_dict, loop_start_time)
 
                     self._send_mail(mime_message=encrypted_message,
-                                   recipients=self.valid_recipient_emails)
+                                    recipients=self.valid_recipient_emails)
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
@@ -166,7 +166,7 @@ class GpgMailer:
                 'body': 'The expiration status of one or more keys have changed.'}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
             self._send_mail(mime_message=encrypted_message,
-                           recipients=self.valid_recipient_emails)
+                            recipients=self.valid_recipient_emails)
 
     def _build_encrypted_message(self, message_dict, loop_start_time):
         """Builds an encrypted e-mail string with a signature if possible.
@@ -207,8 +207,8 @@ class GpgMailer:
         return message
 
     def _send_mail(self, mime_message, recipients):
-        """Adds From and To headers to the message object, then passes it to sendmail to be
-        queued by the local MTA.
+        """Adds From and To headers to the message object, then passes the message to
+        sendmail to be queued by the local MTA.
 
         mime_message: A MIMEMultipart message object describing the e-mail to send.
         recipients:     A list of e-mail addresses to send the e-mail to.
