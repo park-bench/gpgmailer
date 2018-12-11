@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/python2
 
 # Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
@@ -18,8 +18,6 @@
 __author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
-from parkbenchcommon import confighelper
-from parkbenchcommon import broadcastconsumer
 import ConfigParser
 import datetime
 import grp
@@ -32,10 +30,11 @@ import subprocess
 import sys
 import time
 import traceback
-import confighelper
 import daemon
 import gnupg
 from lockfile import pidlockfile
+from parkbenchcommon import broadcastconsumer
+from parkbenchcommon import confighelper
 import gpgkeyring
 import gpgkeyverifier
 import gpgmailer
@@ -59,8 +58,6 @@ PROCESS_USERNAME = PROGRAM_NAME
 PROCESS_GROUP_NAME = PROGRAM_NAME
 PROGRAM_UMASK = 0o027  # -rw-r----- and drwxr-x---
 
-# The number of seconds to wait after a broadcast to get another broadcast.
-NETCHECK_BROADCAST_DELAY = 15 
 logger = None
 
 
@@ -317,7 +314,7 @@ def check_sender_key(gpg_keyring, config, expiration_date):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
             gpg_keyring.get_key_expiration_date(
                 config['sender']['fingerprint'])).strftime('%Y-%m-%d %H:%M:%S')
-        logger.warn('Sender key expired on %s.', formatted_expiration_date)
+        logger.warning('Sender key expired on %s.', formatted_expiration_date)
         config['sender']['can_sign'] = False
 
     elif not signature_test(
@@ -488,7 +485,7 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
         expiration_date)
 
     if expiration_warning_message is not None:
-        logger.warn('Sending expiration warning message email.')
+        logger.warning('Sending expiration warning message email.')
         # gpgmailer.py will prepend the actual warning message.
         message = 'Gpgmailer has just restarted.'
         mail_message = gpgmailmessage.GpgMailMessage()
@@ -565,11 +562,6 @@ try:
 
     # Configuration has been read and directories setup. Now drop permissions forever.
     drop_permissions_forever(program_uid, program_gid)
-
-    # TODO: These might be worth making into constants? Consider this.
-    # TODO: network_connected may not be the final name for this broadcast.
-    netcheck_broadcast = broadcastconsumer.Broadcaster('netcheck', 'network_connected',
-                                                       NETCHECK_BROADCAST_DELAY)
 
     # Make sure the sender key isn't going to expire during the first loop iteration.
     expiration_date = time.time() + config['main_loop_duration']

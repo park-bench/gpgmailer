@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 # Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
@@ -27,11 +25,9 @@ import subprocess
 import sys
 import time
 import traceback
+from parkbenchcommon import broadcastconsumer
 import gpgkeyverifier
 import gpgmailbuilder
-import mailsender
-
-from parkbenchcommon import broadcastconsumer
 
 # The number of seconds to wait after a broadcast to get another broadcast.
 NETCHECK_BROADCAST_DELAY = 5
@@ -64,8 +60,6 @@ class GpgMailer(object):
 
         self.outbox_path = outbox_path
 
-        # TODO: These might be worth making into constants? Consider this.
-        # TODO: network_connected may not be the final name for this broadcast.
         self.netcheck_broadcast = broadcastconsumer.Broadcaster(
             'netcheck', NETCHECK_BROADCAST_NAME, NETCHECK_BROADCAST_DELAY)
 
