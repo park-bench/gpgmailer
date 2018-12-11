@@ -15,13 +15,13 @@ GPG Mailer Daemon - directory management:
     - Attempt to continue
 * /tmp/gpgmailer fails to mount as tmpfs (ex: move /bin/mount out of path)
     - Crash
-* outbox and draft already exists
+* outbox and partial already exists
     - Continue
-* outbox and draft do not exist
+* outbox and partial do not exist
     - Create and continue
 * outbox cannot be created (ex: because it is a file)
     - Crash
-* draft cannot be created (ex: because it is a file)
+* partial cannot be created (ex: because it is a file)
     - Crash
 * mail exists in outbox.
     - It should be sent
@@ -29,13 +29,9 @@ GPG Mailer Daemon - directory management:
 gpgmailmessage: 
 * config file does not exist
     - crash with error message
-* watch_dir does not exist in the config file.
-    - crash with error message
-* watch_dir not specified in the config file.
-    - crash with error message
-* output or draft directory does not exist
+* output or partial directory does not exist
     - crash
-* output or draft are not directories
+* output or partial are not directories
     - crash
 * set_body, add_attachment, add_subject, or queue_for_sending called after queue_for_sending
     - crash

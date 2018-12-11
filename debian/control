@@ -7,5 +7,5 @@ Standards-Version: 3.9.6.1
 
 Package: gpgmailer
 Architecture: all
-Depends: parkbench-common (>=0.8),python-gnupg,python-daemon,postfix | mail-transfer-agent
+Depends: adduser (>= 3.11),parkbench-common (>=0.8),python-gnupg,python-daemon,postfix | mail-transfer-agent
 Description: Daemon to send multipart encrypted e-mails.

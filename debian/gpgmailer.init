@@ -1,6 +1,6 @@
 #! /bin/sh 
 
-# Copyright 2015-2017 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ DESC="GPG Mailer"
 NAME=gpgmailer
 DAEMON=/usr/share/gpgmailer/gpgmailer-daemon.py
 DAEMON_ARGS=
-PIDFILE=/run/$NAME.pid
+PIDFILE=/run/$NAME/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed

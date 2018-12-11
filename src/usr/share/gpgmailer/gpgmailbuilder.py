@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,13 +21,13 @@ __author__ = 'Joel Luellwitz and Emily Frost'
 __version__ = '0.8'
 
 import base64
-from email.Encoders import encode_7or8bit
-import gnupg
-import logging
+from email.encoders import encode_7or8bit
 from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import logging
+import gnupg
 
 
 class SignatureError(Exception):
@@ -54,17 +54,17 @@ class GpgKeyNotValidatedException(Exception):
     """Raised when attempting to use a recipient untrusted or unsigned key."""
 
 
-class GpgMailBuilder:
+class GpgMailBuilder(object):
     """Builds, signs, and encrypts PGP/MIME emails with attachments.
 
     All public methods have a message_dict parameter which has the following format:
       message_dict
       +- subject: The plain-text message subject.
       +- body: The plain-text message body.
-      \- attachments: An array of dictionaries.
-         \- Array[n]
+      +- attachments: An array of dictionaries.
+         +- Array[n]
             +- filename: The filename of the attachment.
-            \- data: The binary data of the attachment.
+            +- data: The binary data of the attachment.
     """
 
     def __init__(self, gpg_keyring, max_operation_time):
@@ -188,7 +188,7 @@ class GpgMailBuilder:
 
         signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]
 
-        self.logger.debug('Used hash algorithm %s.' % signature_hash_algorithm)
+        self.logger.debug('Used hash algorithm %s.', signature_hash_algorithm)
 
         signature_part = MIMEApplication(
             _data=signature_text, _subtype='pgp-signature; name="signature.asc"',

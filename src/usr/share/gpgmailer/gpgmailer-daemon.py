@@ -21,24 +21,43 @@ __version__ = '0.8'
 from parkbenchcommon import confighelper
 from parkbenchcommon import broadcastconsumer
 import ConfigParser
-import daemon
 import datetime
-import gnupg
-import gpgkeyring
-import gpgkeyverifier
-import gpgmailer
-import gpgmailmessage
+import grp
 import logging
 import os
-from lockfile import pidlockfile
+import pwd
 import signal
+import stat
 import subprocess
 import sys
 import time
 import traceback
+import confighelper
+import daemon
+import gnupg
+from lockfile import pidlockfile
+import gpgkeyring
+import gpgkeyverifier
+import gpgmailer
+import gpgmailmessage
 
-PID_FILE = '/run/gpgmailer.pid'
-CONFIG_PATHNAME = '/etc/gpgmailer/gpgmailer.conf'
+# TODO: Consider running in a chroot or jail. (issue 17)
+
+# Constants
+PROGRAM_NAME = 'gpgmailer'
+CONFIGURATION_PATHNAME = os.path.join('/etc', PROGRAM_NAME, '%s.conf' % PROGRAM_NAME)
+SYSTEM_PID_DIR = '/run'
+PROGRAM_PID_DIRS = PROGRAM_NAME
+PID_FILE = '%s.pid' % PROGRAM_NAME
+LOG_DIR = os.path.join('/var/log', PROGRAM_NAME)
+LOG_FILE = '%s.log' % PROGRAM_NAME
+SYSTEM_SPOOL_DIR = '/var/spool'
+PARTIAL_DIR = 'partial'
+OUTBOX_DIR = 'outbox'
+OUTBOX_PATHNAME = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME, OUTBOX_DIR)
+PROCESS_USERNAME = PROGRAM_NAME
+PROCESS_GROUP_NAME = PROGRAM_NAME
+PROGRAM_UMASK = 0o027  # -rw-r----- and drwxr-x---
 
 # The number of seconds to wait after a broadcast to get another broadcast.
 NETCHECK_BROADCAST_DELAY = 15 
@@ -46,133 +65,75 @@ logger = None
 
 
 class InitializationException(Exception):
-    """Indicates an expected fatal error occurred during gpgmailer's initialization.
+    """Indicates an expected fatal error occurred during program initialization.
     Initialization is implied to mean, before daemonization.
     """
 
 
-def check_if_mounted_as_tmpfs(pathname):
-    """Checks if a directory is mounted as tmpfs."""
-    return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
+def get_user_and_group_ids():
+    """Get user and group information for dropping privileges.
 
-
-def create_watch_directories(config):
-    """Mounts the parent watch directory as a ramdisk and creates the draft and outbox
-    subfolders. Exit if any part of this method fails.
+    Returns the user and group IDs that the program should eventually run as.
     """
-    logger.info('Creating watch directories.')
-
-    # Method normpath reduces the path to its simplist form.
-    watch_dir = os.path.normpath(config['watch_dir'])
-
     try:
-        if os.path.isdir(watch_dir) is False:
-            os.makedirs(watch_dir)
-    except Exception as e:
-        message = 'Could not create root watch directory. %s: %s' % (
-            type(e).__name__, e.message)
-        logger.critical(message)
-        logger.critical(traceback.format_exc())
-        raise InitializationException(message)
-
-    mounted_as_tmpfs = check_if_mounted_as_tmpfs(watch_dir)
-
-    # If directory is not mounted as tmpfs and there is something in the directory, fail to
-    #   start.
-    if os.listdir(watch_dir) != [] and mounted_as_tmpfs is False:
-        message = 'Root watch directory is not empty and not mounted as a ramdisk. ' \
-                  'Startup failed.'
-        logger.critical(message)
-        raise InitializationException(message)
-
-    # If the root watch directory is empty and not already mounted as tmpfs, mount it as
-    #   tmpfs.
-    if mounted_as_tmpfs is False:
-        logger.info('Attempting to mount the root watch directory as a ramdisk.')
-        subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', watch_dir])
-
-    if check_if_mounted_as_tmpfs(watch_dir) is False:
-        message = 'Root watch directory was not mounted as a ramdisk. Startup failed.'
-        logger.critical(message)
-        raise InitializationException(message)
-
-    outbox_dir = os.path.join(watch_dir, 'outbox')
-    draft_dir = os.path.join(watch_dir, 'draft')
-
+        program_user = pwd.getpwnam(PROCESS_USERNAME)
+    except KeyError as key_error:
+        # TODO: When switching to Python 3, convert to chained exception. (issue 15)
+        print('User %s does not exist.' % PROCESS_USERNAME)
+        raise key_error
     try:
-        if not os.path.isdir(outbox_dir):
-            os.makedirs(outbox_dir)
-        if not os.path.isdir(draft_dir):
-            os.makedirs(draft_dir)
-    except Exception as e:
-        message = 'Could not create required watch sub-directories. %s: %s' % (
-            type(e).__name__, e.message)
-        logger.critical(message)
-        logger.critical(traceback.format_exc())
-        raise InitializationException(message)
+        program_group = grp.getgrnam(PROCESS_GROUP_NAME)
+    except KeyError as key_error:
+        # TODO: When switching to Python 3, convert to chained exception. (issue 15)
+        print('Group %s does not exist.' % PROCESS_GROUP_NAME)
+        raise key_error
+
+    return program_user.pw_uid, program_group.gr_gid
 
 
-def parse_key_config_string(configuration_option, key_config_string):
-    """Parses the e-mail:fingerprint format used in the application config file to specify
-    e-mail/GPG key pairs.
+def read_configuration_and_create_logger(program_uid, program_gid):
+    """Reads the configuration file and creates the application logger. This is done in the
+    same function because part of the logger creation is dependent upon reading the
+    configuration file.
 
-    configuration_option: The name of the configuration option being parsed.
-    key_config_string: The formatted string to parse.
+    program_uid: The system user ID this program should drop to before daemonization.
+    program_gid: The system group ID this program should drop to before daemonization.
+    Returns the read system config, a confighelper instance, and a logger instance.
     """
-    key_split = key_config_string.split(':')
+    print('Reading %s...' % CONFIGURATION_PATHNAME)
 
-    if len(key_split) is not 2:
-        message = 'Key config %s for %s is does not contain a colon or is malformed.' % (
-            key_config_string, configuration_option)
-        logger.critical(message)
-        raise InitializationException(message)
-
-    if not key_split[0]:
-        message = 'Key config %s for %s is missing an e-mail address.' % (
-            key_config_string, configuration_option)
-        logger.critical(message)
-        raise InitializationException(message)
-
-    if not key_split[1]:
-        message = 'Key config %s for %s is missing a key fingerprint.' % (
-            key_config_string, configuration_option)
-        logger.critical(message)
-        raise InitializationException(message)
-
-    # TODO: Eventually verify e-mail format.
-    key_dict = {'email': key_split[0].strip(),
-                'fingerprint': key_split[1].strip()}
-
-    return key_dict
-
-
-def build_config_dict():
-    """Reads the application config file performing only the basic verifications done in
-    ConfigHelper and returns the config as a dictionary.
-    """
-    print('Reading %s...' % CONFIG_PATHNAME)
-
-    if not os.path.isfile(CONFIG_PATHNAME):
+    if not os.path.isfile(CONFIGURATION_PATHNAME):
         raise InitializationException(
-            'Configuration file %s does not exist. Quitting.' % CONFIG_PATHNAME)
+            'Configuration file %s does not exist. Quitting.' % CONFIGURATION_PATHNAME)
 
     config_file = ConfigParser.RawConfigParser()
-    config_file.read(CONFIG_PATHNAME)
-
-    config_helper = confighelper.ConfigHelper()
-
-    # Figure out the logging options so that can start before anything else.
-    print('Configuring logger.')
-    log_file = config_helper.verify_string_exists(config_file, 'log_file')
-    # TODO: Eventually add a verify_string_list method.
-    log_level = config_helper.verify_string_exists(config_file, 'log_level')
-
-    config_helper.configure_logger(log_file, log_level)
-
-    global logger
-    logger = logging.getLogger('GpgMailer-Daemon')
+    config_file.read(CONFIGURATION_PATHNAME)
 
     config = {}
+    config_helper = confighelper.ConfigHelper()
+    # Figure out the logging options so that can start before anything else.
+    # TODO: Eventually add a verify_string_list method. (issue 20)
+    config['log_level'] = config_helper.verify_string_exists(config_file, 'log_level')
+
+    # Create logging directory.  drwxr-x--- gpgmailer gpgmailer
+    log_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP
+
+    # TODO: Look into defaulting the logging to the console until the program gets more
+    #   bootstrapped. (issue 18)
+    print('Creating logging directory %s.' % LOG_DIR)
+    if not os.path.isdir(LOG_DIR):
+        # Will throw exception if file cannot be created.
+        os.makedirs(LOG_DIR, log_mode)
+    os.chown(LOG_DIR, program_uid, program_gid)
+    os.chmod(LOG_DIR, log_mode)
+
+    # Temporarily drop permission and create the handle to the logger.
+    print('Configuring logger.')
+    os.setegid(program_gid)
+    os.seteuid(program_uid)
+    config_helper.configure_logger(os.path.join(LOG_DIR, LOG_FILE), config['log_level'])
+
+    logger = logging.getLogger('%s-daemon' % PROGRAM_NAME)
 
     # Reads the key configuration.
     config['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
@@ -182,7 +143,6 @@ def build_config_dict():
     config['recipients_string'] = config_helper.verify_string_exists(
         config_file, 'recipients')
 
-    config['watch_dir'] = config_helper.verify_string_exists(config_file, 'watch_dir')
     config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 
     # Convert the key expiration threshold into seconds because expiry dates are
@@ -201,13 +161,94 @@ def build_config_dict():
     config['default_subject'] = config_helper.get_string_if_exists(
         config_file, 'default_subject')
 
-    # TODO: Eventually add verify_boolean_exists.
+    # TODO: Eventually add verify_boolean_exists. (issue 19)
     config['allow_expired_signing_key'] = (config_helper.verify_string_exists(
         config_file, 'allow_expired_signing_key').lower() == 'true')
 
-    log_file_handle = config_helper.get_log_file_handle()
+    return (config, config_helper, logger)
 
-    return config, log_file_handle
+
+def raise_exception(exception):
+    """Raises an exception.
+
+    exception: Any exception.
+    """
+    # TODO: Add custom error message and chain this exception when we move to Python 3.
+    #   (issue 15)
+    raise exception
+
+
+# TODO: Consider checking ACLs. (issue 22)
+def verify_safe_file_permissions(config, program_uid):
+    """Crashes the application if unsafe file and directory permissions exist on application
+    configuration files.
+
+    config: The program config dictionary to read the application GPG keyring location from.
+    program_uid: The system user ID that should own the GPG keyring.
+    """
+    # The configuration file should be owned by root.
+    config_file_stat = os.stat(CONFIGURATION_PATHNAME)
+    if config_file_stat.st_uid != 0:
+        raise InitializationException(
+            'File %s must be owned by root.' % CONFIGURATION_PATHNAME)
+    if bool(config_file_stat.st_mode & (stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)):
+        raise InitializationException(
+            "File %s cannot have 'other user' access permissions set."
+            % CONFIGURATION_PATHNAME)
+
+    if not os.path.isdir(config['gpg_dir']):
+        raise InitializationException('GPG keyring %s does not exist.' % config['gpg_dir'])
+
+    logger.debug('Recursively checking %s for correct permissions.', config['gpg_dir'])
+    for directory, subdirectories, files in os.walk(
+            config['gpg_dir'], onerror=raise_exception, followlinks=True):
+
+        for index, filename in enumerate(files):
+            files[index] = os.path.join(directory, filename)
+
+        for inode in [directory] + files:
+            gpg_dir_stat = os.stat(inode)
+            if gpg_dir_stat.st_uid != program_uid:
+                raise InitializationException(
+                    'Directory %s and all its contents must be owned by %s.' % (
+                        config['gpg_dir'], PROGRAM_NAME))
+
+    if bool(os.stat(config['gpg_dir']).st_mode & (
+            stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)):
+        raise InitializationException(
+            "Directory %s cannot have 'other user' access permissions set." %
+            config['gpg_dir'])
+
+
+def parse_key_config_string(configuration_option, key_config_string):
+    """Parses the e-mail:fingerprint format used in the application config file to specify
+    e-mail/GPG key pairs.
+
+    configuration_option: The name of the configuration option being parsed.
+    key_config_string: The formatted string to parse.
+    """
+    key_split = key_config_string.split(':')
+
+    if len(key_split) != 2:
+        raise InitializationException(
+            'Key config %s for %s does not contain a colon or is malformed.' %
+            (key_config_string, configuration_option))
+
+    if not key_split[0]:
+        raise InitializationException(
+            'Key config %s for %s is missing an e-mail address.' %
+            (key_config_string, configuration_option))
+
+    if not key_split[1]:
+        raise InitializationException(
+            'Key config %s for %s is missing a key fingerprint.' %
+            (key_config_string, configuration_option))
+
+    # TODO: Eventually verify e-mail format. (issue 34)
+    key_dict = {'email': key_split[0].strip(),
+                'fingerprint': key_split[1].strip()}
+
+    return key_dict
 
 
 def parse_key_config(config):
@@ -235,9 +276,9 @@ def signature_test(gpg_home, fingerprint, passphrase):
     gpg_home: The GnuPG directory to read keys from.
     fingerprint: The fingerprint of the key used to sign.
     passphrase: The passphrase for the signing key.
-    Returns True if there are no signing errors. False otherwise.
+    Returns True if there are no signing errors.  False otherwise.
     """
-    # TODO: Eventually, parse gpg output to notify that the password was wrong.
+    # TODO: Eventually, parse gpg output to notify that the password was wrong. (issue 47)
     success = False
     gpg = gnupg.GPG(gnupghome=gpg_home)
 
@@ -246,10 +287,10 @@ def signature_test(gpg_home, fingerprint, passphrase):
         passphrase=passphrase)
 
     if str(signature_test_result).strip() == '':
-        logger.debug('Signature test for %s failed. Check the sender key\'s passphrase.' %
+        logger.debug("Signature test for %s failed. Check the sender key's passphrase.",
                      fingerprint)
     else:
-        logger.info('Signature test for %s passed.' % fingerprint)
+        logger.info('Signature test for %s passed.', fingerprint)
         success = True
 
     return success
@@ -257,7 +298,7 @@ def signature_test(gpg_home, fingerprint, passphrase):
 
 def check_sender_key(gpg_keyring, config, expiration_date):
     """Checks the sender GPG key in the config file and exits if it is missing from the key
-    ring, untrusted, unsigned, or is not a 40-character hex string. Also checks and stores
+    ring, untrusted, unsigned, or is not a 40-character hex string.  Also checks and stores
     whether the sender key can be used to sign messages.
 
     gpg_keyring: The GpgKeyring object in which to look for GPG keys.
@@ -267,29 +308,23 @@ def check_sender_key(gpg_keyring, config, expiration_date):
     logger.info('Checking sender key for validity and expiration.')
 
     if not gpg_keyring.is_trusted(config['sender']['fingerprint']):
-        message = 'Signing key is not ultimately trusted. Exiting.'
-        logger.critical(message)
-        raise InitializationException(message)
+        raise InitializationException('Signing key is not ultimately trusted. Exiting.')
 
     elif not gpg_keyring.is_signed(config['sender']['fingerprint']):
-        message = 'Signing key is not signed. Exiting.'
-        logger.critical(message)
-        raise InitializationException(message)
+        raise InitializationException('Signing key is not signed. Exiting.')
 
     elif not gpg_keyring.is_current(config['sender']['fingerprint'], expiration_date):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
             gpg_keyring.get_key_expiration_date(
                 config['sender']['fingerprint'])).strftime('%Y-%m-%d %H:%M:%S')
-        logger.warn('Sender key expired on %s.' % formatted_expiration_date)
+        logger.warn('Sender key expired on %s.', formatted_expiration_date)
         config['sender']['can_sign'] = False
 
     elif not signature_test(
             config['gpg_dir'], config['sender']['fingerprint'],
             config['sender']['password']):
-        message = 'Sender key failed the signature test and the key is not expired. ' \
-                  "Check the sender key's passphrase."
-        logger.critical(message)
-        raise InitializationException(message)
+        raise InitializationException('Sender key failed the signature test and the key is '
+                                      "not expired. Check the sender key's passphrase.")
 
     else:
         logger.debug('Sender key passed signature test.')
@@ -308,13 +343,12 @@ def check_all_recipient_keys(gpg_keyring, config):
     for recipient in config['recipients']:
         if (not gpg_keyring.is_trusted(recipient['fingerprint']) and
                 not gpg_keyring.is_signed(recipient['fingerprint'])):
-            message = 'Key with fingerprint %s is not signed (and not sufficiently ' \
-                'trusted). Exiting.' % recipient['fingerprint']
-            logger.critical(message)
-            raise InitializationException(message)
+            raise InitializationException(
+                'Key with fingerprint %s is not signed (and not sufficiently trusted). '
+                'Exiting.' % recipient['fingerprint'])
         else:
             logger.debug('Recipient key with fingerprint %s is signed or ultimately '
-                         'trusted.' % recipient['fingerprint'])
+                         'trusted.', recipient['fingerprint'])
 
 
 def verify_signing_config(config):
@@ -325,17 +359,118 @@ def verify_signing_config(config):
     config: The program config dictionary to read the key configuration from.
     """
     if not config['allow_expired_signing_key'] and not config['sender']['can_sign']:
-        message = 'The sender key with fingerprint %s can not sign and ' \
-            'unsigned e-mail is not allowed. Exiting.' % config['sender']['fingerprint']
-        logger.critical(message)
-        raise InitializationException(message)
+        raise InitializationException(
+            'The sender key with fingerprint %s can not sign and unsigned e-mail is not '
+            'allowed. Exiting.' % config['sender']['fingerprint'])
 
     elif not config['sender']['can_sign']:
         logger.warn('The sender key is unable to sign because it has probably expired. '
-            'Gpgmailer will send unsigned messages.')
+                    'Gpgmailer will send unsigned messages.')
 
     else:
         logger.debug('Outgoing e-mails will be signed.')
+
+
+def create_directory(system_path, program_dirs, uid, gid, mode):
+    """Creates directories if they do not exist and sets the specified ownership and
+    permissions.
+
+    system_path: The system path that the directories should be created under.  These are
+      assumed to already exist. The ownership and permissions on these directories are not
+      modified.
+    program_dirs: A string representing additional directories that should be created under
+      the system path that should take on the following ownership and permissions.
+    uid: The system user ID that should own the directory.
+    gid: The system group ID that should be associated with the directory.
+    mode: The umask of the directory access permissions.
+    """
+    logger.info('Creating directory %s.', os.path.join(system_path, program_dirs))
+
+    path = system_path
+    for directory in program_dirs.strip('/').split('/'):
+        path = os.path.join(path, directory)
+        if not os.path.isdir(path):
+            # Will throw exception if file cannot be created.
+            os.makedirs(path, mode)
+        os.chown(path, uid, gid)
+        os.chmod(path, mode)
+
+
+def check_if_mounted_as_tmpfs(pathname):
+    """Checks if a directory is mounted as tmpfs.
+
+    pathname: The directory to check.
+    Returns true if the directory is mounted as tmpfs.  False otherwise.
+    """
+    return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
+
+
+# TODO: Add a switch to not spool to a RAM disk. (issue 21)
+def create_spool_directories(program_uid, program_gid):
+    """Mounts the program spool directory as a ramdisk and creates the partial and outbox
+    subfolders. Exit if any part of this method fails.
+
+    program_uid: The system user ID that should own all the spool directories.
+    program_gid: The system group ID that should be assigned to all the spool directories.
+    """
+    logger.info('Creating spool directories.')
+
+    try:
+        create_directory(
+            SYSTEM_SPOOL_DIR, PROGRAM_NAME, program_uid, program_gid,
+            # drwx--x--- gpgmailer gpgmailer
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IXGRP)
+    except Exception as exception:
+        logger.critical('Could not create program spool directory. %s: %s',
+                        type(exception).__name__, str(exception))
+        raise exception
+
+    spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
+    mounted_as_tmpfs = check_if_mounted_as_tmpfs(spool_dir)
+
+    # If directory is not mounted as tmpfs and there is something in the directory, fail to
+    #   start.
+    if os.listdir(spool_dir) != [] and not mounted_as_tmpfs:
+        raise InitializationException('Program spool directory is not empty and not mounted '
+                                      'as a ramdisk. Startup failed.')
+
+    # If the program spool directory is empty and not already mounted as tmpfs, mount it as
+    #   tmpfs.
+    if not mounted_as_tmpfs:
+        logger.info('Attempting to mount the program spool directory as a ramdisk.')
+        subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', spool_dir])
+
+    if not check_if_mounted_as_tmpfs(spool_dir):
+        raise InitializationException(
+            'Program spool directory was not mounted as a ramdisk. Startup failed.')
+
+    try:
+        # TODO: File Permissions Alone Should Be Enough to Protect Files In
+        #   'partial' and 'outbox'. (issue 26)
+        create_directory(
+            spool_dir, PARTIAL_DIR, program_uid, program_gid,
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IWGRP | stat.S_IXGRP |
+            stat.S_ISGID | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
+        create_directory(
+            spool_dir, OUTBOX_DIR, program_uid, program_gid,
+            stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IWGRP | stat.S_IXGRP |
+            stat.S_ISGID | stat.S_ISVTX)  # drwx-ws--T gpgmailer gpgmailer
+    except Exception as exception:
+        logger.critical('Could not create required spool sub-directories. %s: %s',
+                        type(exception).__name__, str(exception))
+        raise exception
+
+
+def drop_permissions_forever(uid, gid):
+    """Drops escalated permissions forever to the specified user and group.
+
+    uid: The system user ID to drop to.
+    gid: The system group ID to drop to.
+    """
+    logger.info('Dropping permissions for user %s.', PROCESS_USERNAME)
+    os.initgroups(PROCESS_USERNAME, gid)
+    os.setgid(gid)
+    os.setuid(uid)
 
 
 def send_expiration_warning_message(gpg_keyring, config, expiration_date):
@@ -345,7 +480,7 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
     gpg_keyring: The GpgKeyring object in which to look for GPG keys.
     config: The config dict to read sender and recipient GPG key information from.
     expiration_date: The date the singing key was validated to not expire through.
-    Returns a GpgKeyVerifier object initalized with gpg_keyring and config. This is used
+    Returns a GpgKeyVerifier object initalized with gpg_keyring and config.  This is used
       later.
     """
     gpg_key_verifier = gpgkeyverifier.GpgKeyVerifier(gpg_keyring, config)
@@ -354,8 +489,8 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
 
     if expiration_warning_message is not None:
         logger.warn('Sending expiration warning message email.')
+        # gpgmailer.py will prepend the actual warning message.
         message = 'Gpgmailer has just restarted.'
-        gpgmailmessage.GpgMailMessage.configure()
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
         mail_message.set_body(message)
@@ -367,7 +502,7 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
 
 
 def sig_term_handler(signal, stack_frame):
-    """Signal handler for SIGTERM. Quits when SIGTERM is received.
+    """Signal handler for SIGTERM.  Quits when SIGTERM is received.
 
     signal: Object representing the signal thrown.
     stack_frame: Represents the stack frame.
@@ -376,11 +511,60 @@ def sig_term_handler(signal, stack_frame):
     sys.exit(0)
 
 
-config, log_file_handle = build_config_dict()
+def setup_daemon_context(log_file_handle, program_uid, program_gid):
+    """Creates the daemon context.  Specifies daemon permissions, PID file information, and
+    signal handler.
+
+    log_file_handle: The file handle to the log file.
+    program_uid: The system user ID that should own the daemon process.
+    program_gid: The system group ID that should be assigned to the daemon process.
+    Returns the daemon context.
+    """
+    daemon_context = daemon.DaemonContext(
+        working_directory='/',
+        pidfile=pidlockfile.PIDLockFile(
+            os.path.join(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, PID_FILE)),
+        umask=PROGRAM_UMASK,
+        )
+
+    daemon_context.signal_map = {
+        signal.SIGTERM: sig_term_handler,
+        }
+
+    daemon_context.files_preserve = [log_file_handle]
+
+    # Set the UID and GID to 'gpgmailer' user and group.
+    daemon_context.uid = program_uid
+    daemon_context.gid = program_gid
+
+    return daemon_context
+
+
+os.umask(PROGRAM_UMASK)
+program_uid, program_gid = get_user_and_group_ids()
+config, config_helper, logger = read_configuration_and_create_logger(
+    program_uid, program_gid)
+
 try:
+    verify_safe_file_permissions(config, program_uid)
+
     parse_key_config(config)
 
-    create_watch_directories(config)
+    # Re-establish root permissions to create required directories.
+    os.seteuid(os.getuid())
+    os.setegid(os.getgid())
+
+    # Non-root users cannot create files in /run, so create a directory that can be written
+    #   to. Full access to user only.  drwx------ gpgmailer gpgmailer
+    create_directory(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, program_uid, program_gid,
+                     stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+
+    # Do this relatively last because gpgmailmessage assumes the daemon has started if these
+    #   directories exist.
+    create_spool_directories(program_uid, program_gid)
+
+    # Configuration has been read and directories setup. Now drop permissions forever.
+    drop_permissions_forever(program_uid, program_gid)
 
     # TODO: These might be worth making into constants? Consider this.
     # TODO: network_connected may not be the final name for this broadcast.
@@ -393,40 +577,26 @@ try:
     gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
     check_sender_key(gpg_keyring, config, expiration_date)
     check_all_recipient_keys(gpg_keyring, config)
-    # We do this here because we don't want to queue an e-mail if a configuraiton setting
+    verify_signing_config(config)
+
+    # We do this here because we don't want to queue an e-mail if a configuration setting
     #   can cause the program to crash later. This is to avoid a lot of identical queued
     #   warning e-mails.
-    verify_signing_config(config)
     gpg_key_verifier = send_expiration_warning_message(gpg_keyring, config, expiration_date)
-
-    # TODO: Check directory existence and permissions. (issue 9)
-    # TODO: Eventually, move default outbox directory to /var/spool/gpgmailer
 
     logger.info('Verification complete.')
 
+    daemon_context = setup_daemon_context(
+        config_helper.get_log_file_handle(), program_uid, program_gid)
 
-    # TODO: Either warn or crash when the config file is readable by everyone. (issue 9)
-    # TODO: Work out a permissions setup for gpgmailer so that it doesn't run as root.
-    #   (issue 9)
-    daemon_context = daemon.DaemonContext(
-        working_directory='/',
-        pidfile=pidlockfile.PIDLockFile(PID_FILE),
-        umask=0
-        )
-
-    daemon_context.signal_map = {
-        signal.SIGTERM: sig_term_handler
-        }
-
-    daemon_context.files_preserve = [log_file_handle]
+    logger.debug('Initializing GpgMailer.')
+    gpgmailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier, OUTBOX_PATHNAME)
 
     logger.info('Daemonizing...')
     with daemon_context:
-        logger.debug('Initializing GpgMailer.')
-        the_watcher = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier)
-        the_watcher.start_monitoring()
+        gpgmailer.start_monitoring()
 
 except Exception as exception:
-    logger.critical("Fatal %s: %s\n%s" % (type(exception).__name__, exception.message,
-                    traceback.format_exc()))
+    logger.critical("Fatal %s: %s\n%s", type(exception).__name__, str(exception),
+                    traceback.format_exc())
     raise exception

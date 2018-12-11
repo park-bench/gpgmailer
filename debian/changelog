@@ -5,6 +5,9 @@ gpgmailer (0.8) UNRELEASED; urgency=medium
   * GpgMailer now uses a local mail transfer agent instead of asking for an
     SMTP server.
 
+  [ eviljoel ]
+  * Added support for running as non-root user.
+
  -- Emily Frost <emfrost@posteo.net> Mon, 27 Nov 2017 20:26:19 -0600
 
 gpgmailer (0.7) stable; urgency=low

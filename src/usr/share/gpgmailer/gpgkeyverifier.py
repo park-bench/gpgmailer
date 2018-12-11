@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ class RecipientEmailCollision(Exception):
     """Raised when two recipient keys have the same e-mail address."""
 
 
-class GpgKeyVerifier:
+class GpgKeyVerifier(object):
     """Manages expiration information for the sender, recipients, and key expiration warning
     messages for keys that have expired or are about to expire.
     """
@@ -107,7 +107,7 @@ class GpgKeyVerifier:
 
         # Record e-mail information for all the recipients.
         for recipient in config['recipients']:
-            # TODO: Eventually, handle multiple keys for one address.
+            # TODO: Eventually, handle multiple keys for one address. (issue 38)
             if recipient['email'] in self.all_recipient_emails:
                 raise RecipientEmailCollision('Email %s is already configured.' %
                                               recipient['email'])
@@ -131,7 +131,7 @@ class GpgKeyVerifier:
             if config['sender']['fingerprint'] not in recipient_fingerprints:
                 raise RecipientEmailCollision(
                     'Email %s is already configured with a different key.' %
-                    recipient['email'])
+                    self.sender_email)
 
         else:
             # The sender is NOT a recipient.
@@ -174,7 +174,8 @@ class GpgKeyVerifier:
                         'e-mail with an expired sender GPG key.')
 
             else:
-                # Always encrypt with the sender key. TODO: Eventually make this an option.
+                # Always encrypt with the sender key.
+                #   TODO: Eventually make this an option. (issue 36)
                 valid_key_fingerprints.append(
                     self.email_dicts[self.sender_email]['fingerprint'])
 
@@ -186,7 +187,8 @@ class GpgKeyVerifier:
             expired_messages.append(sender_expiration_data['warning_message'])
 
         else:
-            # Always encrypt with the sender key. TODO: Eventually make this an option.
+            # Always encrypt with the sender key.
+            #   TODO: Eventually make this an option. (issue 36)
             valid_key_fingerprints.append(self.email_dicts[self.sender_email]['fingerprint'])
 
             if self.email_dicts[self.sender_email]['is_recipient']:
@@ -196,7 +198,7 @@ class GpgKeyVerifier:
         for recipient_email in self.all_recipient_emails:
             # Reuse the sender expiration data if the sender is also a recipient.
             # TODO: Optimize all key checking, not just sender key. Maybe have a list
-            #   of checked fingerprints.
+            #   of checked fingerprints. (issue 39)
             if self.email_dicts[recipient_email]['is_sender']:
                 self.logger.trace('Recipient %s is also a sender.' % recipient_email)
                 expiration_data = sender_expiration_data
@@ -298,7 +300,7 @@ class GpgKeyVerifier:
                 'expiring_soon': expiring_soon}
 
     # TODO: Eventually we should better support long pauses in execution (such as
-    #   suspend).
+    #   suspend). (issue 40)
     def _update_if_expiration_info_is_stale(self, loop_current_time):
         """Determines whether the recipient and sender GPG key expiration information is
         current for the next full loop. If it isn't, recalculate. Recalculation occurs at a

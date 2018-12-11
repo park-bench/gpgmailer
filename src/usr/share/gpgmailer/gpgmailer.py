@@ -20,8 +20,6 @@ __author__ = 'Joel Luellwitz and Emily Frost'
 __version__ = '0.8'
 
 import base64
-import gpgkeyverifier
-import gpgmailbuilder
 import json
 import logging
 import os
@@ -29,6 +27,9 @@ import subprocess
 import sys
 import time
 import traceback
+import gpgkeyverifier
+import gpgmailbuilder
+import mailsender
 
 from parkbenchcommon import broadcastconsumer
 
@@ -36,20 +37,21 @@ from parkbenchcommon import broadcastconsumer
 NETCHECK_BROADCAST_DELAY = 5
 NETCHECK_BROADCAST_NAME = 'connection_change'
 
-class GpgMailer:
-    """Contains high level program business logic. Monitors the outbox directory, manages
+class GpgMailer(object):
+    """Contains high level program business logic.  Monitors the outbox directory, manages
     keys, and coordinates sending e-mail.
     """
 
-    def __init__(self, config, gpgkeyring, gpgkeyverifier):
-        """Constructs an instance of the class including creating a local instance of
-        gpgmailbuilder.
+    def __init__(self, config, gpgkeyring, gpgkeyverifier, outbox_path):
+        """Constructs an instance of the class including creating local instances of
+        mailsender and gpgmailbuilder.
 
         config: The config dictionary read from the program configuration file.
         gpgkeyring: The GpgKeyring object containing information on all the GPG keys in the
           program's keyring.
         gpgkeyverifier: The GpgKeyVerifier object managing key expiration for all sender and
           recipient GPG keys keys.
+        outbox_path: The directory to monitor for outgoing mail (in our custom JSON format).
         """
         self.logger = logging.getLogger('GpgMailer')
         self.logger.info('Initializing gpgmailer module.')
@@ -60,7 +62,7 @@ class GpgMailer:
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(
             self.gpgkeyring, self.config['main_loop_duration'])
 
-        self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
+        self.outbox_path = outbox_path
 
         # TODO: These might be worth making into constants? Consider this.
         # TODO: network_connected may not be the final name for this broadcast.
@@ -75,8 +77,8 @@ class GpgMailer:
         self.logger.info('Done initializing gpgmailer module.')
 
     def start_monitoring(self):
-        """GpgMailer's main program loop. Reads the watch directory and then calls other
-        modules to build and send e-mail. Also sends warnings about GPG key expirations.
+        """GpgMailer's main program loop.  Reads the spool directory and then calls other
+        modules to build and send e-mail.  Also sends warnings about GPG key expirations.
         """
         while True:
             try:
@@ -95,7 +97,7 @@ class GpgMailer:
                 #   list of directories, and the third is a list of non-directory
                 #   files.
                 for file_name in sorted(next(os.walk(self.outbox_path))[2]):
-                    self.logger.info("Found queued e-mail in file %s." % file_name)
+                    self.logger.info('Found queued e-mail in file %s.', file_name)
                     message_dict = self._read_message_file(file_name)
 
                     # Set default subject if the queued message does not have one.
@@ -107,7 +109,7 @@ class GpgMailer:
 
                     self._send_mail(mime_message=encrypted_message,
                                     recipients=self.valid_recipient_emails)
-                    self.logger.info('Message %s sent successfully.' % file_name)
+                    self.logger.info('Message %s sent successfully.', file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
 
@@ -117,18 +119,17 @@ class GpgMailer:
                 time.sleep(self.config['main_loop_delay'])
 
             except gpgkeyverifier.NoUsableKeysException as exception:
-                self.logger.critical('No keys available for encryption. Exiting. %s: %s' %
-                                     (type(exception).__name__, exception.message))
+                self.logger.critical('No keys available for encryption. Exiting. %s: %s',
+                                     type(exception).__name__, str(exception))
                 raise exception
             except gpgkeyverifier.SenderKeyExpiredException as exception:
                 self.logger.critical(
                     'Sender key has expired and sending unsigned e-mails is not allowed. '
-                    'Exiting. %s: %s' %
-                    (type(exception).__name__, exception.message))
+                    'Exiting. %s: %s', type(exception).__name__, str(exception))
                 raise exception
             except Exception as exception:
-                self.logger.error('Exception %s: %s.' % (
-                    type(exception).__name__, exception.message))
+                self.logger.error('Exception %s: %s.', type(exception).__name__,
+                                  str(exception))
                 self.logger.error(traceback.format_exc())
 
     def _read_message_file(self, file_name):
@@ -165,7 +166,7 @@ class GpgMailer:
         new_expiration_warning_message = \
             self.gpgkeyverifier.get_expiration_warning_message(loop_start_time)
 
-        # TODO: Eventually, change this so it isn't a string comparison.
+        # TODO: Eventually, change this so it isn't a string comparison. (issue 35)
         if self.expiration_warning_message != new_expiration_warning_message:
             self.logger.info(
                 'The expiration status of one or more keys have changed. Sending an '
@@ -203,6 +204,7 @@ class GpgMailer:
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.
                 # TODO: We should eventually make it an option to not include the sender key.
+                #   (issue 36)
                 encryption_keys=self.valid_key_fingerprints,
                 loop_current_time=loop_start_time)
 
@@ -211,6 +213,7 @@ class GpgMailer:
                 message_dict=message_dict,
                 # Intentionally includes sender key so we can read sent e-mails.
                 # TODO: We should eventually make it an option to not include the sender key.
+                #   (issue 36)
                 encryption_keys=self.valid_key_fingerprints,
                 signing_key_fingerprint=self.config['sender']['fingerprint'],
                 signing_key_passphrase=self.config['sender']['password'],
