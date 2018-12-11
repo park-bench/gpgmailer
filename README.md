@@ -24,7 +24,7 @@ you don't have a preference, we have a short, basic guide for Postfix [here](./p
 
 _gpgmailer_ depends on one other piece of the Parkbench project, which must be installed first:
 
-* [_confighelper_](https://github.com/park-bench/confighelper)
+* [_parkbench-common_](https://github.com/park-bench/confighelper)
 
 ## Steps to Build and Install
 

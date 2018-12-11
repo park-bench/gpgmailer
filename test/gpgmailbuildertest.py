@@ -17,7 +17,7 @@
 __author__ = 'Joel Luellwitz and Emily Frost'
 __version__ = '0.8'
 
-import confighelper
+from parkbenchcommon import confighelper
 import gpgkeyring
 import gpgmailbuilder
 import logging

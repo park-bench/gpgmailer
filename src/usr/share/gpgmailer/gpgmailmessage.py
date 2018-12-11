@@ -22,7 +22,7 @@ __all__ = [
 __author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
-import confighelper
+from parkbenchcommon import confighelper
 import ConfigParser
 import base64
 import datetime
