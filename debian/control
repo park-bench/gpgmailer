@@ -1,7 +1,7 @@
 Source: gpgmailer
 Section: parkbench
 Priority: required
-Maintainer: eviljoel, Andrew Klapp
+Maintainer: eviljoel, Emily Frost
 Build-Depends: debhelper
 Standards-Version: 3.9.6.1
 

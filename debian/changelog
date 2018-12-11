@@ -1,11 +1,11 @@
 gpgmailer (0.8) UNRELEASED; urgency=medium
 
-  [ Andrew Klapp ]
+  [ Emily Frost ]
   * GpgMailMessage now throws custom exceptions.
   * GpgMailer now uses a local mail transfer agent instead of asking for an
     SMTP server.
 
- -- Andrew Klapp <andklapp@null.net>  Mon, 27 Nov 2017 20:26:19 -0600
+ -- Emily Frost <emfrost@posteo.net> Mon, 27 Nov 2017 20:26:19 -0600
 
 gpgmailer (0.7) stable; urgency=low
 
