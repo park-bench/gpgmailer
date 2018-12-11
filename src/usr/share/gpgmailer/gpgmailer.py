@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015-2017 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,6 +30,11 @@ import sys
 import time
 import traceback
 
+from parkbenchcommon import broadcastconsumer
+
+# The number of seconds to wait after a broadcast to get another broadcast.
+NETCHECK_BROADCAST_DELAY = 5
+NETCHECK_BROADCAST_NAME = 'connection_change'
 
 class GpgMailer:
     """Contains high level program business logic. Monitors the outbox directory, manages
@@ -56,6 +61,11 @@ class GpgMailer:
             self.gpgkeyring, self.config['main_loop_duration'])
 
         self.outbox_path = os.path.join(self.config['watch_dir'], 'outbox')
+
+        # TODO: These might be worth making into constants? Consider this.
+        # TODO: network_connected may not be the final name for this broadcast.
+        self.netcheck_broadcast = broadcastconsumer.Broadcaster(
+            'netcheck', NETCHECK_BROADCAST_NAME, NETCHECK_BROADCAST_DELAY)
 
         # Set this here so that the string equality check in
         #   _update_expiration_warning_message evaluates to equal on the initial loop.
@@ -100,6 +110,9 @@ class GpgMailer:
                     self.logger.info('Message %s sent successfully.' % file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
+
+                if self.netcheck_broadcast.check():
+                    subprocess.call(['sendmail', '-q'])
 
                 time.sleep(self.config['main_loop_delay'])
 

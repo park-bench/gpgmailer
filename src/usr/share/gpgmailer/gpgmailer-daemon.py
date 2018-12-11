@@ -19,6 +19,7 @@ __author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
 from parkbenchcommon import confighelper
+from parkbenchcommon import broadcastconsumer
 import ConfigParser
 import daemon
 import datetime
@@ -29,22 +30,18 @@ import gpgmailer
 import gpgmailmessage
 import logging
 import os
-# TODO: Remove try/except when we drop support for Ubuntu 14.04 LTS.
-try:
-    from lockfile import pidlockfile
-except ImportError:
-    from daemon import pidlockfile
+from lockfile import pidlockfile
 import signal
 import subprocess
 import sys
 import time
 import traceback
 
-# TODO: Target Ubuntu 18.04 instead of 14.04 (issue 8)
-
 PID_FILE = '/run/gpgmailer.pid'
 CONFIG_PATHNAME = '/etc/gpgmailer/gpgmailer.conf'
 
+# The number of seconds to wait after a broadcast to get another broadcast.
+NETCHECK_BROADCAST_DELAY = 15 
 logger = None
 
 
@@ -384,6 +381,11 @@ try:
     parse_key_config(config)
 
     create_watch_directories(config)
+
+    # TODO: These might be worth making into constants? Consider this.
+    # TODO: network_connected may not be the final name for this broadcast.
+    netcheck_broadcast = broadcastconsumer.Broadcaster('netcheck', 'network_connected',
+                                                       NETCHECK_BROADCAST_DELAY)
 
     # Make sure the sender key isn't going to expire during the first loop iteration.
     expiration_date = time.time() + config['main_loop_duration']
