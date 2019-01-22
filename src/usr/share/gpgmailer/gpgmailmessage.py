@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015-2018 Joel Allen Luellwitz, Andrew Klapp and Brittney
-# Scaccia.
+# Copyright 2015-2018 Joel Allen Luellwitz and Andrew Klapp
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -66,7 +65,7 @@ class GpgMailMessage(object):
     def __init__(self):
         """Initializes the class."""
 
-        logger = logging.getLogger('GpgMailMessage')
+        logger = logging.getLogger(__name__)
 
         # Verify there is some place to save the e-mails.
         if not os.path.isdir(PARTIAL_DIR) or not os.path.isdir(OUTBOX_DIR):
