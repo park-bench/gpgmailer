@@ -133,8 +133,8 @@ def read_configuration_and_create_logger(program_uid, program_gid):
 
     logger = logging.getLogger('%s-daemon' % PROGRAM_NAME)
 
-    config['use_tmpfs_spool'] = config_helper.verify_boolean_exists(
-        config_file, 'use_tmpfs_spool')
+    config['use_ramdisk_spool'] = config_helper.verify_boolean_exists(
+        config_file, 'use_ramdisk_spool')
 
     # Reads the SMTP configuration.
     config['smtp_domain'] = config_helper.verify_string_exists(config_file, 'smtp_domain')
@@ -409,11 +409,11 @@ def create_directory(system_path, program_dirs, uid, gid, mode):
         os.chmod(path, mode)
 
 
-def check_if_mounted_as_tmpfs(pathname):
-    """Checks if a directory is mounted as tmpfs.
+def check_if_mounted_as_ramdisk(pathname):
+    """Checks if a directory is mounted as a ramdisk.
 
     pathname: The directory to check.
-    Returns true if the directory is mounted as tmpfs.  False otherwise.
+    Returns true if the directory is mounted as a ramdisk.  False otherwise.
     """
     return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
 
@@ -422,7 +422,7 @@ def create_spool_directories(config, program_uid, program_gid):
     """Mounts the program spool directory as a ramdisk and creates the partial and outbox
     subfolders. Exit if any part of this method fails.
 
-    config: The program configuration dictionary to read the use_tmpfs_spool flag from.
+    config: The program configuration dictionary to read the use_ramdisk_spool flag from.
     program_uid: The system user ID that should own all the spool directories.
     program_gid: The system group ID that should be assigned to all the spool directories.
     """
@@ -440,26 +440,26 @@ def create_spool_directories(config, program_uid, program_gid):
 
     spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
 
-    if config['use_tmpfs_spool']:
-        mounted_as_tmpfs = check_if_mounted_as_tmpfs(spool_dir)
+    if config['use_ramdisk_spool']:
+        mounted_as_ramdisk = check_if_mounted_as_ramdisk(spool_dir)
 
-        # If directory is not mounted as tmpfs and there is something in the directory, fail
+        # If directory is not mounted as a ramdisk and there is something in the directory, fail
         #   to start.
         # TODO: Do we still want to make sure the directory is empty? (I'm thinking probably
         #   not, although, nothing should be in there unless something goes wrong or the flag
-        #   has just been set to use tmpfs and something was just queued.)
-        if os.listdir(spool_dir) != [] and not mounted_as_tmpfs:
+        #   has just been set to use a ramdisk and something was just queued.)
+        if os.listdir(spool_dir) != [] and not mounted_as_ramdisk:
             raise InitializationException(
                 'Program spool directory configured to be a ramdisk, but the directory is '
                 'not empty and not already mounted as a ramdisk. Startup failed.')
 
-        # If the program spool directory is empty and not already mounted as tmpfs, mount it
-        #   as tmpfs.
-        if not mounted_as_tmpfs:
+        # If the program spool directory is empty and not already mounted as a ramdisk, mount it
+        #   as a ramdisk.
+        if not mounted_as_ramdisk:
             logger.info('Attempting to mount the program spool directory as a ramdisk.')
             subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', spool_dir])
 
-        if not check_if_mounted_as_tmpfs(spool_dir):
+        if not check_if_mounted_as_ramdisk(spool_dir):
             raise InitializationException(
                 'Program spool directory could not be mounted as a ramdisk. Startup failed.')
 
