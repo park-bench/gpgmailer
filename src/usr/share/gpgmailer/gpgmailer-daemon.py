@@ -418,11 +418,11 @@ def check_if_mounted_as_ramdisk(pathname):
     return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
 
 
-def create_spool_directories(config, program_uid, program_gid):
+def create_spool_directories(use_ramdisk, program_uid, program_gid):
     """Mounts the program spool directory as a ramdisk and creates the partial and outbox
     subfolders. Exit if any part of this method fails.
 
-    config: The program configuration dictionary to read the use_ramdisk_spool flag from.
+    use_ramdisk: A boolean indicating whether to mount the spool directory as a ramdisk.
     program_uid: The system user ID that should own all the spool directories.
     program_gid: The system group ID that should be assigned to all the spool directories.
     """
@@ -440,7 +440,7 @@ def create_spool_directories(config, program_uid, program_gid):
 
     spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
 
-    if config['use_ramdisk_spool']:
+    if use_ramdisk:
         mounted_as_ramdisk = check_if_mounted_as_ramdisk(spool_dir)
 
         # If directory is not mounted as a ramdisk and there is something in the directory, fail
@@ -580,7 +580,7 @@ try:
 
     # Do this relatively last because gpgmailmessage assumes the daemon has started if these
     #   directories exist.
-    create_spool_directories(program_uid, program_gid)
+    create_spool_directories(config['use_ramdisk_spool'], program_uid, program_gid)
 
     # Configuration has been read and directories setup. Now drop permissions forever.
     drop_permissions_forever(program_uid, program_gid)
