@@ -133,6 +133,9 @@ def read_configuration_and_create_logger(program_uid, program_gid):
 
     logger = logging.getLogger('%s-daemon' % PROGRAM_NAME)
 
+    config['use_ramdisk_spool'] = config_helper.verify_boolean_exists(
+        config_file, 'use_ramdisk_spool')
+
     # Reads the SMTP configuration.
     config['smtp_domain'] = config_helper.verify_string_exists(config_file, 'smtp_domain')
     config['smtp_port'] = config_helper.verify_integer_within_range(
@@ -147,14 +150,13 @@ def read_configuration_and_create_logger(program_uid, program_gid):
         config_file, 'smtp_sending_timeout', lower_bound=1)  # In seconds.
 
     # Reads the key configuration.
+    config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
     config['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
     config['sender'] = {}
     config['sender']['password'] = config_helper.verify_password_exists(
         config_file, 'signing_key_passphrase')
     config['recipients_string'] = config_helper.verify_string_exists(
         config_file, 'recipients')
-
-    config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 
     # Convert the key expiration threshold into seconds because expiry dates are
     #   stored in unix time. The config value should be days.
@@ -407,20 +409,20 @@ def create_directory(system_path, program_dirs, uid, gid, mode):
         os.chmod(path, mode)
 
 
-def check_if_mounted_as_tmpfs(pathname):
-    """Checks if a directory is mounted as tmpfs.
+def check_if_mounted_as_ramdisk(pathname):
+    """Checks if a directory is mounted as a ramdisk.
 
     pathname: The directory to check.
-    Returns true if the directory is mounted as tmpfs.  False otherwise.
+    Returns true if the directory is mounted as a ramdisk.  False otherwise.
     """
     return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
 
 
-# TODO: Add a switch to not spool to a RAM disk. (issue 21)
-def create_spool_directories(program_uid, program_gid):
+def create_spool_directories(use_ramdisk, program_uid, program_gid):
     """Mounts the program spool directory as a ramdisk and creates the partial and outbox
     subfolders. Exit if any part of this method fails.
 
+    use_ramdisk: A boolean indicating whether to mount the spool directory as a ramdisk.
     program_uid: The system user ID that should own all the spool directories.
     program_gid: The system group ID that should be assigned to all the spool directories.
     """
@@ -437,23 +439,27 @@ def create_spool_directories(program_uid, program_gid):
         raise exception
 
     spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
-    mounted_as_tmpfs = check_if_mounted_as_tmpfs(spool_dir)
 
-    # If directory is not mounted as tmpfs and there is something in the directory, fail to
-    #   start.
-    if os.listdir(spool_dir) != [] and not mounted_as_tmpfs:
-        raise InitializationException('Program spool directory is not empty and not mounted '
-                                      'as a ramdisk. Startup failed.')
+    if use_ramdisk:
+        # TODO: Use parkbenchcommon.ramdisk here. (issue 51)
+        mounted_as_ramdisk = check_if_mounted_as_ramdisk(spool_dir)
 
-    # If the program spool directory is empty and not already mounted as tmpfs, mount it as
-    #   tmpfs.
-    if not mounted_as_tmpfs:
-        logger.info('Attempting to mount the program spool directory as a ramdisk.')
-        subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', spool_dir])
+        # If directory is not mounted as a ramdisk and there is something in the directory,
+        #   log a warning.
+        if os.listdir(spool_dir) != [] and not mounted_as_ramdisk:
+            logger.warning('Program spool directory %s is configured to be a ramdisk, but '
+                           'the directory is not empty and not already mounted as a '
+                           'ramdisk.', spool_dir)
 
-    if not check_if_mounted_as_tmpfs(spool_dir):
-        raise InitializationException(
-            'Program spool directory was not mounted as a ramdisk. Startup failed.')
+        # If the program spool directory is not already mounted as a ramdisk, mount it as a
+        #   ramdisk.
+        if not mounted_as_ramdisk:
+            logger.info('Attempting to mount the program spool directory as a ramdisk.')
+            subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', spool_dir])
+
+        if not check_if_mounted_as_ramdisk(spool_dir):
+            raise InitializationException(
+                'Program spool directory could not be mounted as a ramdisk. Startup failed.')
 
     try:
         # TODO: File Permissions Alone Should Be Enough to Protect Files In
@@ -572,7 +578,7 @@ try:
 
     # Do this relatively last because gpgmailmessage assumes the daemon has started if these
     #   directories exist.
-    create_spool_directories(program_uid, program_gid)
+    create_spool_directories(config['use_ramdisk_spool'], program_uid, program_gid)
 
     # Configuration has been read and directories setup. Now drop permissions forever.
     drop_permissions_forever(program_uid, program_gid)
