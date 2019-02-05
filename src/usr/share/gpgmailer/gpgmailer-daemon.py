@@ -447,12 +447,12 @@ def create_spool_directories(use_ramdisk, program_uid, program_gid):
         # If directory is not mounted as a ramdisk and there is something in the directory,
         #   log a warning.
         if os.listdir(spool_dir) != [] and not mounted_as_ramdisk:
-            logger.warning('Program spool directory is configured to be a ramdisk, but'
-                           ' the directory is not empty and not already mounted as a '
+            logger.warning('Program spool directory is configured to be a ramdisk, but the '
+                           'spool directory is not empty and not already mounted as a '
                            'ramdisk.')
 
-        # If the program spool directory is empty and not already mounted as a ramdisk, mount it
-        #   as a ramdisk.
+        # If the program spool directory is not already mounted as a ramdisk, mount it as a
+        #   ramdisk.
         if not mounted_as_ramdisk:
             logger.info('Attempting to mount the program spool directory as a ramdisk.')
             subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', spool_dir])
