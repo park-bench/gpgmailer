@@ -441,17 +441,15 @@ def create_spool_directories(use_ramdisk, program_uid, program_gid):
     spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
 
     if use_ramdisk:
+        # TODO: Use parkbenchcommon.ramdisk here. (issue 51)
         mounted_as_ramdisk = check_if_mounted_as_ramdisk(spool_dir)
 
-        # If directory is not mounted as a ramdisk and there is something in the directory, fail
-        #   to start.
-        # TODO: Do we still want to make sure the directory is empty? (I'm thinking probably
-        #   not, although, nothing should be in there unless something goes wrong or the flag
-        #   has just been set to use a ramdisk and something was just queued.)
+        # If directory is not mounted as a ramdisk and there is something in the directory,
+        #   log a warning.
         if os.listdir(spool_dir) != [] and not mounted_as_ramdisk:
-            raise InitializationException(
-                'Program spool directory configured to be a ramdisk, but the directory is '
-                'not empty and not already mounted as a ramdisk. Startup failed.')
+            logger.warning('Program spool directory is configured to be a ramdisk, but'
+                           ' the directory is not empty and not already mounted as a '
+                           'ramdisk.')
 
         # If the program spool directory is empty and not already mounted as a ramdisk, mount it
         #   as a ramdisk.
