@@ -180,7 +180,6 @@ def read_configuration_and_create_logger(program_uid, program_gid):
 
     return (config, config_helper, logger)
 
-
 def raise_exception(exception):
     """Raises an exception.
 
@@ -277,6 +276,7 @@ def parse_key_config(config):
     recipients_config_list = config['recipients_string'].split(',')
     recipients = []
 
+    # We won't use these recipients any more.
     for recipient_config in recipients_config_list:
         recipients.append(parse_key_config_string('recipients', recipient_config))
 
@@ -354,8 +354,8 @@ def check_all_recipient_keys(gpg_keyring, config):
     logger.info('Checking recipient keys for validity and expiration.')
 
     for recipient in config['recipients']:
-        if (not gpg_keyring.is_trusted(recipient['fingerprint']) and
-                not gpg_keyring.is_signed(recipient['fingerprint'])):
+        if not gpg_keyring.is_trusted(recipient['fingerprint']) and \
+                not gpg_keyring.is_signed(recipient['fingerprint']):
             raise InitializationException(
                 'Key with fingerprint %s is not signed (and not sufficiently trusted). '
                 'Exiting.' % recipient['fingerprint'])
@@ -511,6 +511,10 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
         mail_message = gpgmailmessage.GpgMailMessage()
         mail_message.set_subject(config['default_subject'])
         mail_message.set_body(message)
+        recipient_addresses = []
+        for recipient in config['recipients']:
+            recipient_addresses.append(recipient['email'])
+        mail_message.set_recipient_addresses(recipient_addresses)
         mail_message.queue_for_sending()
 
     logger.debug('Finished initial key check.')
@@ -609,6 +613,6 @@ try:
         gpgmailer.start_monitoring()
 
 except Exception as exception:
-    logger.critical("Fatal %s: %s\n%s", type(exception).__name__, str(exception),
+    logger.critical('Fatal %s: %s\n%s', type(exception).__name__, str(exception),
                     traceback.format_exc())
     raise exception

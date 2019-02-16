@@ -94,9 +94,14 @@ class MailSender(object):
         message_string: A MIME formatted message.
         recipients: An array of e-mail addresses to send the e-mail to.
         """
-        # TODO: Send encrypted messages to all recipients, regardless of whether it was
-        #   encrypted with their key, so that they are aware that mail is being sent. Make
-        #   it an option.
+        # TODO: Decide if this should be an exception or a warning. (Actually, this probably
+        #   won't matter once Em merges in her branch.)
+        if not recipients:
+            raise Exception('The message has no recipients.')
+
+        # TODO: Eventually, send encrypted messages to all recipients,
+        #   regardless of whether it was encrypted with their key, so that they
+        #   are aware that mail is being sent. Make it an option.
 
         # Mail servers will probably deauth you after a fixed period of inactivity.
         # TODO: Eventually, there is probably also a hard session limit too.
@@ -107,6 +112,7 @@ class MailSender(object):
             self._connect()
 
         try:
+            self.logger.debug(self.config['sender'])
             self.smtp.sendmail(self.config['sender']['email'], recipients, message_string)
         except Exception as exception:
             self.logger.error('Failed to send: %s: %s', type(exception).__name__,

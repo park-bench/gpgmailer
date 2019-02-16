@@ -74,10 +74,8 @@ class GpgMailMessage(object):
             raise WatchDirectoryMissingException(error_message)
 
         self.saved = False
-        self.message = {}
-        self.message['body'] = None
-        self.message['attachments'] = []
-        self.message['subject'] = None
+        self.message = {
+            'body': None, 'recipient_addresses': [], 'attachments': [], 'subject': None}
 
     def set_subject(self, subject):
         """Adds the plain-text subject of the message.
@@ -95,6 +93,15 @@ class GpgMailMessage(object):
         self._check_if_saved()
         self.message['body'] = body
 
+    def set_recipient_addresses(self, recipient_addresses):
+        """Adds an array of recipient e-mail addresses.
+
+        recipients: An array of recipient e-mail addresses.
+        """
+        self._check_if_saved()
+        self.message['recipient_addresses'] = recipient_addresses
+
+
     def add_attachment(self, filename, data):
         """Adds an attachment to the message.
 
@@ -106,15 +113,20 @@ class GpgMailMessage(object):
 
     def queue_for_sending(self):
         """Saves the message to the 'outbox' directory and marks this message class instance
-        as 'saved' meaning no addtional method calls can be made on the current message
+        as 'saved' meaning no additional method calls can be made on the current message
         object.
         """
         self._check_if_saved()
 
-        if self.message['body'] is None:
+        # Check for message and recipients. Throw an exception if they aren't there.
+
+        if not self.message['body']:
             raise SaveMessageWithoutBodyException('Tried to save a message without a body.')
 
-        # Encode any attachments as base64.
+        if not self.message['recipient_addresses']:
+            raise Exception('Tried to send a message with no recipients.')
+
+        # Encode any attachments as base64
         for attachment in self.message['attachments']:
             attachment['data'] = base64.b64encode(attachment['data'])
 

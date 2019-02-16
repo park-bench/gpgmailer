@@ -74,12 +74,7 @@ class GpgMailer(object):
 
                 loop_start_time = time.time()
 
-                self.valid_recipient_emails = self.gpgkeyverifier.get_valid_recipient_emails(
-                    loop_start_time)
-                self.valid_key_fingerprints = self.gpgkeyverifier.get_valid_key_fingerprints(
-                    loop_start_time)
-
-                self._update_expiration_warnings(loop_start_time)
+                self._update_and_send_expiration_warnings(loop_start_time)
 
                 # Return a list of non-directory files in the outbox directory.
                 #   The first element of os.walk is the full path, the second is a
@@ -97,7 +92,7 @@ class GpgMailer(object):
                         message_dict, loop_start_time)
 
                     self.mailsender.sendmail(message_string=encrypted_message,
-                                             recipients=self.valid_recipient_emails)
+                        recipients=message_dict['recipients'])
                     self.logger.info('Message %s sent successfully.', file_name)
 
                     os.remove(os.path.join(self.outbox_path, file_name))
@@ -141,7 +136,7 @@ class GpgMailer(object):
 
         return message_dict
 
-    def _update_expiration_warnings(self, loop_start_time):
+    def _update_and_send_expiration_warnings(self, loop_start_time):
         """Periodically checks whether the expiration warning message has changed and if it
         has, start including the new expiration warning message at the top of every e-mail
         and send an e-mail immediately with the updated warning.
@@ -164,7 +159,10 @@ class GpgMailer(object):
                 'subject': self.config['default_subject'],
                 'body': 'The expiration status of one or more keys have changed.'}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
-            self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
+            self.mailsender.sendmail(
+                encrypted_message,
+                # TODO: Should not reference gpgkeyverifier internal state.
+                self.gpgkeyverifier.get_valid_recipient_emails(loop_start_time))
 
     def _build_encrypted_message(self, message_dict, loop_start_time):
         """Builds an encrypted e-mail string with a signature if possible.

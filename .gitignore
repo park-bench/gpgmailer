@@ -1,5 +1,6 @@
 *.pyc
 *.swp
+.idea/
 debian/debhelper.log
 debian/debhelper-build-stamp
 debian/files
