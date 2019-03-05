@@ -36,22 +36,35 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
     start and fail. (This is expected.)
 
 ## Post-install configuration
+
+### GnuPG configuration
+1.  Create a GPG keyring at the location specified in `gpgmailer.conf`. (Run `gpg` with the
+    `--homedir` option.) It is recommended that you __do not__ use the GPG keyring in your
+    home directory.
+2.  Import or generate a sender PGP key. This key must have a verified signature and be
+    ultimately trusted.
+3.  Import the PGP public keys of all the recipients.
+
+### Configuration file
+
 1.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
     `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the SMTP server, sender, and
     recipient information and GPG passphrase. Other settings can also be modified.
-2.  Create a GPG keyring at the location specified in `gpgmailer.conf`. (Run `gpg` with the
-    `--homedir` option.) It is recommended that you __do not__ use the GPG keyring in your
-    home directory.
-3.  Import or generate a sender PGP key. This key must have a verified signature and be
-    ultimately trusted.
-4.  Import the PGP public keys of all the recipients.
-5.  Use `chown` to __recursively__ change the ownership of the GPG keyring to the `watchman`
-    user.
-6. Use `chmod` to clear the _other user_ permissions bits of `gpgmailer.conf` and the GPG
-    keyring directory. Namely, remove read, write, and execute permissions for _other_.
-7. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
+2.  Change the ownership and permissions of the configuration file:
+```
+chown root:gpgmailer /etc/gpgmailer/gpgmailer.conf
+chmod u=rw,g=r,o= /etc/gpgmailer/gpgmailer.conf
+```
+
+3.  __Recursively__ change the ownership and permissions of the GPG keyring. In this example,
+the keyring is at `/etc/gpgmailer/gnupg`:
+```
+chown -R root:gpgmailer /etc/gpgmailer/gnupg
+chmod -R u=rw,g=r,o= /etc/gpgmailer/gpgmailer.conf
+```
+4. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
     users. Doing this will allow these users to view gpgmailer log files.
-8. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
+5. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
     keyring are valid, named correctly, and have the correct file permissions, the service
     will start successfully.
 
