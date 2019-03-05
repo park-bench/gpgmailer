@@ -45,7 +45,7 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
     ultimately trusted.
 3.  Import the PGP public keys of all the recipients.
 
-### Configuration file
+### Daemon configuration
 
 1.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
     `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the SMTP server, sender, and
@@ -56,11 +56,11 @@ chown root:gpgmailer /etc/gpgmailer/gpgmailer.conf
 chmod u=rw,g=r,o= /etc/gpgmailer/gpgmailer.conf
 ```
 
-3.  __Recursively__ change the ownership and permissions of the GPG keyring. In this example,
+3.  Recursively change the ownership and permissions of the GPG keyring. In this example,
 the keyring is at `/etc/gpgmailer/gnupg`:
 ```
 chown -R root:gpgmailer /etc/gpgmailer/gnupg
-chmod -R u=rw,g=r,o= /etc/gpgmailer/gpgmailer.conf
+chmod -R u=rw,g=r,o= /etc/gpgmailer/gnupg
 ```
 4. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
     users. Doing this will allow these users to view gpgmailer log files.
