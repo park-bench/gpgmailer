@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-# Copyright 2015-2018 Joel Allen Luellwitz and Andrew Klapp
+# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 """Daemon for sending PGP encrypted e-mail."""
 
-__author__ = 'Joel Luellwitz, Andrew Klapp, and Brittney Scaccia'
+__author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
 import ConfigParser
