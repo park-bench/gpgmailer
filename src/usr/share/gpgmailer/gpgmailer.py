@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 # Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
