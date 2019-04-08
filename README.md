@@ -3,7 +3,7 @@
 _gpgmailer_ is a daemon that sends GnuPG signed and encrypted e-mails. E-mails are queued via
 an included Python API.
 
-gpgmailer is licensed under the GNU GPLv3.
+_gpgmailer_ is licensed under the GNU GPLv3.
 
 This software is still in _beta_ and may not be ready for use in a production environment.
 
