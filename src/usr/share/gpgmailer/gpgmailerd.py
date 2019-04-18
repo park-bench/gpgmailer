@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 
-# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,10 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Daemon for sending PGP encrypted e-mail."""
+
+# TODO: Eventually consider running in a chroot or jail. (gpgmailer issue 17)
+
 __author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
-import ConfigParser
 import datetime
 import grp
 import logging
@@ -30,17 +33,16 @@ import subprocess
 import sys
 import time
 import traceback
+import ConfigParser
 import daemon
-import gnupg
 from lockfile import pidlockfile
+import gnupg
 from parkbenchcommon import broadcastconsumer
 from parkbenchcommon import confighelper
 import gpgkeyring
 import gpgkeyverifier
 import gpgmailer
 import gpgmailmessage
-
-# TODO: Consider running in a chroot or jail. (issue 17)
 
 # Constants
 PROGRAM_NAME = 'gpgmailer'
@@ -58,8 +60,6 @@ PROCESS_USERNAME = PROGRAM_NAME
 PROCESS_GROUP_NAME = PROGRAM_NAME
 PROGRAM_UMASK = 0o027  # -rw-r----- and drwxr-x---
 
-logger = None
-
 
 class InitializationException(Exception):
     """Indicates an expected fatal error occurred during program initialization.
@@ -76,13 +76,15 @@ def get_user_and_group_ids():
         program_user = pwd.getpwnam(PROCESS_USERNAME)
     except KeyError as key_error:
         # TODO: When switching to Python 3, convert to chained exception. (issue 15)
-        print('User %s does not exist.' % PROCESS_USERNAME)
+        print('User %s does not exist. %s: %s' % (
+            PROCESS_USERNAME, type(key_error).__name__, str(key_error)))
         raise key_error
     try:
         program_group = grp.getgrnam(PROCESS_GROUP_NAME)
     except KeyError as key_error:
         # TODO: When switching to Python 3, convert to chained exception. (issue 15)
-        print('Group %s does not exist.' % PROCESS_GROUP_NAME)
+        print('Group %s does not exist. %s: %s' % (
+            PROCESS_GROUP_NAME, type(key_error).__name__, str(key_error)))
         raise key_error
 
     return program_user.pw_uid, program_group.gr_gid
@@ -114,33 +116,36 @@ def read_configuration_and_create_logger(program_uid, program_gid):
 
     # Create logging directory.  drwxr-x--- gpgmailer gpgmailer
     log_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP
-
     # TODO: Look into defaulting the logging to the console until the program gets more
     #   bootstrapped. (issue 18)
     print('Creating logging directory %s.' % LOG_DIR)
     if not os.path.isdir(LOG_DIR):
-        # Will throw exception if file cannot be created.
+        # Will throw exception if directory cannot be created.
         os.makedirs(LOG_DIR, log_mode)
     os.chown(LOG_DIR, program_uid, program_gid)
     os.chmod(LOG_DIR, log_mode)
 
-    # Temporarily drop permission and create the handle to the logger.
+    # Temporarily drop permissions and create the handle to the logger.
     print('Configuring logger.')
     os.setegid(program_gid)
     os.seteuid(program_uid)
     config_helper.configure_logger(os.path.join(LOG_DIR, LOG_FILE), config['log_level'])
 
-    logger = logging.getLogger('%s-daemon' % PROGRAM_NAME)
+    logger = logging.getLogger(__name__)
+
+    logger.info('Verifying non-logging configuration.')
+
+    config['use_ramdisk_spool'] = config_helper.verify_boolean_exists(
+        config_file, 'use_ramdisk_spool')
 
     # Reads the key configuration.
+    config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
     config['sender_string'] = config_helper.verify_string_exists(config_file, 'sender')
     config['sender'] = {}
     config['sender']['password'] = config_helper.verify_password_exists(
         config_file, 'signing_key_passphrase')
     config['recipients_string'] = config_helper.verify_string_exists(
         config_file, 'recipients')
-
-    config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
 
     # Convert the key expiration threshold into seconds because expiry dates are
     #   stored in unix time. The config value should be days.
@@ -162,7 +167,7 @@ def read_configuration_and_create_logger(program_uid, program_gid):
     config['allow_expired_signing_key'] = (config_helper.verify_string_exists(
         config_file, 'allow_expired_signing_key').lower() == 'true')
 
-    return (config, config_helper, logger)
+    return config, config_helper, logger
 
 
 def raise_exception(exception):
@@ -372,14 +377,14 @@ def create_directory(system_path, program_dirs, uid, gid, mode):
     """Creates directories if they do not exist and sets the specified ownership and
     permissions.
 
-    system_path: The system path that the directories should be created under.  These are
+    system_path: The system path that the directories should be created under. These are
       assumed to already exist. The ownership and permissions on these directories are not
       modified.
     program_dirs: A string representing additional directories that should be created under
       the system path that should take on the following ownership and permissions.
     uid: The system user ID that should own the directory.
     gid: The system group ID that should be associated with the directory.
-    mode: The umask of the directory access permissions.
+    mode: The unix standard 'mode bits' that should be associated with the directory.
     """
     logger.info('Creating directory %s.', os.path.join(system_path, program_dirs))
 
@@ -393,20 +398,20 @@ def create_directory(system_path, program_dirs, uid, gid, mode):
         os.chmod(path, mode)
 
 
-def check_if_mounted_as_tmpfs(pathname):
-    """Checks if a directory is mounted as tmpfs.
+def check_if_mounted_as_ramdisk(pathname):
+    """Checks if a directory is mounted as a ramdisk.
 
     pathname: The directory to check.
-    Returns true if the directory is mounted as tmpfs.  False otherwise.
+    Returns true if the directory is mounted as a ramdisk.  False otherwise.
     """
     return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
 
 
-# TODO: Add a switch to not spool to a RAM disk. (issue 21)
-def create_spool_directories(program_uid, program_gid):
+def create_spool_directories(use_ramdisk, program_uid, program_gid):
     """Mounts the program spool directory as a ramdisk and creates the partial and outbox
     subfolders. Exit if any part of this method fails.
 
+    use_ramdisk: A boolean indicating whether to mount the spool directory as a ramdisk.
     program_uid: The system user ID that should own all the spool directories.
     program_gid: The system group ID that should be assigned to all the spool directories.
     """
@@ -423,23 +428,27 @@ def create_spool_directories(program_uid, program_gid):
         raise exception
 
     spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
-    mounted_as_tmpfs = check_if_mounted_as_tmpfs(spool_dir)
 
-    # If directory is not mounted as tmpfs and there is something in the directory, fail to
-    #   start.
-    if os.listdir(spool_dir) != [] and not mounted_as_tmpfs:
-        raise InitializationException('Program spool directory is not empty and not mounted '
-                                      'as a ramdisk. Startup failed.')
+    if use_ramdisk:
+        # TODO: Use parkbenchcommon.ramdisk here. (issue 51)
+        mounted_as_ramdisk = check_if_mounted_as_ramdisk(spool_dir)
 
-    # If the program spool directory is empty and not already mounted as tmpfs, mount it as
-    #   tmpfs.
-    if not mounted_as_tmpfs:
-        logger.info('Attempting to mount the program spool directory as a ramdisk.')
-        subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', spool_dir])
+        # If directory is not mounted as a ramdisk and there is something in the directory,
+        #   log a warning.
+        if os.listdir(spool_dir) != [] and not mounted_as_ramdisk:
+            logger.warning('Program spool directory %s is configured to be a ramdisk, but '
+                           'the directory is not empty and not already mounted as a '
+                           'ramdisk.', spool_dir)
 
-    if not check_if_mounted_as_tmpfs(spool_dir):
-        raise InitializationException(
-            'Program spool directory was not mounted as a ramdisk. Startup failed.')
+        # If the program spool directory is not already mounted as a ramdisk, mount it as a
+        #   ramdisk.
+        if not mounted_as_ramdisk:
+            logger.info('Attempting to mount the program spool directory as a ramdisk.')
+            subprocess.call(['mount', '-t', 'tmpfs', '-o', 'size=25%', 'none', spool_dir])
+
+        if not check_if_mounted_as_ramdisk(spool_dir):
+            raise InitializationException(
+                'Program spool directory could not be mounted as a ramdisk. Startup failed.')
 
     try:
         # TODO: File Permissions Alone Should Be Enough to Protect Files In
@@ -499,18 +508,18 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
 
 
 def sig_term_handler(signal, stack_frame):
-    """Signal handler for SIGTERM.  Quits when SIGTERM is received.
+    """Signal handler for SIGTERM. Quits when SIGTERM is received.
 
     signal: Object representing the signal thrown.
     stack_frame: Represents the stack frame.
     """
-    logger.info("SIGTERM received. Quitting.")
+    logger.info('SIGTERM received. Quitting.')
     sys.exit(0)
 
 
 def setup_daemon_context(log_file_handle, program_uid, program_gid):
-    """Creates the daemon context.  Specifies daemon permissions, PID file information, and
-    signal handler.
+    """Creates the daemon context. Specifies daemon permissions, PID file information, and
+    the signal handler.
 
     log_file_handle: The file handle to the log file.
     program_uid: The system user ID that should own the daemon process.
@@ -522,11 +531,11 @@ def setup_daemon_context(log_file_handle, program_uid, program_gid):
         pidfile=pidlockfile.PIDLockFile(
             os.path.join(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, PID_FILE)),
         umask=PROGRAM_UMASK,
-        )
+    )
 
     daemon_context.signal_map = {
         signal.SIGTERM: sig_term_handler,
-        }
+    }
 
     daemon_context.files_preserve = [log_file_handle]
 
@@ -558,7 +567,7 @@ try:
 
     # Do this relatively last because gpgmailmessage assumes the daemon has started if these
     #   directories exist.
-    create_spool_directories(program_uid, program_gid)
+    create_spool_directories(config['use_ramdisk_spool'], program_uid, program_gid)
 
     # Configuration has been read and directories setup. Now drop permissions forever.
     drop_permissions_forever(program_uid, program_gid)
@@ -589,6 +598,6 @@ try:
         gpgmailer.start_monitoring()
 
 except Exception as exception:
-    logger.critical("Fatal %s: %s\n%s", type(exception).__name__, str(exception),
+    logger.critical('Fatal %s: %s\n%s', type(exception).__name__, str(exception),
                     traceback.format_exc())
     raise exception
