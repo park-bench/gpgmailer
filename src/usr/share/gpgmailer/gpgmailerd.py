@@ -37,7 +37,6 @@ import ConfigParser
 import daemon
 from lockfile import pidlockfile
 import gnupg
-from parkbenchcommon import broadcastconsumer
 from parkbenchcommon import confighelper
 import gpgkeyring
 import gpgkeyverifier
