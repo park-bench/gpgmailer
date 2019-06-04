@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __all__ = ['GpgMailer']
-__author__ = 'Joel Luellwitz and Emily Frost'
+__author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
 import base64
@@ -22,7 +22,6 @@ import json
 import logging
 import os
 import subprocess
-import sys
 import time
 import traceback
 from parkbenchcommon import broadcastconsumer
@@ -30,8 +29,8 @@ import gpgkeyverifier
 import gpgmailbuilder
 
 # The number of seconds to wait after a broadcast to get another broadcast.
-NETCHECK_BROADCAST_DELAY = 5
-NETCHECK_BROADCAST_NAME = 'network-reconnected'
+BROADCAST_NETCHECK_GATEWAY_CHANGED_DELAY = 5
+BROADCAST_NETCHECK_GATEWAY_CHANGED_NAME = 'gateway-changed'
 
 class GpgMailer(object):
     """Contains high level program business logic.  Monitors the outbox directory, manages
@@ -61,7 +60,8 @@ class GpgMailer(object):
         self.outbox_path = outbox_path
 
         self.netcheck_broadcast = broadcastconsumer.BroadcastConsumer(
-            'NetCheck', NETCHECK_BROADCAST_NAME, NETCHECK_BROADCAST_DELAY)
+            'netcheck', BROADCAST_NETCHECK_GATEWAY_CHANGED_NAME,
+            BROADCAST_NETCHECK_GATEWAY_CHANGED_DELAY)
 
         # Set this here so that the string equality check in
         #   _update_expiration_warning_message evaluates to equal on the initial loop.
@@ -108,7 +108,8 @@ class GpgMailer(object):
                     os.remove(os.path.join(self.outbox_path, file_name))
 
                 if self.netcheck_broadcast.check():
-                    self.logger.info('Broadcast consumed. Flushing sendmail queue.')
+                    self.logger.info('Received network connected signal. Flushing sendmail'
+                                     ' queue.')
                     subprocess.call(['sendmail', '-q'])
 
                 time.sleep(self.config['main_loop_delay'])
