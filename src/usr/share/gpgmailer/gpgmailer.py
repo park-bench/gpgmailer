@@ -108,7 +108,7 @@ class GpgMailer(object):
                     os.remove(os.path.join(self.outbox_path, file_name))
 
                 if self.netcheck_broadcast.check():
-                    self.logger.info('Received network connected signal. Flushing sendmail'
+                    self.logger.info('Received a gateway change broadcast. Flushing sendmail'
                                      ' queue.')
                     subprocess.call(['sendmail', '-q'])
 
