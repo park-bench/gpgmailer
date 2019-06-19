@@ -42,10 +42,10 @@ Restart the Postfix daemon and then test it.
 `echo "test email body" | mail -s "test subject" <recipient email>`
 
 After verifying that Postfix works, it should be secured against unauthorized users by
-changing which users can send via `sendmail` or `mail`. To block all users but root, edit
-`/etc/postfix/main.cf` and add the line:
+changing which users can send via `sendmail` or `mail`. To block all users but root and
+gpgmailer, edit `/etc/postfix/main.cf` and add the line:
 ```
-authorized_submit_users = root
+authorized_submit_users = root,gpgmailer
 ```
 
 If you do not want to leak your system's hostname, you can set one in `main.cf`.

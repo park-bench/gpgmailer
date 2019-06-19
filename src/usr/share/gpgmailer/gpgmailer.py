@@ -32,6 +32,11 @@ import gpgmailbuilder
 BROADCAST_NETCHECK_GATEWAY_CHANGED_DELAY = 5
 BROADCAST_NETCHECK_GATEWAY_CHANGED_NAME = 'gateway-changed'
 
+class SendmailError(Exception):
+    """This exception is raised when sendmail returns an error code upon attempting to queue
+    a message.
+    """
+
 class GpgMailer(object):
     """Contains high level program business logic.  Monitors the outbox directory, manages
     keys, and coordinates sending e-mail.
@@ -92,6 +97,9 @@ class GpgMailer(object):
                 #   files.
                 for file_name in sorted(next(os.walk(self.outbox_path))[2]):
                     self.logger.info('Found queued e-mail in file %s.', file_name)
+                    # TODO: Move the majority of this stuff into a try block so that
+                    #   individual messages erroring out don't stop everything. Catch the
+                    #   exceptions from the outer block and re-raise them.
                     message_dict = self._read_message_file(file_name)
 
                     # Set default subject if the queued message does not have one.
@@ -234,5 +242,12 @@ class GpgMailer(object):
         sendmail_process = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE)
         sendmail_process.communicate(str(mime_message))
         sendmail_process.stdin.close()
+        sendmail_process.wait()
+
+        if sendmail_process.returncode >= 64:
+            message = 'Message was not queued, sendmail returned error code %s' % \
+                    (sendmail_process.returncode)
+            self.logger.error(message)
+            raise SendmailError(message)
 
         self.logger.debug('Message queued successfully.')
