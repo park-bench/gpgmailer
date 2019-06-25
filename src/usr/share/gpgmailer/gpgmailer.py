@@ -97,23 +97,7 @@ class GpgMailer(object):
                 #   files.
                 for file_name in sorted(next(os.walk(self.outbox_path))[2]):
                     self.logger.info('Found queued e-mail in file %s.', file_name)
-                    # TODO: Move the majority of this stuff into a try block so that
-                    #   individual messages erroring out don't stop everything. Catch the
-                    #   exceptions from the outer block and re-raise them.
-                    message_dict = self._read_message_file(file_name)
-
-                    # Set default subject if the queued message does not have one.
-                    if message_dict['subject'] is None:
-                        message_dict['subject'] = self.config['default_subject']
-
-                    encrypted_message = self._build_encrypted_message(
-                        message_dict, loop_start_time)
-
-                    self._send_mail(mime_message=encrypted_message,
-                                    recipients=self.valid_recipient_emails)
-                    self.logger.info('Message %s sent successfully.', file_name)
-
-                    os.remove(os.path.join(self.outbox_path, file_name))
+                    self._read_and_send_message(file_name, loop_start_time)
 
                 if self.netcheck_broadcast.check():
                     self.logger.info('Received a gateway change broadcast. Flushing sendmail'
@@ -135,6 +119,41 @@ class GpgMailer(object):
                 self.logger.error('Exception %s: %s.', type(exception).__name__,
                                   str(exception))
                 self.logger.error(traceback.format_exc())
+
+    def _read_and_send_message(self, file_name, loop_start_time):
+        """Attempt to build a message and send it, re-raising the SenderKeyExpired and
+        NoUsableKeysException exceptions.
+        """
+        try:
+            message_dict = self._read_message_file(file_name)
+
+            # Set default subject if the queued message does not have one.
+            if message_dict['subject'] is None:
+                message_dict['subject'] = self.config['default_subject']
+
+            encrypted_message = self._build_encrypted_message(
+                message_dict, loop_start_time)
+
+            self._send_mail(mime_message=encrypted_message,
+                            recipients=self.valid_recipient_emails)
+            self.logger.info('Message %s sent successfully.', file_name)
+
+            os.remove(os.path.join(self.outbox_path, file_name))
+
+        except SendmailError as sendmail_error:
+            self.logger.error('Message %s was not queued: %s',
+                              file_name, str(sendmail_error))
+
+        except gpgkeyverifier.NoUsableKeysException as no_usable_keys:
+            raise no_usable_keys
+
+        except gpgkeyverifier.SenderKeyExpiredException as sender_key_expired:
+            raise sender_key_expired
+
+        except Exception as exception:
+            self.logger.error('Exception %s: %s.', type(exception).__name__,
+                              str(exception))
+            self.logger.error(traceback.format_exc())
 
     def _read_message_file(self, file_name):
         """Reads a message file from the outbox directory and builds a dictionary
@@ -245,9 +264,7 @@ class GpgMailer(object):
         sendmail_process.wait()
 
         if sendmail_process.returncode >= 64:
-            message = 'Message was not queued, sendmail returned error code %s' % \
-                    (sendmail_process.returncode)
-            self.logger.error(message)
-            raise SendmailError(message)
+            raise SendmailError('Sendmail returned error code %s' % \
+                    (sendmail_process.returncode))
 
         self.logger.debug('Message queued successfully.')
