@@ -32,9 +32,9 @@ import gpgmailbuilder
 BROADCAST_NETCHECK_GATEWAY_CHANGED_DELAY = 5
 BROADCAST_NETCHECK_GATEWAY_CHANGED_NAME = 'gateway-changed'
 
-class SendmailError(Exception):
-    """This exception is raised when sendmail returns an error code upon attempting to queue
-    a message.
+class SendmailException(Exception):
+    """This exception is raised when sendmail returns an error code indicating that it failed
+    to queue a message.
     """
 
 class GpgMailer(object):
@@ -121,8 +121,12 @@ class GpgMailer(object):
                 self.logger.error(traceback.format_exc())
 
     def _read_and_send_message(self, file_name, loop_start_time):
-        """Attempt to build a message and send it, re-raising the SenderKeyExpired and
-        NoUsableKeysException exceptions.
+        """Attempt to build a message and send it while handling exceptions for individual
+        messages.
+
+        file_name: The name of the message file in the outbox directory. Not a full path.
+        loop_start_time: The time associated with the current program loop from which all PGP
+          key expiration checks are based.
         """
         try:
             message_dict = self._read_message_file(file_name)
@@ -140,14 +144,14 @@ class GpgMailer(object):
 
             os.remove(os.path.join(self.outbox_path, file_name))
 
-        except SendmailError as sendmail_error:
-            self.logger.error('Message %s was not queued: %s',
-                              file_name, str(sendmail_error))
-
         except gpgkeyverifier.NoUsableKeysException as no_usable_keys:
+            # This exception will prevent all messages from sending, so re-raise it to
+            #   restart the loop.
             raise no_usable_keys
 
         except gpgkeyverifier.SenderKeyExpiredException as sender_key_expired:
+            # This exception will prevent all messages from sending, so re-raise it to
+            #   restart the loop.
             raise sender_key_expired
 
         except Exception as exception:
@@ -264,7 +268,7 @@ class GpgMailer(object):
         sendmail_process.wait()
 
         if sendmail_process.returncode >= 64:
-            raise SendmailError('Sendmail returned error code %s' % \
-                    (sendmail_process.returncode))
+            raise SendmailException('Message was not queued. Sendmail returned error code' \
+                    '%s.' % sendmail_process.returncode)
 
         self.logger.debug('Message queued successfully.')
