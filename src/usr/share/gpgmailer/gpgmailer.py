@@ -121,8 +121,8 @@ class GpgMailer(object):
                 self.logger.error(traceback.format_exc())
 
     def _read_and_send_message(self, file_name, loop_start_time):
-        """Attempt to build a message and send it while handling exceptions for individual
-        messages.
+        """Attempts to build a message and send it. Handles all exceptions so that no one
+        problematic message holds up the processing of other messages.
 
         file_name: The name of the message file in the outbox directory. Not a full path.
         loop_start_time: The time associated with the current program loop from which all PGP
@@ -145,13 +145,11 @@ class GpgMailer(object):
             os.remove(os.path.join(self.outbox_path, file_name))
 
         except gpgkeyverifier.NoUsableKeysException as no_usable_keys:
-            # This exception will prevent all messages from sending, so re-raise it to
-            #   restart the loop.
+            # This exception should abort the program, so we just re-raise it.
             raise no_usable_keys
 
         except gpgkeyverifier.SenderKeyExpiredException as sender_key_expired:
-            # This exception will prevent all messages from sending, so re-raise it to
-            #   restart the loop.
+            # This exception should abort the program, so we just re-raise it.
             raise sender_key_expired
 
         except Exception as exception:
@@ -268,7 +266,7 @@ class GpgMailer(object):
         sendmail_process.wait()
 
         if sendmail_process.returncode >= 64:
-            raise SendmailException('Message was not queued. Sendmail returned error code' \
+            raise SendmailException('Message was not queued. Sendmail returned error code ' \
                     '%s.' % sendmail_process.returncode)
 
         self.logger.debug('Message queued successfully.')
