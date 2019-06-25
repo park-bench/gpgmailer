@@ -21,12 +21,21 @@ import base64
 import json
 import logging
 import os
+import subprocess
 import time
 import traceback
+from parkbenchcommon import broadcastconsumer
 import gpgkeyverifier
 import gpgmailbuilder
-import mailsender
 
+# The number of seconds to wait after a broadcast to get another broadcast.
+BROADCAST_NETCHECK_GATEWAY_CHANGED_DELAY = 5
+BROADCAST_NETCHECK_GATEWAY_CHANGED_NAME = 'gateway-changed'
+
+class SendmailException(Exception):
+    """This exception is raised when sendmail returns an error code indicating that it failed
+    to queue a message.
+    """
 
 class GpgMailer(object):
     """Contains high level program business logic.  Monitors the outbox directory, manages
@@ -52,9 +61,12 @@ class GpgMailer(object):
         self.gpgkeyverifier = gpgkeyverifier
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(
             self.gpgkeyring, self.config['main_loop_duration'])
-        self.mailsender = mailsender.MailSender(self.config)
 
         self.outbox_path = outbox_path
+
+        self.netcheck_broadcast = broadcastconsumer.BroadcastConsumer(
+            'netcheck', BROADCAST_NETCHECK_GATEWAY_CHANGED_NAME,
+            BROADCAST_NETCHECK_GATEWAY_CHANGED_DELAY)
 
         # Set this here so that the string equality check in
         #   _update_expiration_warning_message evaluates to equal on the initial loop.
@@ -85,20 +97,12 @@ class GpgMailer(object):
                 #   files.
                 for file_name in sorted(next(os.walk(self.outbox_path))[2]):
                     self.logger.info('Found queued e-mail in file %s.', file_name)
-                    message_dict = self._read_message_file(file_name)
+                    self._read_and_send_message(file_name, loop_start_time)
 
-                    # Set default subject if the queued message does not have one.
-                    if message_dict['subject'] is None:
-                        message_dict['subject'] = self.config['default_subject']
-
-                    encrypted_message = self._build_encrypted_message(
-                        message_dict, loop_start_time)
-
-                    self.mailsender.sendmail(message_string=encrypted_message,
-                                             recipients=self.valid_recipient_emails)
-                    self.logger.info('Message %s sent successfully.', file_name)
-
-                    os.remove(os.path.join(self.outbox_path, file_name))
+                if self.netcheck_broadcast.check():
+                    self.logger.info('Received a gateway change broadcast. Flushing sendmail'
+                                     ' queue.')
+                    subprocess.call(['sendmail', '-q'])
 
                 time.sleep(self.config['main_loop_delay'])
 
@@ -115,6 +119,43 @@ class GpgMailer(object):
                 self.logger.error('Exception %s: %s.', type(exception).__name__,
                                   str(exception))
                 self.logger.error(traceback.format_exc())
+
+    def _read_and_send_message(self, file_name, loop_start_time):
+        """Attempts to build a message and send it. Handles all exceptions so that no one
+        problematic message holds up the processing of other messages.
+
+        file_name: The name of the message file in the outbox directory. Not a full path.
+        loop_start_time: The time associated with the current program loop from which all PGP
+          key expiration checks are based.
+        """
+        try:
+            message_dict = self._read_message_file(file_name)
+
+            # Set default subject if the queued message does not have one.
+            if message_dict['subject'] is None:
+                message_dict['subject'] = self.config['default_subject']
+
+            encrypted_message = self._build_encrypted_message(
+                message_dict, loop_start_time)
+
+            self._send_mail(mime_message=encrypted_message,
+                            recipients=self.valid_recipient_emails)
+            self.logger.info('Message %s sent successfully.', file_name)
+
+            os.remove(os.path.join(self.outbox_path, file_name))
+
+        except gpgkeyverifier.NoUsableKeysException as no_usable_keys:
+            # This exception should abort the program, so we just re-raise it.
+            raise no_usable_keys
+
+        except gpgkeyverifier.SenderKeyExpiredException as sender_key_expired:
+            # This exception should abort the program, so we just re-raise it.
+            raise sender_key_expired
+
+        except Exception as exception:
+            self.logger.error('Exception %s: %s.', type(exception).__name__,
+                              str(exception))
+            self.logger.error(traceback.format_exc())
 
     def _read_message_file(self, file_name):
         """Reads a message file from the outbox directory and builds a dictionary
@@ -162,7 +203,8 @@ class GpgMailer(object):
                 'subject': self.config['default_subject'],
                 'body': 'The expiration status of one or more keys have changed.'}
             encrypted_message = self._build_encrypted_message(message_dict, loop_start_time)
-            self.mailsender.sendmail(encrypted_message, self.valid_recipient_emails)
+            self._send_mail(mime_message=encrypted_message,
+                            recipients=self.valid_recipient_emails)
 
     def _build_encrypted_message(self, message_dict, loop_start_time):
         """Builds an encrypted e-mail string with a signature if possible.
@@ -203,3 +245,28 @@ class GpgMailer(object):
                 loop_current_time=loop_start_time)
 
         return message
+
+    def _send_mail(self, mime_message, recipients):
+        """Adds From and To headers to the message object, then passes the message to
+        sendmail to be queued by the local MTA.
+
+        mime_message: A MIMEMultipart message object describing the e-mail to send.
+        recipients:     A list of e-mail addresses to send the e-mail to.
+        """
+        self.logger.info('Sending message via sendmail.')
+
+        recipients_string = ', '.join(recipients)
+
+        mime_message['From'] = self.config['sender']['email']
+        mime_message['To'] = recipients_string
+
+        sendmail_process = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE)
+        sendmail_process.communicate(str(mime_message))
+        sendmail_process.stdin.close()
+        sendmail_process.wait()
+
+        if sendmail_process.returncode >= 64:
+            raise SendmailException('Message was not queued. Sendmail returned error code ' \
+                    '%s.' % sendmail_process.returncode)
+
+        self.logger.debug('Message queued successfully.')

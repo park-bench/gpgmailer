@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 # Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,10 +15,13 @@
 
 __all__ = [
     'WatchDirectoryMissingException', 'SaveMessageWithoutBodyException',
-    'ModifyAlreadySavedMessageException', 'GpgMailMessage']
+    'ModifyAlreadySavedMessageException', 'GpgMailMessageNotConfiguredException',
+    'GpgMailMessage']
 __author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
+from parkbenchcommon import confighelper
+import ConfigParser
 import base64
 import datetime
 import json

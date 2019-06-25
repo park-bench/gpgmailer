@@ -22,12 +22,13 @@ installing a Debian package. The rest of these instructions make the following a
 *   You are familiar with using `git` and GitHub.
 *   You already know how to use GnuPG.
 *   You are already somewhat familiar with using `debuild`.
+* A local MTA installed that provides `mail-transfer-agent`, as the majority of them do. If
+you don't have a preference, we have a short, basic guide for Postfix [here](./postfix.md).
 
 ## Parkbench Dependencies
 
 _gpgmailer_ depends on one other Parkbench project which must be installed first:
-
-1.  [_confighelper_](https://github.com/park-bench/confighelper)
+* [_parkbench-common_](https://github.com/park-bench/confighelper)
 
 ## Steps to Build and Install
 

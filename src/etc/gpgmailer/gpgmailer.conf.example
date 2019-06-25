@@ -31,22 +31,6 @@ main_loop_duration=3
 # The number of seconds to wait in between checking key expiration.
 key_check_interval=60
 
-# Standard email server details
-smtp_username=
-smtp_password=
-smtp_domain=
-smtp_port=
-
-
-# Less standard email server details
-
-# The number of seconds until the program assumes an SMTP session has ended.
-smtp_max_idle=600
-
-# How many seconds the mailer should wait until the program determines that the sending of an
-#   e-mail has failed.
-smtp_sending_timeout=20
-
 
 # Email and GPG settings
 

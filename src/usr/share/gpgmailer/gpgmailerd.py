@@ -35,9 +35,9 @@ import time
 import traceback
 import ConfigParser
 import daemon
-import gnupg
 from lockfile import pidlockfile
-import confighelper
+import gnupg
+from parkbenchcommon import confighelper
 import gpgkeyring
 import gpgkeyverifier
 import gpgmailer
@@ -136,19 +136,6 @@ def read_configuration_and_create_logger(program_uid, program_gid):
 
     config['use_ramdisk_spool'] = config_helper.verify_boolean_exists(
         config_file, 'use_ramdisk_spool')
-
-    # Reads the SMTP configuration.
-    config['smtp_domain'] = config_helper.verify_string_exists(config_file, 'smtp_domain')
-    config['smtp_port'] = config_helper.verify_integer_within_range(
-        config_file, 'smtp_port', lower_bound=1, upper_bound=65536)
-    config['smtp_username'] = config_helper.verify_string_exists(
-        config_file, 'smtp_username')
-    config['smtp_password'] = config_helper.verify_password_exists(
-        config_file, 'smtp_password')  # Note this is a password!
-    config['smtp_max_idle'] = config_helper.verify_integer_within_range(
-        config_file, 'smtp_max_idle', lower_bound=1)
-    config['smtp_sending_timeout'] = config_helper.verify_integer_within_range(
-        config_file, 'smtp_sending_timeout', lower_bound=1)  # In seconds.
 
     # Reads the key configuration.
     config['gpg_dir'] = config_helper.verify_string_exists(config_file, 'gpg_dir')
@@ -331,7 +318,7 @@ def check_sender_key(gpg_keyring, config, expiration_date):
         formatted_expiration_date = datetime.datetime.fromtimestamp(
             gpg_keyring.get_key_expiration_date(
                 config['sender']['fingerprint'])).strftime('%Y-%m-%d %H:%M:%S')
-        logger.warn('Sender key expired on %s.', formatted_expiration_date)
+        logger.warning('Sender key expired on %s.', formatted_expiration_date)
         config['sender']['can_sign'] = False
 
     elif not signature_test(
@@ -506,7 +493,7 @@ def send_expiration_warning_message(gpg_keyring, config, expiration_date):
         expiration_date)
 
     if expiration_warning_message is not None:
-        logger.warn('Sending expiration warning message email.')
+        logger.warning('Sending expiration warning message email.')
         # gpgmailer.py will prepend the actual warning message.
         message = 'Gpgmailer has just restarted.'
         mail_message = gpgmailmessage.GpgMailMessage()

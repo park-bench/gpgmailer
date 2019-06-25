@@ -19,7 +19,7 @@ __version__ = '0.8'
 
 import logging
 import unittest
-import confighelper
+from parkbenchcommon import confighelper
 import gpgkeyring
 import gpgmailbuilder
 

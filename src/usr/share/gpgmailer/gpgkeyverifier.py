@@ -276,7 +276,7 @@ class GpgKeyVerifier(object):
             self.logger.trace(expiration_warning_message)
 
             if not self.email_dicts[email]['expired_email_sent']:
-                self.logger.warn(expiration_warning_message)
+                self.logger.warning(expiration_warning_message)
                 self.email_dicts[email]['expired_email_sent'] = True
 
         elif not self.gpgkeyring.is_current(fingerprint, expiring_soon_date):
@@ -289,7 +289,7 @@ class GpgKeyVerifier(object):
             self.logger.trace(expiration_warning_message)
 
             if not self.email_dicts[email]['expiring_soon_email_sent']:
-                self.logger.warn(expiration_warning_message)
+                self.logger.warning(expiration_warning_message)
                 self.email_dicts[email]['expiring_soon_email_sent'] = True
 
         else:

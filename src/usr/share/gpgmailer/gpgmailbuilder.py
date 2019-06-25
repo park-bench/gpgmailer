@@ -108,7 +108,7 @@ class GpgMailBuilder(object):
             loop_current_time=loop_current_time)
         encrypted_message['Subject'] = message_dict['subject']
 
-        return str(encrypted_message)
+        return encrypted_message
 
     def build_signed_message(self, message_dict, signing_key_fingerprint,
                              signing_key_passphrase, loop_current_time):
@@ -128,7 +128,7 @@ class GpgMailBuilder(object):
             loop_current_time=loop_current_time)
         signed_message['Subject'] = message_dict['subject']
 
-        return str(signed_message)
+        return signed_message
 
     def build_signed_encrypted_message(
             self, message_dict, encryption_keys, signing_key_fingerprint,
@@ -154,7 +154,7 @@ class GpgMailBuilder(object):
             loop_current_time=loop_current_time)
         encrypted_message['Subject'] = message_dict['subject']
 
-        return str(encrypted_message)
+        return encrypted_message
 
     def _sign_message(self, message, signing_key_fingerprint, signing_key_passphrase,
                       loop_current_time):
