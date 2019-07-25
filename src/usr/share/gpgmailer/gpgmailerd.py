@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 # Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
 #
@@ -33,7 +33,7 @@ import subprocess
 import sys
 import time
 import traceback
-import ConfigParser
+import configparser
 import daemon
 from lockfile import pidlockfile
 import gnupg
@@ -104,7 +104,7 @@ def read_configuration_and_create_logger(program_uid, program_gid):
         raise InitializationException(
             'Configuration file %s does not exist. Quitting.' % CONFIGURATION_PATHNAME)
 
-    config_file = ConfigParser.RawConfigParser()
+    config_file = configparser.RawConfigParser()
     config_file.read(CONFIGURATION_PATHNAME)
 
     config = {}
@@ -403,7 +403,7 @@ def check_if_mounted_as_ramdisk(pathname):
     pathname: The directory to check.
     Returns true if the directory is mounted as a ramdisk.  False otherwise.
     """
-    return 'none on {0} type tmpfs'.format(pathname) in subprocess.check_output('mount')
+    return 'none on {0} type tmpfs'.format(pathname) in str(subprocess.check_output('mount'))
 
 
 def create_spool_directories(use_ramdisk, program_uid, program_gid):

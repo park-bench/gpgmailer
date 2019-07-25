@@ -1,4 +1,4 @@
-# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ class SendmailException(Exception):
     to queue a message.
     """
 
-class GpgMailer(object):
+class GpgMailer():
     """Contains high level program business logic.  Monitors the outbox directory, manages
     keys, and coordinates sending e-mail.
     """

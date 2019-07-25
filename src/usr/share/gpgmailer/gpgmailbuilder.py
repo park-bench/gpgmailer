@@ -1,4 +1,4 @@
-# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ class GpgKeyNotValidatedException(Exception):
     """Raised when attempting to use a recipient untrusted or unsigned key."""
 
 
-class GpgMailBuilder(object):
+class GpgMailBuilder():
     """Builds, signs, and encrypts PGP/MIME emails with attachments.
 
     All public methods have a message_dict parameter which has the following format:
@@ -183,7 +183,7 @@ class GpgMailBuilder(object):
         if signature_text.strip() == '':
             # TODO: Eventually, use signature_text.stderr for more granular error handling.
             #   (issue 7)
-            self.logger.error(signature_result.stderr)
+            self.logger.error(signature_result.output)
             raise SignatureError('Error while signing message.')
 
         signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]

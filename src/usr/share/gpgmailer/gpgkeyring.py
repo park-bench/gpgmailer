@@ -1,4 +1,4 @@
-# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ class KeyNotFoundException(Exception):
     """This exception is thrown when a GPG fingerprint is not in the given key ring."""
 
 
-class GpgKeyRing(object):
+class GpgKeyRing():
     """GpgKeyRing caches and checks validity, expiration, and trust for GPG keys."""
 
     def __init__(self, gnupg_home):

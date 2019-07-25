@@ -1,4 +1,4 @@
-# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ class RecipientEmailCollision(Exception):
     """Raised when two recipient keys have the same e-mail address."""
 
 
-class GpgKeyVerifier(object):
+class GpgKeyVerifier():
     """Manages expiration information for the sender, recipients, and key expiration warning
     messages for keys that have expired or are about to expire.
     """

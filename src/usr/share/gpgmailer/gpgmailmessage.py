@@ -21,7 +21,7 @@ __author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
 __version__ = '0.8'
 
 from parkbenchcommon import confighelper
-import ConfigParser
+import configparser
 import base64
 import datetime
 import json
