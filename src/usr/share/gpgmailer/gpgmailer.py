@@ -261,7 +261,7 @@ class GpgMailer():
         mime_message['To'] = recipients_string
 
         sendmail_process = subprocess.Popen(['sendmail', '-t'], stdin=subprocess.PIPE)
-        sendmail_process.communicate(str(mime_message))
+        sendmail_process.communicate(str(mime_message).encode())
         sendmail_process.stdin.close()
         sendmail_process.wait()
 

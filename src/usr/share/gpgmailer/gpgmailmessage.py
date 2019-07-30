@@ -117,7 +117,7 @@ class GpgMailMessage(object):
 
         # Encode any attachments as base64.
         for attachment in self.message['attachments']:
-            attachment['data'] = base64.b64encode(attachment['data'])
+            attachment['data'] = base64.b64encode(attachment['data']).decode('utf-8')
 
         # Serialize into JSON.
         message_json = json.dumps(self.message)
@@ -125,7 +125,7 @@ class GpgMailMessage(object):
         # Write message to filesystem.
         time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
         # For security, the filename should not be guessable. Hence the random component.
-        message_filename = '%s-%s' % (time_string, os.urandom(16).encode('hex'))
+        message_filename = '%s-%s' % (time_string, os.urandom(16).hex())
         # Write to a 'partial' directory so the message doesn't get picked up before it is
         #   fully created.
         partial_pathname = os.path.join(PARTIAL_DIR, message_filename)
