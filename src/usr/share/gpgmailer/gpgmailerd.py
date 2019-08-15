@@ -364,7 +364,7 @@ def verify_signing_config(config):
             'allowed. Exiting.' % config['sender']['fingerprint'])
 
     elif not config['sender']['can_sign']:
-        logger.warn('The sender key is unable to sign because it has probably expired. '
+        logger.warning('The sender key is unable to sign because it has probably expired. '
                     'Gpgmailer will send unsigned messages.')
 
     else:
@@ -544,58 +544,66 @@ def setup_daemon_context(log_file_handle, program_uid, program_gid):
     return daemon_context
 
 
-os.umask(PROGRAM_UMASK)
-program_uid, program_gid = get_user_and_group_ids()
-config, config_helper, logger = read_configuration_and_create_logger(
-    program_uid, program_gid)
+def main():
+    """The container function for the entire script. It loads and verifies configuration,
+    then daemonizes and starts the main loop.
+    """
+    os.umask(PROGRAM_UMASK)
+    program_uid, program_gid = get_user_and_group_ids()
+    global logger
+    config, config_helper, logger = read_configuration_and_create_logger(
+        program_uid, program_gid)
 
-try:
-    verify_safe_file_permissions(config, program_uid)
+    try:
+        verify_safe_file_permissions(config, program_uid)
 
-    parse_key_config(config)
+        parse_key_config(config)
 
-    # Re-establish root permissions to create required directories.
-    os.seteuid(os.getuid())
-    os.setegid(os.getgid())
+        # Re-establish root permissions to create required directories.
+        os.seteuid(os.getuid())
+        os.setegid(os.getgid())
 
-    # Non-root users cannot create files in /run, so create a directory that can be written
-    #   to. Full access to user only.  drwx------ gpgmailer gpgmailer
-    create_directory(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, program_uid, program_gid,
-                     stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        # Non-root users cannot create files in /run, so create a directory that can be written
+        #   to. Full access to user only.  drwx------ gpgmailer gpgmailer
+        create_directory(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, program_uid, program_gid,
+                         stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
 
-    # Do this relatively last because gpgmailmessage assumes the daemon has started if these
-    #   directories exist.
-    create_spool_directories(config['use_ramdisk_spool'], program_uid, program_gid)
+        # Do this relatively last because gpgmailmessage assumes the daemon has started if these
+        #   directories exist.
+        create_spool_directories(config['use_ramdisk_spool'], program_uid, program_gid)
 
-    # Configuration has been read and directories setup. Now drop permissions forever.
-    drop_permissions_forever(program_uid, program_gid)
+        # Configuration has been read and directories setup. Now drop permissions forever.
+        drop_permissions_forever(program_uid, program_gid)
 
-    # Make sure the sender key isn't going to expire during the first loop iteration.
-    expiration_date = time.time() + config['main_loop_duration']
+        # Make sure the sender key isn't going to expire during the first loop iteration.
+        expiration_date = time.time() + config['main_loop_duration']
 
-    gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
-    check_sender_key(gpg_keyring, config, expiration_date)
-    check_all_recipient_keys(gpg_keyring, config)
-    verify_signing_config(config)
+        gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
+        check_sender_key(gpg_keyring, config, expiration_date)
+        check_all_recipient_keys(gpg_keyring, config)
+        verify_signing_config(config)
 
-    # We do this here because we don't want to queue an e-mail if a configuration setting
-    #   can cause the program to crash later. This is to avoid a lot of identical queued
-    #   warning e-mails.
-    gpg_key_verifier = send_expiration_warning_message(gpg_keyring, config, expiration_date)
+        # We do this here because we don't want to queue an e-mail if a configuration setting
+        #   can cause the program to crash later. This is to avoid a lot of identical queued
+        #   warning e-mails.
+        gpg_key_verifier = send_expiration_warning_message(gpg_keyring, config, expiration_date)
 
-    logger.info('Verification complete.')
+        logger.info('Verification complete.')
 
-    daemon_context = setup_daemon_context(
-        config_helper.get_log_file_handle(), program_uid, program_gid)
+        daemon_context = setup_daemon_context(
+            config_helper.get_log_file_handle(), program_uid, program_gid)
 
-    logger.debug('Initializing GpgMailer.')
-    gpgmailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier, OUTBOX_PATHNAME)
+        logger.debug('Initializing GpgMailer.')
+        gpg_mailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier, OUTBOX_PATHNAME)
 
-    logger.info('Daemonizing...')
-    with daemon_context:
-        gpgmailer.start_monitoring()
+        logger.info('Daemonizing...')
+        with daemon_context:
+            gpg_mailer.start_monitoring()
 
-except Exception as exception:
-    logger.critical('Fatal %s: %s\n%s', type(exception).__name__, str(exception),
-                    traceback.format_exc())
-    raise exception
+    except Exception as exception:
+        logger.critical('Fatal %s: %s\n%s', type(exception).__name__, str(exception),
+                        traceback.format_exc())
+        raise exception
+
+if __name__ == "__main__":
+    main()
