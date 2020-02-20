@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 GPGMAILER_USER='gpgmailer'
 GPGMAILER_USER_COMMENT='GPG Mailer Daemon'
 GPGMAILER_GROUP='gpgmailer'
+NETCHECK_GROUP='netcheck'
 
 case "$1" in
     configure)
@@ -27,6 +28,13 @@ case "$1" in
     if ! getent group "$GPGMAILER_GROUP" >> /dev/null; then
         echo -n "Adding group $GPGMAILER_GROUP..."
         addgroup --quiet --system "$GPGMAILER_GROUP" 2> /dev/null
+        echo "done"
+    fi
+
+    # Add the netcheck group
+    if ! getent group "$NETCHECK_GROUP" >> /dev/null; then
+        echo -n "Adding group $NETCHECK_GROUP..."
+        addgroup --quiet --system "$NETCHECK_GROUP" 2> /dev/null
         echo "done"
     fi
 
@@ -41,7 +49,7 @@ case "$1" in
     # Adjust the user regardless of whether this script created the user or not.
     #   (The user might already exist.)
     usermod -c "$GPGMAILER_USER_COMMENT" -d "/nonexistent" -g "$GPGMAILER_GROUP" \
-        "$GPGMAILER_USER"
+        -G "$NETCHECK_GROUP" "$GPGMAILER_USER"
     ;;
 esac
 
