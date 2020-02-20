@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2020 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -545,8 +545,8 @@ def setup_daemon_context(log_file_handle, program_uid, program_gid):
 
 
 def main():
-    """The container function for the entire script. It loads and verifies configuration,
-    then daemonizes and starts the main loop.
+    """The parent function for the entire program. It loads and verifies configuration,
+    daemonizes, and starts the main program loop.
     """
     os.umask(PROGRAM_UMASK)
     program_uid, program_gid = get_user_and_group_ids()
@@ -563,13 +563,13 @@ def main():
         os.seteuid(os.getuid())
         os.setegid(os.getgid())
 
-        # Non-root users cannot create files in /run, so create a directory that can be written
-        #   to. Full access to user only.  drwx------ gpgmailer gpgmailer
+        # Non-root users cannot create files in /run, so create a directory that can be
+        #   written to. Full access to user only.  drwx------ gpgmailer gpgmailer
         create_directory(SYSTEM_PID_DIR, PROGRAM_PID_DIRS, program_uid, program_gid,
                          stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
 
-        # Do this relatively last because gpgmailmessage assumes the daemon has started if these
-        #   directories exist.
+        # Do this relatively last because gpgmailmessage assumes the daemon has started if
+        #   these directories exist.
         create_spool_directories(config['use_ramdisk_spool'], program_uid, program_gid)
 
         # Configuration has been read and directories setup. Now drop permissions forever.
@@ -586,7 +586,8 @@ def main():
         # We do this here because we don't want to queue an e-mail if a configuration setting
         #   can cause the program to crash later. This is to avoid a lot of identical queued
         #   warning e-mails.
-        gpg_key_verifier = send_expiration_warning_message(gpg_keyring, config, expiration_date)
+        gpg_key_verifier = send_expiration_warning_message(
+            gpg_keyring, config, expiration_date)
 
         logger.info('Verification complete.')
 
@@ -594,7 +595,8 @@ def main():
             config_helper.get_log_file_handle(), program_uid, program_gid)
 
         logger.debug('Initializing GpgMailer.')
-        gpg_mailer = gpgmailer.GpgMailer(config, gpg_keyring, gpg_key_verifier, OUTBOX_PATHNAME)
+        gpg_mailer = gpgmailer.GpgMailer(
+            config, gpg_keyring, gpg_key_verifier, OUTBOX_PATHNAME)
 
         logger.info('Daemonizing...')
         with daemon_context:
