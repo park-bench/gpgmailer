@@ -74,15 +74,12 @@ def get_user_and_group_ids():
     try:
         program_user = pwd.getpwnam(PROCESS_USERNAME)
     except KeyError as key_error:
-        message = 'User %s does not exist. %s: %s' % (
-            PROCESS_USERNAME, type(key_error).__name__, str(key_error))
-        print(message)
+        message = 'User %s does not exist.' % PROCESS_USERNAME
         raise InitializationException(message) from key_error
     try:
         program_group = grp.getgrnam(PROCESS_GROUP_NAME)
     except KeyError as key_error:
-        message = 'Group %s does not exist. %s: %s' % (
-            PROCESS_GROUP_NAME, type(key_error).__name__, str(key_error))
+        message = 'Group %s does not exist.' % PROCESS_GROUP_NAME
         raise InitializationException(message) from key_error
 
     return program_user.pw_uid, program_group.gr_gid
