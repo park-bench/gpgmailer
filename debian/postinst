@@ -58,4 +58,4 @@ chown -R "$GPGMAILER_USER:$GPGMAILER_GROUP" /etc/gpgmailer/gnupg 2> /dev/null
 chmod o-rwx /etc/gpgmailer/gnupg 2> /dev/null
 
 update-rc.d gpgmailer defaults || exit 1
-invoke-rc.d gpgmailer start || exit 1
+systemctl start gpgmailer || exit 1
