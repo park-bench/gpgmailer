@@ -66,4 +66,3 @@ check the current example file to make sure it has all the required options.
 
 *   No support for checking GPG subkey expiration. All subkeys are assumed to expire at the
     same time as their parent keys.
-*   No exponential backoff while failing to connect to the SMTP server.
