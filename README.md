@@ -22,8 +22,9 @@ installing a Debian package. The rest of these instructions make the following a
 *   You are familiar with using `git` and GitHub.
 *   You already know how to use GnuPG.
 *   You are already somewhat familiar with using `debuild`.
-* A local MTA installed that provides `mail-transfer-agent`, as the majority of them do. If
-you don't have a preference, we have a short, basic guide for Postfix [here](./postfix.md).
+*   A local MTA is installed that provides `mail-transfer-agent`, as the majority of them do.
+    If you don't have a preference, we have a short, basic guide for Postfix
+    [here](./postfix.md).
 
 ## Parkbench Dependencies
 
