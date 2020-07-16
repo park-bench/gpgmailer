@@ -47,8 +47,8 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
 7.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
     `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the sender and recipient
     information and the sender GPG passphrase. Other settings can also be modified.
-8.  Use `chown` to __recurrsively__ change the ownership of the GPG keyring to the `watchman`
-    user.
+8.  Use `chown` to __recurrsively__ change the ownership of the GPG keyring to the
+    `gpgmailer` user.
 9.  Use `chmod` to clear the _other user_ permissions bits of `gpgmailer.conf` and the GPG
     keyring directory. Namely, remove read, write, and execute permissions for _other_.
 10. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
