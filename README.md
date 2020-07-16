@@ -45,8 +45,8 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
     ultimately trusted.
 6.  Import the PGP public keys of all the recipients.
 7.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
-    `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the SMTP server, sender, and
-    recipient information and GPG passphrase. Other settings can also be modified.
+    `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the sender and recipient
+    information and the sender GPG passphrase. Other settings can also be modified.
 8.  Use `chown` to __recurrsively__ change the ownership of the GPG keyring to the `watchman`
     user.
 9.  Use `chmod` to clear the _other user_ permissions bits of `gpgmailer.conf` and the GPG
