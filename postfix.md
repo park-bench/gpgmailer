@@ -40,7 +40,7 @@ smtp_use_tls = yes
 ```
 
 To test your configuration, run the following replacing "sender address" and "recipient
-address". Sender address probably has to match the e-mail account being used to send mail.:
+address". Sender address probably has to match the e-mail account being used to send mail:
 `sudo systemctl restart postfix`
 `echo "testing" | sendmail -f '<sender address>' -v '<recipient address>'`
 

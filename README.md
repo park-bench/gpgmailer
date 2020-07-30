@@ -43,7 +43,7 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
     recommended that you __do not__ use the GPG keyring in your home directory.
 5.  Import or generate a sender PGP key. This key must have a verified signature and be
     ultimately trusted.
-6.  Import the PGP public keys of all the recipients.
+6.  Import and sign the PGP public keys of all the recipients.
 7.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
     `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the sender and recipient
     information and the sender GPG passphrase. Other settings can also be modified.
