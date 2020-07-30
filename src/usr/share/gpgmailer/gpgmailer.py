@@ -140,7 +140,8 @@ class GpgMailer():
 
             self._send_mail(mime_message=encrypted_message,
                             recipients=self.valid_recipient_emails)
-            self.logger.info('Message %s sent successfully.', file_name)
+            self.logger.info('Message %s handed off to the transfer agent successfully.',
+                             file_name)
 
             os.remove(os.path.join(self.outbox_path, file_name))
 
