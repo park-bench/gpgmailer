@@ -39,9 +39,10 @@ smtp_tls_CAfile = /etc/ssl/certs/thawte_Primary_Root_CA.pem
 smtp_use_tls = yes
 ```
 
-To test your configuration, run the following replacing "receipient e-mail" with your e-mail:
+To test your configuration, run the following replacing "sender address" and "recipient
+address". Sender address probably has to match the e-mail account being used to send mail.:
 `sudo systemctl restart postfix`
-`echo "test e-mail body" | mail -s "test subject" <recipient e-mail>`
+`echo "testing" | sendmail -f '<sender address>' -v '<recipient address>'`
 
 After verifying that you received the e-mail, postfix should be secured against unauthorized
 users by changing which users can send via `sendmail` or `mail`. To block all users except
