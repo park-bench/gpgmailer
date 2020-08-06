@@ -168,8 +168,8 @@ class GpgMailBuilder():
         """
         self._validate_signing_key(signing_key_fingerprint, loop_current_time)
 
-        # Removes the first line and replaces LF with CR/LF.
-        message_string = str(message).split('\n', 1)[1].replace('\n', '\r\n')
+        # Replaces LF with CR/LF.
+        message_string = str(message).replace('\n', '\r\n')
 
         # Make the signature component.
         signature_result = self.gpg.sign(
