@@ -37,6 +37,7 @@ smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
 smtp_sasl_security_options = noanonymous
 smtp_tls_CAfile = /etc/ssl/certs/thawte_Primary_Root_CA.pem
 smtp_use_tls = yes
+soft_bounce=yes
 ```
 
 To test your configuration, run the following replacing "sender address" and "recipient

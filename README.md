@@ -16,8 +16,7 @@ installing a Debian package. The rest of these instructions make the following a
 
 *   Your server is running Ubuntu 18.04 LTS. (Other operating systems may work, but are not
     supported.)
-*   `build-essential` is installed on your build server.
-*   `devscripts` is installed on your build server.
+*   `debhelper` and `devscripts` are installed on your build server.
 *   You are already familiar with using a Linux terminal.
 *   You are familiar with using `git` and GitHub.
 *   You are familiar with GnuPG.
