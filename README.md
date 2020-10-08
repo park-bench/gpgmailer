@@ -5,7 +5,7 @@ an included Python API.
 
 gpgmailer is licensed under the GNU GPLv3.
 
-This is software is still in _beta_ and may not be ready for use in a production environment.
+This software is still in _beta_ and may not be ready for use in a production environment.
 
 Bug fixes are welcome!
 
