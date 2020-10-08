@@ -11,30 +11,31 @@ Bug fixes are welcome!
 
 ## Prerequisites
 
+This software is currently only supported on Ubuntu 18.04.
+
 Currently, the only supported method for installation of this project is building and
 installing a Debian package. The rest of these instructions make the following assumptions:
 
-*   Your server is running Ubuntu 18.04 LTS. (Other operating systems may work, but are not
-    supported.)
-*   `debhelper` and `devscripts` are installed on your build server.
-*   You are already familiar with using a Linux terminal.
+*   You are familiar with using a Linux terminal.
+*   You are somewhat familiar with using `debuild`.
 *   You are familiar with using `git` and GitHub.
+*   `debhelper` and `devscripts` are installed on your build server.
 *   You are familiar with GnuPG.
-*   You are already somewhat familiar with using `debuild`.
 *   A local MTA is installed that provides `mail-transfer-agent`, as the majority of them do.
     If you don't have a preference, we have a short, basic guide for Postfix
     [here](./postfix.md).
 
 ## Parkbench Dependencies
 
-_gpgmailer_ depends on one other Parkbench project which must be installed first:
-* [_parkbench-common_](https://github.com/park-bench/confighelper)
+gpgmailer depends on one other Parkbench package, which must be installed first:
+
+*   [parkbench-common](https://github.com/park-bench/parkbench-common)
 
 ## Steps to Build and Install
 
 1.  Clone the repository and checkout the latest release tag. (Do not build against the
     `master` branch. The `master` branch might not be stable.)
-2.  Use `debuild` in the project root directory to build the package.
+2.  Run `debuild` in the project root directory to build the package.
 3.  Run `apt install /path/to/package.deb` to install the package. The daemon will attempt to
     start and fail. (This is expected.)
 4.  Create a GPG keyring at the location specified in
@@ -47,10 +48,16 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
 7.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
     `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the sender and recipient
     information and the sender GPG passphrase. Other settings can also be modified.
-8.  Use `chown` to __recurrsively__ change the ownership of the GPG keyring to the
-    `gpgmailer` user.
-9.  Use `chmod` to clear the _other user_ permissions bits of `gpgmailer.conf` and the GPG
-    keyring directory. Namely, remove read, write, and execute permissions for _other_.
+8.  __Recurrsively__ change the ownership and permissions of the GPG keyring:
+```
+chown -R root:gpgmailer /path/to/gpg/keyring
+chmod -R u=rw,g=r,o= /path/to/gpg/keyring
+```
+5.  Change the ownership and permissions of the configuration file:
+```
+chown root:gpgmailer /etc/gpgmailer/gpgmailer.conf
+chmod u=rw,g=r,o= /etc/gpgmailer/gpgmailer.conf
+```
 10. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
     users. Doing this will allow these users to view gpgmailer log files.
 11. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
@@ -59,8 +66,8 @@ _gpgmailer_ depends on one other Parkbench project which must be installed first
 
 ## Updates
 
-Updates may change configuration file options. So if you have a configuration file already,
-check the current example file to make sure it has all the required options.
+Updates may change configuration file options. If a configuration file already exists, check
+that it has all of the required options from the current example file.
 
 ## Known Errors and Limitations
 
