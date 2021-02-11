@@ -38,29 +38,30 @@ gpgmailer depends on one other Parkbench package, which must be installed first:
 2.  Run `debuild` in the project root directory to build the package.
 3.  Run `apt install /path/to/package.deb` to install the package. The daemon will attempt to
     start and fail. (This is expected.)
-4.  Create a GPG keyring at the location specified in
-    `/etc/gpgmailer/gpgmailer.conf.example`. (Run `gpg` with the `--homedir` option.) It is
-    recommended that you __do not__ use the GPG keyring in your home directory.
-5.  Import or generate a sender PGP key. This key must have a verified signature and be
-    ultimately trusted.
-6.  Import and sign the PGP public keys of all the recipients. (If you did this out of order
-    or need to sign keys later, you may have to use the option `--pinentry-mode=loopback`.)
-7.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
-    `/etc/gpgmailer/gpgmailer.conf`. Edit this file to enter the sender and recipient
-    information and the sender GPG passphrase. Other settings can also be modified.
-8.  __Recurrsively__ change the ownership and permissions of the GPG keyring:
-```
-chown -R root:gpgmailer /path/to/gpg/keyring
-chmod -R u=rw,g=r,o= /path/to/gpg/keyring
-```
+4.  Copy or rename the example configuration file `/etc/gpgmailer/gpgmailer.conf.example` to
+    `/etc/gpgmailer/gpgmailer.conf`.
 5.  Change the ownership and permissions of the configuration file:
 ```
 chown root:gpgmailer /etc/gpgmailer/gpgmailer.conf
 chmod u=rw,g=r,o= /etc/gpgmailer/gpgmailer.conf
 ```
-10. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
+6.  Create a GPG keyring at the location specified in
+    `/etc/gpgmailer/gpgmailer.conf`. (Run `gpg` with the `--homedir` option.) It is
+    recommended that you __do not__ use the GPG keyring in your home directory.
+7.  Import or generate a sender PGP key. This key must have a verified signature and be
+    ultimately trusted.
+8.  Import and sign the PGP public keys of all the recipients. (You may have to use the option
+    `--pinentry-mode=loopback`.)
+9.  __Recurrsively__ change the ownership and permissions of the GPG keyring:
+```
+chown -R gpgmailer:gpgmailer /path/to/gpg/keyring
+chmod -R u=rwX,g=rX,o= /path/to/gpg/keyring
+```
+10. Edit the `/etc/gpgmailer/gpgmailer.conf` file to enter the sender and recipient
+    information and the sender GPG passphrase. Other settings can also be modified.
+11. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
     users. Doing this will allow these users to view gpgmailer log files.
-11. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
+12. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
     keyring are valid, named correctly, and have the correct file permissions, the service
     will start successfully.
 

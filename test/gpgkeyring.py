@@ -1,1 +1,0 @@
-../src/usr/share/gpgmailer/gpgkeyring.py

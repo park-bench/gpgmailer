@@ -1,5 +1,6 @@
 *.pyc
 *.swp
+.coverage
 debian/.debhelper
 debian/debhelper.log
 debian/debhelper-build-stamp
@@ -11,7 +12,9 @@ debian/gpgmailer.prerm.debhelper
 debian/gpgmailer.substvars
 debian/gpgmailer/
 debian/tmp
+htmlcov
 src/etc/opt/gpgmailer/gnupg
 src/etc/opt/gpgmailer/gpgmailer.conf
 src/var/opt/log/gpgmailer.log
 test/gpgmailbuilder-test-keyring/pubring.gpg~
+test/gpgmailbuilder-test-keyring/random_seed

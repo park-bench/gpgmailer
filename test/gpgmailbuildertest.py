@@ -1,5 +1,5 @@
-#!/usr/bin/env python2
-# Copyright 2015-2018 Joel Allen Luellwitz and Emily Frost
+#!/usr/bin/python3
+# Copyright 2015-2021 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,10 +18,12 @@ __author__ = 'Joel Luellwitz and Emily Frost'
 __version__ = '0.8'
 
 import logging
+import os
+import subprocess
 import unittest
 from parkbenchcommon import confighelper
-import gpgkeyring
-import gpgmailbuilder
+from src.usr.share.gpgmailer import gpgkeyring
+from src.usr.share.gpgmailer import gpgmailbuilder
 
 # A few constants for testing.
 log_file = "/dev/null"
@@ -41,7 +43,7 @@ expired_encryption_subkey_key_fingerprint = '56E3B2498A859953EF003FD8FC88955B8E4
 signing_key_correct_passphrase = \
     'lk\\4+v4*SL3r{vm^S(R";uP-l)nT+%)Ku;{0gS+"a5"1t;+6\'c]}TX4H)`c2'
 signing_key_wrong_passphrase = 'php is a great language'
-test_keyring_directory = './gpgmailbuilder-test-keyring'
+test_keyring_directory = 'test/gpgmailbuilder-test-keyring'
 
 message = {
         'subject': 'This won\'t be seen.',
@@ -49,16 +51,36 @@ message = {
     }
 
 
-class gpgmailbuildertest(unittest.TestCase):
+class GpgMailBuilderTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            subprocess.run(['pkill'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            print("Program 'pkill' does not exist. pkill is required for clearing the "
+                  'GPG agent cache.')
+            exit(1)
+
+        if not os.environ.get('CLEAR_GPG_AGENT_CACHE') or \
+                not os.environ.get('CLEAR_GPG_AGENT_CACHE').lower() == 'true':
+            print("Refusing to run without CLEAR_GPG_AGENT_CACHE set to 'true'.")
+            exit(1)
 
     def setUp(self):
-        # Load the keyring
-        # Initialize gpgmailbuilder
+
+        # Clear the GPG agent cache.
+        subprocess.run(['pkill', '-SIGHUP', 'gpg-agent'], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
 
         config_helper = confighelper.ConfigHelper()
         config_helper.configure_logger(log_file, log_level)
         self.logger = logging.getLogger(__name__)
+
+        # Load the keyring
         self.gpgkeyring = gpgkeyring.GpgKeyRing(test_keyring_directory)
+
+        # Initialize gpgmailbuilder
         self.gpgmailbuilder = gpgmailbuilder.GpgMailBuilder(self.gpgkeyring,
                                                             max_operation_time)
 
@@ -85,6 +107,26 @@ class gpgmailbuildertest(unittest.TestCase):
 
     def test_signed_encrypted_message_succeeds(self):
         self.logger.info('Testing signed encrypted message with valid key.')
+        signed_encrypted_message = self.gpgmailbuilder.build_signed_encrypted_message(
+            message, [valid_encryption_key_fingerprint], valid_signing_key_fingerprint,
+            signing_key_correct_passphrase, self.test_time)
+        # Make sure the signed_encrypted_message is not empty.
+        self.assertTrue(signed_encrypted_message)
+        # TODO: Eventually, consider verifying the signature here. (issue 43)
+
+    def test_attachments_succeeds(self):
+        self.logger.info('Testing with attachments.')
+        message = {
+            'subject': 'This won\'t be seen.',
+            'body': 'Ever. By anyone.',
+            'attachments': [
+                 {'filename': 'attachment0.txt',
+                  'data': 'Attachment 0'.encode()},
+                 {'filename': 'attachment1.txt',
+                  'data': 'Attachment 1'.encode()}
+            ]
+        }
+
         signed_encrypted_message = self.gpgmailbuilder.build_signed_encrypted_message(
             message, [valid_encryption_key_fingerprint], valid_signing_key_fingerprint,
             signing_key_correct_passphrase, self.test_time)
@@ -165,5 +207,3 @@ class gpgmailbuildertest(unittest.TestCase):
             self.gpgmailbuilder.build_encrypted_message(
                 message, [expired_encryption_subkey_key_fingerprint],
                 1483228800)  # 2017-01-01T00:00:00Z
-
-unittest.main()

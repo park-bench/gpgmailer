@@ -1,187 +1,316 @@
 TODO: Eventually add test cases for sender and recipient sub keys and for both init and runtime.
 
-GPG Mailer Daemon - directory management:
-* /tmp/gpgmailer does not exist.
-    - Create it, mount tmpfs and continue
-* /tmp/gpgmailer is not a directory.
-    - Crash
-* /tmp/gpgmailer exists and is an empty directory.
-    - Mount tmpfs and continue
-* /tmp/gpgmailer is not tmpfs and directory not empty.
-    - Crash
-* /tmp/gpgmailer is tmpfs and empty
-    - Create subdirectories and continue
-* /tmp/gpgmailer is tmpfs and not empty
-    - Attempt to continue
-* /tmp/gpgmailer fails to mount as tmpfs (ex: move /bin/mount out of path)
-    - Crash
-* outbox and partial already exists
-    - Continue
-* outbox and partial do not exist
-    - Create and continue
-* outbox cannot be created (ex: because it is a file)
-    - Crash
-* partial cannot be created (ex: because it is a file)
-    - Crash
-* mail exists in outbox.
-    - It should be sent
-
-gpgmailmessage: 
-* config file does not exist
-    - crash with error message
-* output or partial directory does not exist
-    - crash
-* output or partial are not directories
-    - crash
-* set_body, add_attachment, add_subject, or queue_for_sending called after queue_for_sending
-    - crash
-* queue_for_sending called and set_body never called.
-    - crash
-* GpgMailMessage.configure has not been called
-    - crash
-* otherwise
-    - Mail is saved successfully and sent.
-
-Program init:
-* Configuration file is missing.
-    - Crash.
-* Remove each required option.
-    - Crash with decent message.
-* Test each option that will not accept blanks.
-    - Crash with decent message.
-* Verify numbers fields only accept numbers.
-    - Crash with decent message.
-* Verify integer fields don't accept floats.
-    - Crash with decent message.
-* Perform out of range checks.
-    - Crash with decent message.
-* Check that colon exists in e-mail/key string.
-    - Crash with decent message.
-* Check that a non blank string exists on both sides of the colon in e-mail/key string.
-    - Crash with decent message.
+* Unit tests pass.
+* Can build following the instructions.
+* Test the init.d script:
+  * Exit if daemon program is not installed.
+  * Source the /etc/default/torwatchdog file if it exists.
+  * /lib/init/vars.sh is sourced.
+  * start
+    * Returns $VERBOSE message when started.
+    * Returns $VERBOSE message if already running when started.
+    * Returns $VERBOSE messgae on failure.
+  * stop
+    * PID file removed
+    * Returns $VERBOSE message when stopped.
+    * Returns $VERBOSE message when already stopped.
+    * Returns warning message if program cannot be stopped (stub out the start-stop-daemon program [restore before rebooting]).
+  * status prints status
+  * restart
+    * Starts when not running.
+    * restarts when running.
+    * prints $VERBOSE message on restart
+    * prints $VERBOSE message when old process still running.
+    * prints $VERBOSE message on failed to start.
+    * prints warning on failed to stop.
+  * force-reload
+    * Same as restart.
+  * anything else prints usage
+* Following the instructions results in a working application.
+* The gpgmailer group is created if it doesn't exist.
+* The gpgmailer group already exists.
+* The gpgmailer user is created if it doesn't exist.
+* The gpgmailer user already exists.
+* The gpgmailer user has the gpgmailer group.
+* gpgmailer is started following install.
+* gpgmailer is enabled following install.
+* Reinstalling does restart gpgmailer.
+* Reinstalling enables gpgmailer.
+* Verify the config matches the example.
+* Verify the license is installed.
+* Verify changelog is sufficiently updated.
+* Test starting when the gpgmailer user does not exist.
+* Test starting when the gpgmailer group does not exist.
+* Configuration file missing.
+* log_level setting missing.
+* log_level setting empty.
+* Log directory gets created if it doesn't exist.
+  * Permissions are correct on /var/log/gpgmailer/gpgmailer.log
+    * Owner and group
+    * Permission bits
+  * Permissions are correct on /var/log/gpgmailer/
+    * Owner and group
+    * Permission bits
+* Log directory already exists.
+  * Permissions are correct on /var/log/gpgmailer/gpgmailer.log
+    * Owner and group
+    * Permission bits
+  * Permissions are correct on /var/log/gpgmailer/
+    * Owner and group
+    * Permission bits
+* Process eoid is gpgmailer after log directory creation.
+* Process egid is gpgmailer after log directory creation.
+* use_ramdisk_spool does not exist
+* use_ramdisk_spool is not boolean
+* use_ramdisk_spool is true
+* use_ramdisk_spool is false
+* gpg_dir does not exist
+* gpg_dir is blank
+* sender does not exist
+* sender is blank
+* signing_key_passphrase does not exist
+* signing_key_passphrase is blank
+* signing_key_passphrase is not logged
+* recipients does not exist
+* recipients is blank
+* expiration_warning_threshold does not exist
+* expiration_warning_threshold is blank
+* expiration_warning_threshold is not a whole number
+* expiration_warning_threshold is 0
+* expiration_warning_threshold is 1
+* main_loop_delay does not exist
+* main_loop_delay is blank
+* main_loop_delay is less than 0.000001
+* main_loop_delay is 0.000001
+* main_loop_duration does not exist
+* main_loop_duration is blank
+* main_loop_duration is less than 0.000001
+* main_loop_duration is 0.000001
+* key_check_interval does not exist
+* key_check_interval is blank
+* key_check_interval is less than 0.000001
+* key_check_interval is 0.000001
+* default_subject does not exist
+* default_subject is blank
+* default_subject exists
+* allow_expired_signing_key does not exist
+* allow_expired_signing_key is blank
+* allow_expired_signing_key is false
+* allow_expired_signing_key is true
+* configuration file is not owned by root.
+* configuration file has group write permission.
+* configuration file's other permissions are wrong.
+  * x
+  * r
+  * w
+* The GPG keyring directory does not exist.
+* GPG directory must be owned by gpgmailer.
+* GPG directory contents must be owned by gpgmailer.
+* GPG directory cannot have 'other' bits set.
+* sender is missing a colon
+* sender has more than 2 colons
+* sender has no e-mail address
+* sender has no fingerprint
+* recipients is missing a colon
+* recipients has more than 2 colons
+* recipients has no e-mail address
+* recipients has no fingerprint
+* recipients can support more than one recipient.
+* Run directory gets created if it doesn't exist.
+  * Permissions are correct on /run/gpgmailer/gpgmailer.pid
+    * Owner and group
+    * Permission bits
+  * Permissions are correct on /run/gpgmailer/
+    * Owner and group
+    * Permission bits
+* Run directory already exists.
+  * Permissions are correct on /run/gpgmailer/gpgmailer.pid
+    * Owner and group
+    * Permission bits
+  * Permissions are correct on /run/gpgmailer/
+    * Owner and group
+    * Permission bits changed
+* spool directory
+  * /var/spool/gpgmailer gets created if it doesn't exist.
+    * Permissions are correct on /var/spool/gpgmailer
+      * Owner and group are gpgmailer
+      * Permission bits are changed to rwx--x---
+  * /var/spool/gpgmailer already exists.
+    * Permissions are correct on /var/spool/gpgmailer
+      * Owner and group are gpgmailer
+      * Permission bits are changed to rwx--x---
+  * Throws an exception if spool directory cannot be created.
+  * spool directory is not a ramdisk
+  * spool directory is a ramdisk
+    * Is not already mounted as ramdisk
+      * New ramdisk is created.
+      * No warning if directory is empty.
+      * Warning if directory is not empty.
+    * Is already mounted as ramdisk
+      * Uses existing ramdisk
+    * Errors if ramdisk fails to create.
+    * /var/spool/gpgmailer/partial gets created if it doesn't exist.
+      * Permissions are correct on /var/spool/gpgmailer/partial
+        * Owner and group are gpgmailer
+        * Permission bits are changed to rwx-ws--T
+    * /var/spool/gpgmailer/outbox already exists.
+      * Permissions are correct on /var/spool/gpgmailer/outbox
+        * Owner and group are gpgmailer
+        * Permission bits are changed to rwx-ws--T
+    * Error thrown if partial or outbox cannot be created.
+* Once permissions are dropped, the egid cannot be changed.
+* Once permissions are dropped, the euid cannot be changed.
+* The program has the correct groups after permissions are dropped.
+* Signing key is not ultimately trusted.
+* Signing key is not a 40 character hex string.
+* Signing key is not in keystore.
+* Signing key is not signed.
+* Sender key cannot sign if expired.
+* Sender fails signature test due to bad passphrase.
+* Sender key logs that signature test passes.
+* Exception is thrown if recipient key is nether signed nor trusted.
+* Recipient key is not a 40 character hex string.
+* Recipient key is not in keystore.
+* Recipient key is trusted but not signed.
+* Recipient key is signed by not trusted.
+* Recipient key is both signed and trusted.
+* Logs all valid recipients fingerprints.
+* Expired signing key not allowed and sender can't sign.
+  * Fails with error.
+* Expired signing key allowed and sender can't sign.
+  * Logs a warning.
+  * Sends an unsigned e-mail.
+* Expired signing key allowed and sender can sign.
+  * Logs a debug message.
+  * Sends signed e-mail.
+* Expired signing key not allowed and sender can sign.
+  * Logs a debug message.
+  * Sends signed e-mail.
+* Duplicate e-mail addresses cause the program to crash.
+* Sender is a recipient.
+  * Sender config is configured with the same key as the recipient config.
+    * Program starts.
+  * Sender config is configured with a different key as the recipient config.
+    * Crash.
+* Sender is not a recipient.
+* Program starts when sender key is expired. (Assuming we allow sending with an expired sender key.)
+  * Warning is logged.
+  * Warning messages are prepended to e-mail.
+  * Messages are not encrypted with sender key.
+  * Does not send e-mail to sender if sender is a recipient.
+  * Does not send e-mail to sender if sender is not a recipient.
+* Program starts when sender key is expiring soon.
+  * Warning is logged.
+  * Warning messages are prepended to e-mail.
+  * Messages are still encrypted with sender key.
+  * Sends e-mail to sender if sender is a recipient.
+  * Does not send e-mail to sender if sender is not a recipient.
+* Program starts when sender key is not expiring soon.
+  * Messages are still encrypted with sender key.
+  * Sends e-mail to sender if sender is a recipient.
+  * Does not send e-mail to sender if sender is not a recipient.
+* When program starts, verify that when sender is a recipient, the sender is not listed as a recipient twice.
+* When program starts, verify warning message exists in e-mail when recipient key is expired.
+  * E-mail is not sent to this recipient.
+* When program starts, verify warning message exists in e-mail when recipient key is expiring soon.
+  * E-mail is sent to this recipient.
+* When program starts, verify there is no warning message for keys that are not expiring soon.
+  * E-mail is sent to this recipient.
+* When program starts, quits of all recipient keys are already expired.
+* All warnings are prefixed with introduction text.
+  * No introduction text if there are no warnings.
+* On start, sends expiration warning message if there are warnings.
+  * No e-mail is sent if there are no warnings.
+  * Nearly identical e-mail isn't sent on first main loop iteration.
 * Verify no passwords are displayed in console (except maybe at trace log level).
 * Verify no passwords are displayed in log file (except maybe at trace log level).
-
-Key management init:
-* All keys valid, sender is a recipient
-    - Init successfuly
-* All keys valid, sender is not a recipient
-    - Init successfuly
-* Sender key is trusted because of ultimate owner trust and level 3 signature (or web of trust).
-    - Send e-mail successfully.
-* Sender key untrusted
-    - Crash with decent message.
-* Sender key is not signed.
-    - Crash with decent message.
-* Sender key missing from keyring
-    - Crash with decent message.
-* Sender key invalid (not a 40 character hex string)
-    - Crash with decent message.
-* Sender key expired, allow_expired_signing_key is false, sender is recipient
-    - Crash with decent message.
-* Sender key expired, allow_expired_signing_key is false, sender is not a recipient
-    - Crash with decent message.
-* Sender key expired, allow_expired_signing_key is true, sender is recipient
-    - Log warning message.
-    - Receive e-mail with this warning.
-    - Init successfuly
-* Sender key expired, allow_expired_signing_key is true, sender is not a recipient
-    - Log warning message.
-    - Receive e-mail with this warning.
-    - Init successfuly
-* Recipient key untrusted.
-    - Crash with decent message.
-* Recipient key not signed.
-    - Crash with decent message.
-* Recipient key missing
-    - Crash with decent message.
-* Recipient key invalid (not a 40 character hex string)
-    - Crash with decent message.
-* Recipient key is expired.
-    - Log warning.
-    - Receive e-mail with this warning.
-* No valid recipients.
-    - Crash with decent message.
-* Termination Signal.
-    - Logs info message and quits.
-* Sender key has a bad passphrase.
-    - Crash with decent message.
-* A recipient e-mail address is in the configuraiton file twice.
-    - Crash with decent message.
-
-Regular operation:
-* The regular warning message is not sent on the first loop given the program starts with a problematic key.
-* The program actually sends mail without attachments when a message is put in the queue.
-* The program actually sends mail with attachments when a message is put in the queue.
-* An e-mail is sent with the specified subject.
-* An e-mail is sent with the default subject.
-* An e-mail is sent when the sender can sign.
-* An e-mail is sent when the sender cannot sign.
-* Test the sender expiring while the program is running.
-* Test a recipient expiring while the program is running.
-* Test all recipients expiring while the program is running (but not the sender).
-* Test everyone expires while the program is running.
-* Messages are also encrypted with the sender key.
-* The appropriate recipient keys are used.
-* The appropriate e-mail addresses are used (not the sender e-mail address).
-* Test wrong e-mail username
-  * Error is logged.
-* Test wrong e-mail password
-  * Error is logged.
-* Test wrong server address.
-  * Error is logged.
-* Test wrong server port.
-  * Error is logged.
-* Test when Google times out out after 10 minutes.
-  * We reconnect and send the e-mail.
-* Test when timeout time is set to high.
-  * We reconnect and send the e-mail.
-* Test when timeout time is set to low.
-  * We reconnect and send the e-mail.
-* Verify SHA512 is used.
-* Create a unit test to test signing only.
-* Test when signing fails only in sign_message.
-  * An exception is thrown.
-* Test when encryption key is expired only the encrypt_message.
-  * An exception is thrown.
-* Test when a sub key is expired only in encrypt_message.
-  * An exception is thrown.
-* Test when trust fails in sign_message only.
-  * An exception is thrown.
-* Test when key is expired in sign_message only.
-  * An exception is thrown.
-
-Key management runtime:
-* Sender key expires, allow_expired_signing_key is false
-    - Crash
-* Sender key expires soon.
-    - One warning in the log.
-    - Send e-mail with that warning.
-* Sender key expires, allow_expired_signing_key is true
-    - Warning in log message.
-    - Send warning e-mail stating the key expires.
-    - Externally triggered e-mails still get sent.
-* The same as above but when the sender is also a recipient.
-    - E-mail message is different for the sender.
-* Sender key has expired and signing is required.
-    - Program crashes with appropriate log message.
-* Any recipient key enters the configured "expiring soon" period
-    - That key is still used for encryption
-    - The expiration warning is appended to all outgoing messages
-    - A warning appears once in the log.
-    - An expiration warning email is queued
-* Any recipient key expires
-    - That key is not used for encryption
-    - The expiration warning is appended to all outgoing messages
-    - A warning message is logged once.
-    - An expiration warning email is queued.
-    - Messages are still sent to all recipients but the expired recipient won't be able to decrypt.
-        (The 0.7 release will not do this, but the 0.8 release should.)
-* All recipient keys have expired
-    - Crash
-* Test sender expiration message when sender is also a recipient.
-    - Message should indicate sender is also a recipient.
-* Test expiration recalculation. (Make sure enough time has passed for a recalculation to occur.)
+* After daemonize, the current working directory is '/'.
+* The pid file contains the correct process number.
+* Before daemonize program's umask is set correctly.
+  * Test file creation.
+  * Test directory creation.
+* After daemonize program's umask is set correctly.
+  * Test file creation.
+  * Test directory creation.
+* After deamonize, the program have a blank ouid.
+* After deamonize, the program should have an suid, euid, and ruid of gpgmailer.
+* After deamonize, the program should have an sgid, egid, and rgid of gpgmailer.
+* After daemonize, the euid cannot be changed.
+* After daemonize, the egid cannot be changed.
+* An exception doesn't kill the program once the main loop is entered.
+* Key expiration is rechecked on the scheduled interval.
+* While the program is running, the warning messages change.
+  * Sender key is expired when program is running. (Assuming we allow sending with an expired sender key.)
+    * Warning is logged.
+    * Warning messages are prepended to e-mail.
+    * Messages are not encrypted with sender key.
+    * Does not send e-mail to sender if sender is a recipient.
+    * Does not send e-mail to sender if sender is not a recipient.
+  * Sender key starts expiring soon when program is running.
+    * Warning is logged.
+    * Warning messages are prepended to e-mail.
+    * Messages are still encrypted with sender key.
+    * Sends e-mail to sender if sender is a recipient.
+    * Does not send e-mail to sender if sender is not a recipient.
+  * Continues to sends mail to recipients when keys are not expiring soon.
+    * Messages are still encrypted with sender key.
+    * Sends e-mail to sender if sender is a recipient.
+    * Does not send e-mail to sender if sender is not a recipient.
+  * When the key expires when the program is running, verify warning message exists in e-mail.
+    * E-mail is not sent to this recipient.
+  * When the key gets in the warning range, verify warning message exists in e-mail.
+    * E-mail is sent to this recipient.
+  * There are no warning messages for keys that do not fall in the expiring/expiring soon range.
+    * E-mail is sent to this recipient.
+* Test warning message concatination with multiple expiration warnings and expiration notices.
+* Program aborts when, sender key expires
+* When program starts, quits of all recipient keys are already expired.
+* All warnings are prefixed with introduction text.
+  * No introduction text if there are no warnings.
+* Warnings a prepended to all regular messages.
+* On start, sends expiration warning message if there are warnings.
+  * No e-mail is sent if there are no warnings.
+* sendmail returns a code greater than 63
+  * Log exception.
+* Reads queued messages in correct order.
+* A problem in one message doesn't block the other messages.
+* message has no attachments
+* message has multiple attachments
+* message uses provided subject
+* message falls back to default subject
+* Exception outside of an individual message doesn't crash the program.
+* Fushes the sendmail queue when a broadcase is sent.
+* Broadcast delay is recognized.
+* Mail loop delay is recognized.
+* The program quits when all recipients have expired.
+* The stack trace is printed if an exception occurs before the main loop.
+* Test the keyboard exception (by starting the program outside of systemd).
+* On removal, the gpgmailer process is stopped.
+* On removal, the gpgmailer process is disabled.
+* Programs starts fine with default values (as much as possible) in a VM.
+* Existing mail in outbox sends mail.
 * Test sender key that does not expire.
 * Test recipient key that does not expire.
-* Test warning message concatination with multiple expiration warnings and expiration notices.
+* Test sender key that does expire.
+* Test recipient key that does expire.
+* Verify SHA512 is used with GPG digest.
+* Verify e-mail looks fine.
+* Termination Signal.
+  * Logs info message and quits.
+
+gpgmailmessage:
+* Minimal message send with
+  * add_body
+  * queue_for_sending
+* Maximal message send with
+  * add_subject called
+  * add_attachment called
+  * add_attachment called again
+  * add_body called
+  * queue_for_sending
+* message send without subject or attachment
+* Crash if method called after queue_for_sending
+  * set_body
+  * add_attachment
+  * add_subject
+* Crash if queue_for_sending called and set_body never called.

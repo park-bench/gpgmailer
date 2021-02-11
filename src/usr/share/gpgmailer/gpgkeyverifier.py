@@ -1,4 +1,4 @@
-# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2021 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -201,7 +201,6 @@ class GpgKeyVerifier():
             #   of checked fingerprints. (issue 39)
             if self.email_dicts[recipient_email]['is_sender']:
                 self.logger.trace('Recipient %s is also a sender.' % recipient_email)
-                expiration_data = sender_expiration_data
 
             else:
                 expiration_data = self._build_key_expiration_warning_message(
@@ -251,7 +250,7 @@ class GpgKeyVerifier():
 
         email: The e-mail address associated with the expired key.
         expiration_date: The date after which a key's expiration date should be considered
-          expired. Will be slightly before the current time.
+          expired. Will be slightly after the current time.
         expiring_soon_date: The date after which a key's expiration date should be should be
           considered expiring soon.
         """

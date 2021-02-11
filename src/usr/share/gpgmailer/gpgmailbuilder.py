@@ -1,4 +1,4 @@
-# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2021 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -183,7 +183,6 @@ class GpgMailBuilder():
         if signature_text.strip() == '':
             # TODO: Eventually, use signature_text.stderr for more granular error handling.
             #   (issue 7)
-            self.logger.error(signature_result.output)
             raise SignatureError('Error while signing message.')
 
         signature_hash_algorithm = self.hash_algorithm_table[signature_result.hash_algo]

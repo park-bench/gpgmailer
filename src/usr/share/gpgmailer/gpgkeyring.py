@@ -1,4 +1,4 @@
-# Copyright 2015-2019 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2021 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -144,8 +144,8 @@ class GpgKeyRing():
         """
         signed = True
 
-        # We assume the key is signed if the key is expired since we have no way of knowing
-        #   if it is really signed or not.
+        # We assume the key is signed if the key is not expired since we have no way of
+        #   knowing if it is really signed or not.
         if gpg_key['expires'] == '' or float(gpg_key['expires']) > time.time():
 
             # Try to encrypt a test string. The key is considered signed if we encrypt
