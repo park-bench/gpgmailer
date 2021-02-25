@@ -167,6 +167,7 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
 * Signing key is not signed.
 * Sender key cannot sign if expired.
 * Sender fails signature test due to bad passphrase.
+  * Passphrase is already cached in gpg agent.
 * Sender key logs that signature test passes.
 * Exception is thrown if recipient key is nether signed nor trusted.
 * Recipient key is not a 40 character hex string.

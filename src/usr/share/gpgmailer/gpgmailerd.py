@@ -36,6 +36,7 @@ import traceback
 import configparser
 import daemon
 from lockfile import pidlockfile
+import psutil
 import gnupg
 from parkbenchcommon import confighelper
 import gpgkeyring
@@ -279,6 +280,10 @@ def signature_test(gpg_home, fingerprint, passphrase):
     passphrase: The passphrase for the signing key.
     Returns True if there are no signing errors.  False otherwise.
     """
+    # Clear the GPG agent cache so we can be sure that the supplied passphrase is the correct
+    #   passphrase.
+    clear_gpg_agent_cache()
+
     # TODO: Eventually, parse gpg output to notify that the password was wrong. (issue 47)
     success = False
     gpg = gnupg.GPG(gnupghome=gpg_home)
@@ -295,6 +300,14 @@ def signature_test(gpg_home, fingerprint, passphrase):
         success = True
 
     return success
+
+
+def clear_gpg_agent_cache():
+    """ Clears the gpg-agent cache. """
+    for process_id in psutil.pids():
+        process = psutil.Process(process_id)
+        if process.name() == 'gpg-agent' and process.username() == PROCESS_USERNAME:
+            os.kill(process_id, signal.SIGHUP)
 
 
 def check_sender_key(gpg_keyring, config, expiration_date):
