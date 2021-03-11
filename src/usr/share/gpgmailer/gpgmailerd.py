@@ -441,6 +441,7 @@ def create_spool_directories(use_ramdisk, program_uid, program_gid):
 
     spool_dir = os.path.join(SYSTEM_SPOOL_DIR, PROGRAM_NAME)
 
+    # TODO: Log a warning when use_ramdisk_spool is false and ramdisk exists. (issue 56)
     if use_ramdisk:
         # TODO: Use parkbenchcommon.ramdisk here. (issue 51)
         mounted_as_ramdisk = check_if_mounted_as_ramdisk(spool_dir)
@@ -616,9 +617,19 @@ def main():
         with daemon_context:
             gpg_mailer.start_monitoring()
 
-    except Exception as exception:
-        logger.critical('Fatal %s: %s\n%s', type(exception).__name__, str(exception),
-                        traceback.format_exc())
+    except BaseException as exception:
+
+        if isinstance(exception, Exception):
+            logger.critical('Fatal %s: %s\n%s', type(exception).__name__, str(exception),
+                            traceback.format_exc())
+
+        # Kill the gpg-agent owned by gpgmailer because otherwise systemd will think
+        #   gpgmailer is still running because gpg-agent is keeping the CGroup alive.
+        for process_id in psutil.pids():
+            process = psutil.Process(process_id)
+            if process.name() == 'gpg-agent' and process.username() == PROCESS_USERNAME:
+                os.kill(process_id, signal.SIGKILL)
+
         raise exception
 
 if __name__ == "__main__":

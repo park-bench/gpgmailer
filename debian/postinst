@@ -57,5 +57,5 @@ esac
 chown -R "$GPGMAILER_USER:$GPGMAILER_GROUP" /etc/gpgmailer/gnupg 2> /dev/null
 chmod o-rwx /etc/gpgmailer/gnupg 2> /dev/null
 
-update-rc.d gpgmailer defaults || exit 1
+systemctl enable gpgmailer || exit 1
 systemctl restart gpgmailer || exit 1
