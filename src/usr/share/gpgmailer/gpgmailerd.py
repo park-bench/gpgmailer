@@ -304,10 +304,9 @@ def signature_test(gpg_home, fingerprint, passphrase):
 
 def clear_gpg_agent_cache():
     """ Clears the gpg-agent cache. """
-    for process_id in psutil.pids():
-        process = psutil.Process(process_id)
+    for process in psutil.process_iter(['create_time', 'name', 'pid', 'username']):
         if process.name() == 'gpg-agent' and process.username() == PROCESS_USERNAME:
-            os.kill(process_id, signal.SIGHUP)
+            process.send_signal(signal.SIGHUP)
 
 
 def check_sender_key(gpg_keyring, config, expiration_date):
@@ -625,10 +624,9 @@ def main():
 
         # Kill the gpg-agent owned by gpgmailer because otherwise systemd will think
         #   gpgmailer is still running because gpg-agent is keeping the CGroup alive.
-        for process_id in psutil.pids():
-            process = psutil.Process(process_id)
+        for process in psutil.process_iter(['create_time', 'name', 'pid', 'username']):
             if process.name() == 'gpg-agent' and process.username() == PROCESS_USERNAME:
-                os.kill(process_id, signal.SIGKILL)
+                process.kill()
 
         raise exception
 
