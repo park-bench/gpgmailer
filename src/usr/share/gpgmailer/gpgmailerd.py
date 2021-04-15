@@ -378,7 +378,7 @@ def verify_signing_config(config):
 
     elif not config['sender']['can_sign']:
         logger.warning('The sender key is unable to sign because it has probably expired. '
-                    'Gpgmailer will send unsigned messages.')
+                       'Gpgmailer will send unsigned messages.')
 
     else:
         logger.debug('Outgoing e-mails will be signed.')
