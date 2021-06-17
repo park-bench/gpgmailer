@@ -50,18 +50,16 @@ chmod u=rw,g=r,o= /etc/gpgmailer/gpgmailer.conf
     recommended that you __do not__ use the GPG keyring in your home directory.
 7.  Import or generate a sender PGP key. This key must have a verified signature and be
     ultimately trusted.
-8.  Import and sign the PGP public keys of all the recipients. (You may have to use the option
-    `--pinentry-mode=loopback`.)
-9.  __Recurrsively__ change the ownership and permissions of the GPG keyring:
+8.  __Recursively__ change the ownership and permissions of the GPG keyring:
 ```
 chown -R gpgmailer:gpgmailer /path/to/gpg/keyring
 chmod -R u=rwX,g=rX,o= /path/to/gpg/keyring
 ```
-10. Edit the `/etc/gpgmailer/gpgmailer.conf` file to enter the sender and recipient
+9.  Edit the `/etc/gpgmailer/gpgmailer.conf` file to enter the sender and recipient
     information and the sender GPG passphrase. Other settings can also be modified.
-11. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
+10. To ease system maintenance, add `gpgmailer` as a supplemental group to administrative
     users. Doing this will allow these users to view gpgmailer log files.
-12. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
+11. Restart the daemon with `systemctl restart gpgmailer`. If the configuration file and GPG
     keyring are valid, named correctly, and have the correct file permissions, the service
     will start successfully.
 

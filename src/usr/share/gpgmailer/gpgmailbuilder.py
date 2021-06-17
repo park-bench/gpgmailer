@@ -221,7 +221,8 @@ class GpgMailBuilder():
         pgp_version.set_payload('Version: 1\n')
 
         # Encrypt the message.
-        encrypted_payload = self.gpg.encrypt(data=str(message), recipients=encryption_keys)
+        encrypted_payload = self.gpg.encrypt(
+            data=str(message), recipients=encryption_keys, always_trust=True)
         encrypted_payload_string = str(encrypted_payload)
 
         # This 'ok' variable is not as granular as we would like it to be.
@@ -271,11 +272,6 @@ class GpgMailBuilder():
         loop_current_time: The Unix time associated with the main program loop from which
           all PGP key expiration checks are based.
         """
-
-        if not self.gpgkeyring.is_trusted(fingerprint) and \
-                not self.gpgkeyring.is_signed(fingerprint):
-            raise GpgKeyNotValidatedException('Recipient key %s is not signed or trusted.' %
-                                              fingerprint)
 
         if not self.gpgkeyring.is_current(fingerprint, loop_current_time +
                                           self.max_operation_time):

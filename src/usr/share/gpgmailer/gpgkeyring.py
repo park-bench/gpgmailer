@@ -134,7 +134,8 @@ class GpgKeyRing():
 
     def _is_key_signed(self, gpg_key):
         """Determines if a 'key' dictionary from the gnupg libary is signed. The method is
-        intended to be called only during instantiation.
+        intended to be called only during instantiation. As of GnuPG 2.x, this method is only
+        realiable for the signing key.
 
         key: A 'key' from the gnupg library.
         Returns true if the key is signed (or if we cannot determine if the key is signed).

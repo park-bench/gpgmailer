@@ -344,26 +344,6 @@ def check_sender_key(gpg_keyring, config, expiration_date):
         config['sender']['can_sign'] = True
 
 
-def check_all_recipient_keys(gpg_keyring, config):
-    """Checks every recipient GPG key in the config file and exits if any of them are missing
-    from the key ring, untrusted and unsigned, or are not 40-character hex strings.
-
-    gpg_keyring: The GpgKeyring object in which to look for GPG keys.
-    config: The config dict to read recipient GPG key information from.
-    """
-    logger.info('Checking recipient keys for validity and expiration.')
-
-    for recipient in config['recipients']:
-        if (not gpg_keyring.is_trusted(recipient['fingerprint']) and
-                not gpg_keyring.is_signed(recipient['fingerprint'])):
-            raise InitializationException(
-                'Key with fingerprint %s is not signed (and not sufficiently trusted). '
-                'Exiting.' % recipient['fingerprint'])
-        else:
-            logger.debug('Recipient key with fingerprint %s is signed or ultimately '
-                         'trusted.', recipient['fingerprint'])
-
-
 def verify_signing_config(config):
     """Checks the sending GPG key and the program configuration to determine if sending
     unsigned e-mail is allowed.  Crashes if the sending key cannot sign and sending unsigned
@@ -594,7 +574,6 @@ def main():
 
         gpg_keyring = gpgkeyring.GpgKeyRing(config['gpg_dir'])
         check_sender_key(gpg_keyring, config, expiration_date)
-        check_all_recipient_keys(gpg_keyring, config)
         verify_signing_config(config)
 
         # We do this here because we don't want to queue an e-mail if a configuration setting
