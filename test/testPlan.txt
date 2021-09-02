@@ -4,34 +4,30 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
 * Can build following the instructions.
 * Test the init.d script:
   * Exit if daemon program is not installed.
-  * Source the /etc/default/torwatchdog file if it exists.
-  * /lib/init/vars.sh is sourced.
+  * Source the /etc/default/gpgmailer file if it exists.
   * start
-    * Returns $VERBOSE message when started.
-    * Returns $VERBOSE message if already running when started.
-    * Returns $VERBOSE messgae on failure.
+    * starts the program from stop
+    * doesn't restart the program if started.
   * stop
     * PID file removed
-    * Returns $VERBOSE message when stopped.
-    * Returns $VERBOSE message when already stopped.
-    * Returns warning message if program cannot be stopped (stub out the start-stop-daemon program [restore before rebooting]).
   * status prints status
   * restart
     * Starts when not running.
     * restarts when running.
-    * prints $VERBOSE message on restart
-    * prints $VERBOSE message when old process still running.
-    * prints $VERBOSE message on failed to start.
-    * prints warning on failed to stop.
   * force-reload
     * Same as restart.
   * anything else prints usage
 * Following the instructions results in a working application.
-* The gpgmailer group is created if it doesn't exist.
-* The gpgmailer group already exists.
-* The gpgmailer user is created if it doesn't exist.
-* The gpgmailer user already exists.
-* The gpgmailer user has the gpgmailer group.
+* On install, the gpgmailer group is created if it doesn't exist.
+* On install, the gpgmailer group already exists.
+* On install, the netcheck group is created if it doesn't exist.
+* On install, the netcheck group already exists.
+* On install, the gpgmailer user is created if it doesn't exist.
+  * Has the gpgmailer group.
+  * Has the netcheck group.
+* On install, the gpgmailer user already exists.
+  * Has the gpgmailer group.
+  * Has the netcheck group.
 * gpgmailer is started following install.
 * gpgmailer is enabled following install.
 * Reinstalling does restart gpgmailer.
@@ -52,7 +48,7 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
     * Owner and group
     * Permission bits
 * Log directory already exists.
-  * Permissions are correct on /var/log/gpgmailer/gpgmailer.log
+  * Permissions are corrected on /var/log/gpgmailer/gpgmailer.log
     * Owner and group
     * Permission bits
   * Permissions are correct on /var/log/gpgmailer/
@@ -97,9 +93,9 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
 * allow_expired_signing_key is blank
 * allow_expired_signing_key is false
 * allow_expired_signing_key is true
-* configuration file is not owned by root.
-* configuration file has group write permission.
-* configuration file's other permissions are wrong.
+* configuration file is not owned by root, program crashes.
+* configuration file has group write permission, program crashes.
+* configuration file's other permissions are wrong, program crashes.
   * x
   * r
   * w
@@ -134,13 +130,13 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
   * /var/spool/gpgmailer gets created if it doesn't exist.
     * Permissions are correct on /var/spool/gpgmailer
       * Owner and group are gpgmailer
-      * Permission bits are changed to rwx--x---
+      * Permission bits are rwx--x---
   * /var/spool/gpgmailer already exists.
     * Permissions are correct on /var/spool/gpgmailer
-      * Owner and group are gpgmailer
+      * Owner and group are changed to gpgmailer
       * Permission bits are changed to rwx--x---
   * Throws an exception if spool directory cannot be created.
-  * spool directory is not a ramdisk
+  * spool directory can be created without being a ramdisk
   * spool directory is a ramdisk
     * Is not already mounted as ramdisk
       * New ramdisk is created.
@@ -149,32 +145,38 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
     * Is already mounted as ramdisk
       * Uses existing ramdisk
     * Errors if ramdisk fails to create.
-    * /var/spool/gpgmailer/partial gets created if it doesn't exist.
-      * Permissions are correct on /var/spool/gpgmailer/partial
-        * Owner and group are gpgmailer
-        * Permission bits are changed to rwx-ws--T
-    * /var/spool/gpgmailer/outbox already exists.
-      * Permissions are correct on /var/spool/gpgmailer/outbox
-        * Owner and group are gpgmailer
-        * Permission bits are changed to rwx-ws--T
-    * Error thrown if partial or outbox cannot be created.
+  * /var/spool/gpgmailer/partial gets created if it doesn't exist.
+    * Permissions are correct on /var/spool/gpgmailer/partial
+      * Owner and group are gpgmailer
+      * Permission bits are changed to rwx-ws--T
+  * /var/spool/gpgmailer/partial already exists.
+    * Permissions are correct on /var/spool/gpgmailer/partial
+      * Owner and group are changed to gpgmailer
+      * Permission bits are changed to rwx-ws--T
+  * /var/spool/gpgmailer/outbox gets created if it doesn't exist.
+    * Permissions are correct on /var/spool/gpgmailer/outbox
+      * Owner and group are gpgmailer
+      * Permission bits are changed to rwx-ws--T
+  * /var/spool/gpgmailer/outbox already exists.
+    * Permissions are correct on /var/spool/gpgmailer/outbox
+      * Owner and group are changed to gpgmailer
+      * Permission bits are changed to rwx-ws--T
+  * Error thrown if partial cannot be created.
+  * Error thrown if outbox cannot be created.
 * Once permissions are dropped, the egid cannot be changed.
 * Once permissions are dropped, the euid cannot be changed.
 * The program has the correct groups after permissions are dropped.
-* Signing key is not ultimately trusted.
-* Signing key is not a 40 character hex string.
-* Signing key is not in keystore.
-* Signing key is not signed.
+* gpg-agent has the same permissions.
+* Crash if signing key is not ultimately trusted.
+* Crash if signing key is not a 40 character hex string.
+* Crash if signing key is not in keystore.
+* Crash if signing key is not signed.
 * Sender key cannot sign if expired.
 * Sender fails signature test due to bad passphrase.
   * Passphrase is already cached in gpg agent.
-* Sender key logs that signature test passes.
-* Exception is thrown if recipient key is nether signed nor trusted.
+* On startup logs that signature test passes.
 * Recipient key is not a 40 character hex string.
 * Recipient key is not in keystore.
-* Recipient key is trusted but not signed.
-* Recipient key is signed by not trusted.
-* Recipient key is both signed and trusted.
 * Logs all valid recipients fingerprints.
 * Expired signing key not allowed and sender can't sign.
   * Fails with error.
@@ -210,14 +212,13 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
   * Messages are still encrypted with sender key.
   * Sends e-mail to sender if sender is a recipient.
   * Does not send e-mail to sender if sender is not a recipient.
-* When program starts, verify that when sender is a recipient, the sender is not listed as a recipient twice.
-* When program starts, verify warning message exists in e-mail when recipient key is expired.
+* When program starts, verifies that when sender is a recipient, the sender is not listed as a recipient twice.
+* When program starts, verifies warning message exists in e-mail when recipient key is expired.
   * E-mail is not sent to this recipient.
-* When program starts, verify warning message exists in e-mail when recipient key is expiring soon.
+* When program starts, verifies warning message exists in e-mail when recipient key is expiring soon.
   * E-mail is sent to this recipient.
-* When program starts, verify there is no warning message for keys that are not expiring soon.
-  * E-mail is sent to this recipient.
-* When program starts, quits of all recipient keys are already expired.
+* When program starts, verifies there is no warning message for keys that are not expiring soon.
+* When program starts, quits if all recipient keys are already expired.
 * All warnings are prefixed with introduction text.
   * No introduction text if there are no warnings.
 * On start, sends expiration warning message if there are warnings.
@@ -234,10 +235,10 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
   * Test file creation.
   * Test directory creation.
 * After deamonize, the program have a blank ouid.
-* After deamonize, the program should have an suid, euid, and ruid of gpgmailer.
+* Before deamonize, the program should have an suid, euid, and ruid of gpgmailer.
 * After deamonize, the program should have an sgid, egid, and rgid of gpgmailer.
-* After daemonize, the euid cannot be changed.
-* After daemonize, the egid cannot be changed.
+* systemd considers the service stopped on expected termination.
+* systemd considers the service stopped on unexpected termination.
 * An exception doesn't kill the program once the main loop is entered.
 * Key expiration is rechecked on the scheduled interval.
 * While the program is running, the warning messages change.
@@ -245,12 +246,14 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
     * Warning is logged.
     * Warning messages are prepended to e-mail.
     * Messages are not encrypted with sender key.
+    * Messages are not signed with sender key.
     * Does not send e-mail to sender if sender is a recipient.
     * Does not send e-mail to sender if sender is not a recipient.
   * Sender key starts expiring soon when program is running.
     * Warning is logged.
     * Warning messages are prepended to e-mail.
     * Messages are still encrypted with sender key.
+    * Messages are still signed with sender key.
     * Sends e-mail to sender if sender is a recipient.
     * Does not send e-mail to sender if sender is not a recipient.
   * Continues to sends mail to recipients when keys are not expiring soon.
@@ -264,11 +267,10 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
   * There are no warning messages for keys that do not fall in the expiring/expiring soon range.
     * E-mail is sent to this recipient.
 * Test warning message concatination with multiple expiration warnings and expiration notices.
-* Program aborts when, sender key expires
-* When program starts, quits of all recipient keys are already expired.
+* Program aborts when sender key expires
 * All warnings are prefixed with introduction text.
   * No introduction text if there are no warnings.
-* Warnings a prepended to all regular messages.
+* Warnings are prepended to all regular messages.
 * On start, sends expiration warning message if there are warnings.
   * No e-mail is sent if there are no warnings.
 * sendmail returns a code greater than 63
@@ -280,10 +282,11 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
 * message uses provided subject
 * message falls back to default subject
 * Exception outside of an individual message doesn't crash the program.
-* Fushes the sendmail queue when a broadcase is sent.
+* Exceptions with in a message context doesn't block the sending of other messages.
+* Flushes the sendmail queue when a broadcast is sent.
 * Broadcast delay is recognized.
-* Mail loop delay is recognized.
-* The program quits when all recipients have expired.
+* Main loop delay is recognized.
+* The program quits when all recipients have expired (when the program already started).
 * The stack trace is printed if an exception occurs before the main loop.
 * Test the keyboard exception (by starting the program outside of systemd).
 * On removal, the gpgmailer process is stopped.
@@ -298,6 +301,7 @@ TODO: Eventually add test cases for sender and recipient sub keys and for both i
 * Verify e-mail looks fine.
 * Termination Signal.
   * Logs info message and quits.
+  * gpg-agent is killed.
 
 gpgmailmessage:
 * Minimal message send with
