@@ -15,7 +15,7 @@ their defaults.
 
 ## Configuration
 First, create the authentication credentials file:
-`touch /etc/postfix/sasl_passwd`
+`sudo touch /etc/postfix/sasl_passwd`
 
 Make the sasl_passwd file only accessible to root:
 `sudo chmod u=rw,g=,o= /etc/postfix/sasl_passwd`
