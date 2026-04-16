@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2015-2021 Joel Allen Luellwitz and Emily Frost
+# Copyright 2015-2026 Joel Allen Luellwitz and Emily Frost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 # TODO: Eventually consider running in a chroot or jail. (gpgmailer issue 17)
 
 __author__ = 'Joel Luellwitz, Emily Frost, and Brittney Scaccia'
-__version__ = '0.8'
+__version__ = '0.9'
 
 import datetime
 import grp
@@ -108,7 +108,7 @@ def read_configuration_and_create_logger(program_uid, program_gid):
     config_helper = confighelper.ConfigHelper()
     # Figure out the logging options so that can start before anything else.
     # TODO: Eventually add a verify_string_list method. (issue 20)
-    config['log_level'] = config_helper.verify_string_exists(config_file, 'log_level')
+    config['log_level'] = config_helper.verify_log_level(config_file)
 
     # Create logging directory.  drwxr-x--- gpgmailer gpgmailer
     log_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP
@@ -125,9 +125,10 @@ def read_configuration_and_create_logger(program_uid, program_gid):
     print('Configuring logger.')
     os.setegid(program_gid)
     os.seteuid(program_uid)
-    config_helper.configure_logger(os.path.join(LOG_DIR, LOG_FILE), config['log_level'])
+    config_helper.configure_logger()
 
     logger = logging.getLogger(__name__)
+    logger.setLevel(config['log_level'])
 
     logger.info('Verifying non-logging configuration.')
 
@@ -509,11 +510,10 @@ def sig_term_handler(signal, stack_frame):
     sys.exit(0)
 
 
-def setup_daemon_context(log_file_handle, program_uid, program_gid):
+def setup_daemon_context(program_uid, program_gid):
     """Creates the daemon context. Specifies daemon permissions, PID file information, and
     the signal handler.
 
-    log_file_handle: The file handle to the log file.
     program_uid: The system user ID that should own the daemon process.
     program_gid: The system group ID that should be assigned to the daemon process.
     Returns the daemon context.
@@ -528,8 +528,6 @@ def setup_daemon_context(log_file_handle, program_uid, program_gid):
     daemon_context.signal_map = {
         signal.SIGTERM: sig_term_handler,
     }
-
-    daemon_context.files_preserve = [log_file_handle]
 
     # Set the UID and GID to 'gpgmailer' user and group.
     daemon_context.uid = program_uid
@@ -584,8 +582,7 @@ def main():
 
         logger.info('Verification complete.')
 
-        daemon_context = setup_daemon_context(
-            config_helper.get_log_file_handle(), program_uid, program_gid)
+        daemon_context = setup_daemon_context(program_uid, program_gid)
 
         logger.debug('Initializing GpgMailer.')
         gpg_mailer = gpgmailer.GpgMailer(
